@@ -100,6 +100,29 @@ The model is grouped by visibility class and plan region, one GLB node per group
   baths match their panoramas.
 * **Not baked:** vegetation, which is skipped.
 
+## Photoreal 3D walk (page side)
+
+In walk mode the page projects the path-traced panoramas themselves onto this model
+(`assets/js/house3d.js`: `setPanorama`, `setProjection`), the way Matterport-style tours do:
+
+* **On a stop** the view is that stop's 4K panorama, pixel for pixel, lined up with the geometry.
+  It matches the 360° viewer to within texture filtering.
+* **Between stops** the two nearest stops in view are blended on the geometry, weighted by
+  inverse squared distance. A depth cube rendered from each stop (from this GLB) rejects surfaces
+  that stop cannot see. Those fall back to the other stop's panorama, then to the bake with eye
+  adaptation. Only occluders inside the house footprint count, because planting and fences
+  outside are simplified in the model. The sky and anything without geometry show the panoramas
+  at infinity.
+* **Loading:** 2k panoramas while moving, the 4K file once you stand on a stop, and neighbours
+  prefetched. Panorama textures and depth cubes are cached (six of each). Depth cubes are
+  1024² on desktops and 512² on touch and low-memory devices.
+* **Opt-out:** `?walk=model` shows the baked model alone. Hiding furniture also turns the
+  projection off, because the panoramas contain the furniture.
+
+The projection needs the stops to match the render cameras exactly. `render_panos.py` places
+each equirectangular camera at the stop's `p` (eye height included), with yaw 0 = −z, so a
+re-render keeps them aligned.
+
 ## Review tools
 
 | Tool | Purpose |
