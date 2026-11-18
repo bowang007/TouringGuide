@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Baked model test</title>
+<style>html,body{margin:0;height:100%;background:#c9e0ef}canvas{width:100vw;height:100vh;display:block}#s{position:fixed;left:8px;top:8px;font:12px monospace;background:#fff8;padding:4px}</style>
+<script type="importmap">{"imports":{"three":"../../assets/vendor/three/build/three.module.min.js","three/addons/":"../../assets/vendor/three/examples/jsm/"}}</script>
+</head><body><canvas id="c"></canvas><div id="s">loading…</div>
+<script type="module">
+import { createEngine } from '../../assets/js/house3d.js';
+const q = new URLSearchParams(location.search);
+const glb = q.get('glb') || '../../assets/model/house.glb';
+const mode = q.get('mode') || 'orbit';
+const c = document.getElementById('c'), s = document.getElementById('s');
+const E = createEngine(c);
+window.E = E;
+await E.load(glb, p => s.textContent = 'loading ' + Math.round(p * 100) + '%');
+E.applyVisibility({ mode, cut: q.get('cut') !== '0', furniture: true, garden: true });
+const t = [20.4, 0, 27.5];
+const th = parseFloat(q.get('theta') || '-2.45'), ph = parseFloat(q.get('phi') || '0.85'), r = parseFloat(q.get('r') || '85');
+let eye = [t[0] + r * Math.sin(th) * Math.cos(ph), t[1] + r * Math.sin(ph), t[2] + r * Math.cos(th) * Math.cos(ph)], aim = t, fov = Math.PI * .255;
+if (q.get('eye')) { eye = q.get('eye').split(',').map(Number); aim = q.get('aim').split(',').map(Number); fov = 1.15; }
+E.render(eye, aim, fov, innerWidth, innerHeight, 1);
+console.log("GL", E.renderer.getContext().getParameter(E.renderer.getContext().RENDERER), "calls", E.renderer.info.render.calls, "tris", E.renderer.info.render.triangles, "size", c.width, c.height, "frustum test", JSON.stringify(E.camera.position));
+s.textContent = JSON.stringify(E.stats());
+document.title = 'READY';
+</script></body></html>
