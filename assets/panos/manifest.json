@@ -1,0 +1,249 @@
+{
+ "version": "b2d59b044882",
+ "convention": "Equirectangular 2:1, top row = up (+y). Centre column = world yaw `offset` (yaw 0 = SCENE -z, plan north); u increases clockwise seen from above. Paths are relative to this file.",
+ "nodes": {
+  "E0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "E0.webp",
+   "half": "2k/E0.webp",
+   "thumb": "../thumbs/E0.webp",
+   "source": "render"
+  },
+  "H1": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "H1.webp",
+   "half": "2k/H1.webp",
+   "thumb": "../thumbs/H1.webp",
+   "source": "render"
+  },
+  "H2": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "H2.webp",
+   "half": "2k/H2.webp",
+   "thumb": "../thumbs/H2.webp",
+   "source": "render"
+  },
+  "H3": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "H3.webp",
+   "half": "2k/H3.webp",
+   "thumb": "../thumbs/H3.webp",
+   "source": "render"
+  },
+  "B3": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "B3.webp",
+   "half": "2k/B3.webp",
+   "thumb": "../thumbs/B3.webp",
+   "source": "render"
+  },
+  "B4": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "B4.webp",
+   "half": "2k/B4.webp",
+   "thumb": "../thumbs/B4.webp",
+   "source": "render"
+  },
+  "K0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "K0.webp",
+   "half": "2k/K0.webp",
+   "thumb": "../thumbs/K0.webp",
+   "source": "render"
+  },
+  "D0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "D0.webp",
+   "half": "2k/D0.webp",
+   "thumb": "../thumbs/D0.webp",
+   "source": "render"
+  },
+  "L2": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "L2.webp",
+   "half": "2k/L2.webp",
+   "thumb": "../thumbs/L2.webp",
+   "source": "render"
+  },
+  "L0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "L0.webp",
+   "half": "2k/L0.webp",
+   "thumb": "../thumbs/L0.webp",
+   "source": "render"
+  },
+  "L1": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "L1.webp",
+   "half": "2k/L1.webp",
+   "thumb": "../thumbs/L1.webp",
+   "source": "render"
+  },
+  "T1": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "T1.webp",
+   "half": "2k/T1.webp",
+   "thumb": "../thumbs/T1.webp",
+   "source": "render"
+  },
+  "P0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "P0.webp",
+   "half": "2k/P0.webp",
+   "thumb": "../thumbs/P0.webp",
+   "source": "render"
+  },
+  "P1": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "P1.webp",
+   "half": "2k/P1.webp",
+   "thumb": "../thumbs/P1.webp",
+   "source": "render"
+  },
+  "S0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "S0.webp",
+   "half": "2k/S0.webp",
+   "thumb": "../thumbs/S0.webp",
+   "source": "render"
+  },
+  "C0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "C0.webp",
+   "half": "2k/C0.webp",
+   "thumb": "../thumbs/C0.webp",
+   "source": "render"
+  },
+  "A0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "A0.webp",
+   "half": "2k/A0.webp",
+   "thumb": "../thumbs/A0.webp",
+   "source": "render"
+  },
+  "T2": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "T2.webp",
+   "half": "2k/T2.webp",
+   "thumb": "../thumbs/T2.webp",
+   "source": "render"
+  },
+  "B2": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "B2.webp",
+   "half": "2k/B2.webp",
+   "thumb": "../thumbs/B2.webp",
+   "source": "render"
+  },
+  "T3": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "T3.webp",
+   "half": "2k/T3.webp",
+   "thumb": "../thumbs/T3.webp",
+   "source": "render"
+  },
+  "A1": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "A1.webp",
+   "half": "2k/A1.webp",
+   "thumb": "../thumbs/A1.webp",
+   "source": "render"
+  },
+  "G0": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "G0.webp",
+   "half": "2k/G0.webp",
+   "thumb": "../thumbs/G0.webp",
+   "source": "render"
+  },
+  "T4": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "T4.webp",
+   "half": "2k/T4.webp",
+   "thumb": "../thumbs/T4.webp",
+   "source": "render"
+  },
+  "A3": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "A3.webp",
+   "half": "2k/A3.webp",
+   "thumb": "../thumbs/A3.webp",
+   "source": "render"
+  },
+  "T6": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "T6.webp",
+   "half": "2k/T6.webp",
+   "thumb": "../thumbs/T6.webp",
+   "source": "render"
+  },
+  "C3": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "C3.webp",
+   "half": "2k/C3.webp",
+   "thumb": "../thumbs/C3.webp",
+   "source": "render"
+  },
+  "GA": {
+   "offset": 0,
+   "width": 4096,
+   "height": 2048,
+   "full": "GA.webp",
+   "half": "2k/GA.webp",
+   "thumb": "../thumbs/GA.webp",
+   "source": "render"
+  }
+ }
+}
