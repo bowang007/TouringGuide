@@ -35,6 +35,10 @@ ROOFS = ['#626262', '#8d8a86', '#7a6c60', '#4a4a4c']
 GDOORS = ['#ebe8e1', '#ddd6c8', '#4a3f37', '#3a3c3e', '#f0efeb']
 DOORS = ['#2e3a44', '#5a4433', '#6b2b27', '#2f3b31', '#1f2123', '#7b6a55']
 SHUTTERS = ['#2b3530', '#22272c', '#3a3f45']
+# Roof colours of the houses around ours, read off the user's aerial photo of the street
+# (assets/references/img-3202.webp): red-brown tile next door to the east, grey shingle to the west,
+# an orange-tan roof on the house behind.
+NEIGHBOUR_ROOFS = {'east': '#c7735c', 'west': '#8a8784', 'rear1': '#d39a6c'}
 # houses whose front yards the windows look into get instanced lawn (others: lawn-coloured ground)
 GRASS_X = (-80.0, 112.0)
 
@@ -229,7 +233,7 @@ def drive_mat(ctx):
     return m
 
 
-def _house_mats(ctx, seed, r):
+def _house_mats(ctx, seed, r, roof_tint=None):
     clad = 'siding' if r.random() < 0.6 else 'stucco'
     if clad == 'siding':
         k = seed % len(SIDING)
@@ -240,7 +244,10 @@ def _house_mats(ctx, seed, r):
     ti = 3 if (clad == 'siding' and SIDING[seed % len(SIDING)] in ('#e2e0d8', '#d3cbb0') and seed % 2) else seed % 3
     trim = flat_mat(f'Z_exterior_nb_trim_{ti}', TRIMS[ti], 0.5)
     rk = (seed * 7 + 3) % len(ROOFS)
-    roof = tex_mat(f'Z_exterior_nb_shingles_{rk}', 'grey_roof_01', 2.2, tint=ROOFS[rk], random_hue=0.06)
+    if roof_tint:   # a colour read off the aerial photo of the real street
+        roof = tex_mat(f'Z_exterior_nb_shingles_{roof_tint[1:]}', 'grey_roof_01', 2.2, tint=roof_tint, random_hue=0.03)
+    else:
+        roof = tex_mat(f'Z_exterior_nb_shingles_{rk}', 'grey_roof_01', 2.2, tint=ROOFS[rk], random_hue=0.06)
     gk = (seed * 5 + 1) % len(GDOORS)
     return dict(
         clad=clad, wall=wall, trim=trim, roof=roof,
@@ -456,11 +463,11 @@ def _garage_door(g, tr, dk, gx0, gx1, c, sgn, yb, top, style):
 
 # ----------------------------------------------------------------------------------- house
 def house(ctx, name, x0, x1, z0, z1, seed, front='S', garage=True, eave=None, pitch=None, floor=0.5,
-          wings=(), roof_type=None, shrubs=True, gwing=None, yard=None, porch=True):
+          wings=(), roof_type=None, shrubs=True, gwing=None, yard=None, porch=True, roof=None):
     """Single-storey ranch: main box (+ optional side wings), hip or gable roof, optional front-projecting
     garage wing, recessed entry porch, windows, garage door, driveway; returns a dict describing the lot."""
     r = rng(seed)
-    M = _house_mats(ctx, seed, r)
+    M = _house_mats(ctx, seed, r, roof)
     st = dict(grids=(seed % 5 == 2), shutters=(M['clad'] == 'siding' and seed % 4 == 1))
     eave = eave if eave is not None else round(8.0 + r.uniform(0.0, 0.9), 2)
     pitch = pitch if pitch is not None else r.choice((4.0, 4.5, 5.0, 5.5, 6.0)) / 12
@@ -768,16 +775,17 @@ def bins(ctx, x, z, face, colours=('#3d5a3a', '#2f4f74')):
 
 # ----------------------------------------------------------------------------------- build
 def build(ctx):
+    from . import exterior_far as far             # (imports this module: keep the import local)
     n = 0
     lots = []
     # side neighbours (front faces on our street, garages toward the street on the front wings)
     house(ctx, 'west', -52.0, -12.5, 6.0, 44.0, 1, wings=[(-33.0, -12.5, 30.0, 50.0)], garage=False, porch=False,
-          yard=False)
+          yard=False, roof=NEIGHBOUR_ROOFS['west'])
     house(ctx, 'east', 53.0, 93.0, 4.0, 45.0, 2, wings=[(53.0, 75.0, 28.0, 50.0)], garage=False, porch=False,
-          yard=False)
+          yard=False, roof=NEIGHBOUR_ROOFS['east'])
     n += 2
     for nm, gxx, cz, seed in (('west', (-31.0, -15.0), 50.0, 1), ('east', (55.0, 71.0), 50.0, 2)):
-        M = _house_mats(ctx, seed, rng(seed))
+        M = _house_mats(ctx, seed, rng(seed), NEIGHBOUR_ROOFS.get(nm))
         g, tr, dk = MB(), MB(), MB()
         _garage_door(g, tr, dk, gxx[0], gxx[1], cz, 1, GRADE + 0.05, 7.5, seed % 3)
         g.obj(ctx, f'ext nb {nm} garage door', [M['gdoor'], M['glass']], SUB)
@@ -791,7 +799,7 @@ def build(ctx):
     house(ctx, 'west2', -112.0, -70.0, 4.0, 46.0, 3); n += 1
     house(ctx, 'east2', 110.0, 152.0, 5.0, 46.0, 4); n += 1
     # rear neighbours (their backs face our fence)
-    house(ctx, 'rear1', -14.0, 24.0, -82.0, -40.0, 5, front='N', gwing=0.0); n += 1
+    house(ctx, 'rear1', -14.0, 24.0, -82.0, -40.0, 5, front='N', gwing=0.0, roof=NEIGHBOUR_ROOFS['rear1']); n += 1
     house(ctx, 'rear2', 34.0, 74.0, -80.0, -42.0, 6, front='N', gwing=0.0); n += 1
     house(ctx, 'rear3', -70.0, -30.0, -82.0, -42.0, 7, front='N', gwing=0.0); n += 1
     house(ctx, 'rear4', 88.0, 128.0, -80.0, -40.0, 8, front='N', gwing=0.0); n += 1
@@ -842,9 +850,13 @@ def build(ctx):
     # neighbourhood trees: backyard shade trees above the fences, street trees, a few big background trees
     r = rng(77)
     leaf = dict(amount=0.3)
-    spots = [(-24, -24, 24), (14, -30, 26), (52, -27, 22), (86, -28, 25), (-48, -20, 21), (-30, 22, 20),
-             (70, 20, 22), (-90, 30, 24), (125, -10, 26), (-8, -110, 34), (40, -120, 36), (100, -100, 32),
-             (-80, -105, 33), (160, 60, 30), (-150, 60, 30)]
+    # (three of these used to stand inside the side neighbours' houses and four in the rear street; the
+    # drone-height exterior renders see that, so they now stand in backyards and in the rear park strip,
+    # clear of the rear neighbours' driveways)
+    pk = far.STREET_Z0 - far.PITCH_Z + 21.25           # rear street's park strip on our side
+    spots = [(-24, -24, 24), (14, -30, 26), (52, -27, 22), (86, -28, 25), (-48, -20, 21), (-30, -4, 20),
+             (70, -4, 22), (-90, -4, 24), (125, -10, 26), (-8, pk, 34), (28, pk, 36), (80, pk, 32),
+             (-80, pk, 33), (160, 60, 30), (-150, 60, 30)]
     for (x, z, h) in spots:
         plant(ctx, 'tree_small_02', 'main', x, z, height_ft=h * r.uniform(0.9, 1.1), leaf=leaf, sub=SUB)
     # backyard trees behind the across-street row, so the skyline over their roofs reads leafy
@@ -862,7 +874,13 @@ def build(ctx):
             x, z = r.uniform(-320, 360), r.uniform(-260, -95)
         else:
             x, z = r.choice((r.uniform(-330, -140), r.uniform(150, 380))), r.uniform(-60, 140)
-        plant(ctx, 'tree_small_02', 'main', x, z, height_ft=r.uniform(26, 44), leaf=leaf, sub=SUB)
+        h = r.uniform(26, 44)
+        if not far.in_backyards(z):                    # keep them out of streets and houses: nearest spine
+            sp = far.spine_z(z)
+            z = sp + max(-9.0, min(9.0, (z - sp) * 0.1))
+            if abs(sp - far.spine_z(0.0)) < 1.0 and -60.0 < x < 140.0:
+                z = far.spine_z(-300.0)                 # never into our own or the side neighbours' gardens
+        plant(ctx, 'tree_small_02', 'main', x, z, height_ft=h, leaf=leaf, sub=SUB)
     for (x, z, h) in [(-34, -18, 13), (63, -24, 14), (100, -22, 13), (-60, -24, 12)]:
         plant(ctx, 'island_tree_02', 'main', x, z, height_ft=h, leaf=leaf, sub=SUB)
     # street trees along both park strips

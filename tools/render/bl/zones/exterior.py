@@ -3,16 +3,18 @@
 Grounds and hardscape (exterior_site), charcoal slat fences + gates (exterior_fence), the black
 aluminium / frosted-glass sectional garage door with its inside hardware, sconces and house number
 (exterior_garage), lawn / pebbles / ornamental grasses / Poly Haven trees and shrubs
-(exterior_plants) and the neighbourhood context (exterior_context). Site plan: exterior_layout.
+(exterior_plants) and the neighbourhood context (exterior_context). exterior_far fills out the whole
+neighbourhood for the drone-height exterior renders only (excluded from the view layer by default).
+Site plan: exterior_layout.
 """
 import time
 
 import bpy
 
-from . import exterior_context, exterior_fence, exterior_garage, exterior_plants, exterior_site
+from . import exterior_context, exterior_far, exterior_fence, exterior_garage, exterior_plants, exterior_site
 from .exterior_util import coll, mesh_tris
 
-SUBS = ('site', 'fence', 'garage_door', 'lights', 'plants', 'context', 'library', 'library_proc', 'lib_pebbles')
+SUBS = ('site', 'fence', 'garage_door', 'lights', 'plants', 'context', 'far', 'library', 'library_proc', 'lib_pebbles')
 
 
 def _tri_stats(root):
@@ -48,6 +50,9 @@ def build(ctx):
     t = time.time()
     out['context'] = exterior_context.build(ctx)
     out['t_context'] = round(time.time() - t, 1)
+    t = time.time()
+    out['far'] = exterior_far.build(ctx)        # excluded from the view layer; render_exterior.py turns it on
+    out['t_far'] = round(time.time() - t, 1)
     objs, unique = _tri_stats(root)
     out['objects'] = objs
     out['unique_tris'] = unique

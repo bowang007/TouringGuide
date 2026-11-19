@@ -476,10 +476,14 @@ def vault_infill(ctx, A, cnt):
         hit, loc, *_ = bpy.context.scene.ray_cast(dg, ft2bl(17.38, 8.6, 41.5), Vector((dx, 0, 0)))
         if hit and abs(loc.x / FT - xf) < 0.2:
             continue
-        tops = [L.ceiling_y(xf - dx * 0.05, z, y0=8.2)[0] for z in (40.9, 42.0, 43.5, 45.0, 46.6)]
-        top = min(max(tops) + 0.2, 9.8)
+        # stepped top that follows the vault ceiling along z (a flat top at the highest point poked
+        # through the sloping entry roof, visible from the air)
         x0, x1 = sorted((xf, xo))
-        ctx.box(f'entry vault knee wall {side}', x0, x1, 8.0, top, 40.80, 46.90, 'paint_wall', C_ENTRY)
+        zs = [40.80 + (46.90 - 40.80) * k / 24 for k in range(25)]
+        ceil = [L.ceiling_y(xf - dx * 0.05, z, y0=8.2)[0] for z in zs]      # (all rays before any box)
+        for k in range(24):
+            top = min(max(ceil[k], ceil[k + 1]) + 0.06, 9.8)
+            ctx.box(f'entry vault knee wall {side} {k:02d}', x0, x1, 8.0, top, zs[k], zs[k + 1], 'paint_wall', C_ENTRY)
         made += 1
     cnt['vault_infill'] = made
 

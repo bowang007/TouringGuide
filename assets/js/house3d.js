@@ -12,6 +12,10 @@
 // tested against a depth cube rendered from its stop: surfaces that stop cannot see fall back to
 // the other panorama, then to the bake.
 //
+// Photoreal exterior: the same projection with perspective frames (setPanorama's `frame`), path-traced
+// from orbit positions around the house (tools/render/render_exterior.py). On a frame position the
+// view is that render; orbiting between frames blends the two nearest on the model.
+//
 // Coordinates: the GLB is in metres with SCENE axes (x east, y up, z south), so scaling the
 // root by 1/0.3048 puts it in SCENE feet, the unit the rest of the app (camera, hotspots,
 // minimap, collision, measurements) already uses. No other conversion is needed: three.js
@@ -46,6 +50,7 @@ const ADAPT_SNAP = 0.5;                  // s without frames -> jump straight to
 // Panorama projection.
 const PANO_DEPTH_SIZE = 512;             // depth cube face size (texels); opts.depthSize overrides
 const PANO_DEPTH_FAR = 160;              // ft; farther surfaces count as visible
+const PANO_DEPTH_FAR_EXTERIOR = 700;     // ft, for the exterior frames (~100 ft out, neighbours behind)
 const PANO_CACHE = 6;                    // panorama textures kept on the GPU; opts.cacheSize overrides
 const PANO_MAX_FULL = 2;                 // of which full resolution (4K + mips = 45 MB); opts.maxFull
 const PANO_DEPTH_POOL = 3;               // depth cubes (two slots + one spare), re-rendered on reuse
@@ -57,10 +62,17 @@ const BACKDROP_RADIUS = 300;             // ft, inside the walk camera's far pla
 // Equirectangular lookup shared by the model and the backdrop. The derivatives come from whichever
 // of u and u + 0.5 is continuous here, so the seam at the back of the panorama never drops to the
 // smallest mip level.
+//
+// A perspective frame (uTgPersp = 1) is looked up through its camera's projection x view matrix
+// instead; its alpha is the frame coverage, feathered over the outer 3% so frames end softly.
+// p.w = 0 projects a direction (the backdrop, at infinity).
 const PANO_SAMPLE_GLSL = `
 uniform float uTgOn;
 uniform vec2 uTgW;
 uniform vec2 uTgOffset;
+uniform vec2 uTgPersp;
+uniform mat4 uTgMatA;
+uniform mat4 uTgMatB;
 uniform sampler2D uTgPanoA;
 uniform sampler2D uTgPanoB;
 varying vec3 vTgWorld;
@@ -71,6 +83,17 @@ vec3 tgPano( sampler2D t, vec3 d, float offset ) {
 	vec2 dx = dFdx( uv ), dy = dFdy( uv ), dx2 = dFdx( uv2 ), dy2 = dFdy( uv2 );
 	if ( abs( dx2.x ) + abs( dy2.x ) < abs( dx.x ) + abs( dy.x ) ) { dx = dx2; dy = dy2; }
 	return textureGrad( t, uv, dx, dy ).rgb;
+}
+vec4 tgFrame( sampler2D t, mat4 m, vec4 p ) {
+	vec4 c = m * p;
+	vec2 ndc = c.xy / max( c.w, 1e-4 );
+	vec2 e = smoothstep( vec2( 1.0 ), vec2( 0.97 ), abs( ndc ) );
+	vec3 rgb = texture( t, vec2( ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5 ) ).rgb;
+	return vec4( rgb, e.x * e.y * step( 1e-4, c.w ) );
+}
+vec4 tgSample( sampler2D t, float persp, mat4 m, vec4 p, vec3 d, float offset ) {
+	if ( persp > 0.5 ) return tgFrame( t, m, p );
+	return vec4( tgPano( t, d, offset ), 1.0 );
 }
 `;
 
@@ -93,7 +116,8 @@ uniform vec4 uTgBox;
 float tgTap( samplerCube depth, vec3 c, vec3 d, float dist, float tol ) {
 	float s = unpackRGBAToDepth( textureCube( depth, d ) ) * uTgFar;
 	vec3 hit = c + d * s;
-	bool inside = hit.x > uTgBox.x && hit.z > uTgBox.y && hit.x < uTgBox.z && hit.z < uTgBox.w;
+	// Cleared texels (nothing within the cube's far plane) unpack to ~far: never an occluder.
+	bool inside = s < uTgFar * 0.998 && hit.x > uTgBox.x && hit.z > uTgBox.y && hit.x < uTgBox.z && hit.z < uTgBox.w;
 	return inside ? 1.0 - smoothstep( tol, 2.0 * tol, dist - s ) : 1.0;
 }
 float tgSeen( samplerCube depth, vec3 c, vec3 d, float dist, float occ, vec3 n ) {
@@ -119,15 +143,17 @@ const PANO_FRAGMENT = `
 		if ( uTgW.x > 0.0 ) {
 			vec3 r = vTgWorld - uTgCenterA;
 			float dist = max( length( r ), 1e-4 );
-			float w = uTgW.x * tgSeen( uTgDepthA, uTgCenterA, r / dist, dist, uTgOcc.x, tgN );
-			tgSum += w * tgPano( uTgPanoA, r / dist, uTgOffset.x );
+			vec4 c = tgSample( uTgPanoA, uTgPersp.x, uTgMatA, vec4( vTgWorld, 1.0 ), r / dist, uTgOffset.x );
+			float w = uTgW.x * c.a * tgSeen( uTgDepthA, uTgCenterA, r / dist, dist, uTgOcc.x, tgN );
+			tgSum += w * c.rgb;
 			tgSeenW += w;
 		}
 		if ( uTgW.y > 0.0 ) {
 			vec3 r = vTgWorld - uTgCenterB;
 			float dist = max( length( r ), 1e-4 );
-			float w = uTgW.y * tgSeen( uTgDepthB, uTgCenterB, r / dist, dist, uTgOcc.y, tgN );
-			tgSum += w * tgPano( uTgPanoB, r / dist, uTgOffset.y );
+			vec4 c = tgSample( uTgPanoB, uTgPersp.y, uTgMatB, vec4( vTgWorld, 1.0 ), r / dist, uTgOffset.y );
+			float w = uTgW.y * c.a * tgSeen( uTgDepthB, uTgCenterB, r / dist, dist, uTgOcc.y, tgN );
+			tgSum += w * c.rgb;
 			tgSeenW += w;
 		}
 		float tgStrength = clamp( uTgW.x + uTgW.y, 0.0, 1.0 ) * smoothstep( 0.0, 0.35, tgSeenW );
@@ -190,6 +216,9 @@ export function createEngine(canvas, opts = {}) {
     uTgW: { value: new THREE.Vector2() },
     uTgOcc: { value: new THREE.Vector2() },
     uTgOffset: { value: new THREE.Vector2() },
+    uTgPersp: { value: new THREE.Vector2() },
+    uTgMatA: { value: new THREE.Matrix4() },
+    uTgMatB: { value: new THREE.Matrix4() },
     uTgCenterA: { value: new THREE.Vector3() },
     uTgCenterB: { value: new THREE.Vector3() },
     uTgPanoA: { value: null },
@@ -206,17 +235,22 @@ export function createEngine(canvas, opts = {}) {
   proj.uTgTexel.value = 2.5 / depthSize;
   // opts.interior = [x0, z0, x1, z1]: the house footprint in SCENE feet. The margin keeps window
   // frames and the wall thickness inside it.
+  // Outside (exterior frames) every occluder counts.
+  const boxAll = new THREE.Vector4(-1e9, -1e9, 1e9, 1e9);
+  const boxInterior = boxAll.clone();
   if (Array.isArray(opts.interior) && opts.interior.length === 4) {
     const [x0, z0, x1, z1] = opts.interior;
-    proj.uTgBox.value.set(x0 - 0.3, z0 - 0.3, x1 + 0.3, z1 + 0.3);
+    boxInterior.set(x0 - 0.3, z0 - 0.3, x1 + 0.3, z1 + 0.3);
   }
-  const panos = new Map();                // id -> {tex, full, offset, center, cube, depthReady, born, used}
+  proj.uTgBox.value.copy(boxInterior);
+  const panos = new Map();                // id -> {tex, full, offset, persp, center, cube, depthReady, born, used}
   const cubes = [];                       // depth cube pool: {rt, owner}
   const projWeights = new Map();          // id -> eased blend weight
   let projTargets = [];
   let projWanted = new Set();
   let projClock = 0;
   let projInfo = { on: false, slots: [] };
+  let projMode = '';
   let visKey = '';
   let cubeCam = null;
   const clearTmp = new THREE.Color();
@@ -230,9 +264,17 @@ export function createEngine(canvas, opts = {}) {
 void main() {
 	vec3 d = normalize( vTgWorld - cameraPosition );
 	vec3 c = vec3( 0.0 );
-	if ( uTgW.x > 0.0 ) c += uTgW.x * tgPano( uTgPanoA, d, uTgOffset.x );
-	if ( uTgW.y > 0.0 ) c += uTgW.y * tgPano( uTgPanoB, d, uTgOffset.y );
-	float a = uTgW.x + uTgW.y;
+	float a = 0.0;
+	if ( uTgW.x > 0.0 ) {
+		vec4 s = tgSample( uTgPanoA, uTgPersp.x, uTgMatA, vec4( d, 0.0 ), d, uTgOffset.x );
+		c += uTgW.x * s.a * s.rgb;
+		a += uTgW.x * s.a;
+	}
+	if ( uTgW.y > 0.0 ) {
+		vec4 s = tgSample( uTgPanoB, uTgPersp.y, uTgMatB, vec4( d, 0.0 ), d, uTgOffset.y );
+		c += uTgW.y * s.a * s.rgb;
+		a += uTgW.y * s.a;
+	}
 	gl_FragColor = vec4( mix( uTgSky, c / max( a, 1e-5 ), clamp( a, 0.0, 1.0 ) ), 1.0 );
 	#include <colorspace_fragment>
 }`,
@@ -313,13 +355,25 @@ void main() {
       const v = show[cls] !== undefined ? show[cls] : true;
       for (const o of list) o.visible = v;
     }
+    // The neighbourhood (landscape) has inside-out pieces (the neighbours' houses: Cycles renders both
+    // sides, so the bake and the renders never minded). Outside, draw both sides so the drawn surface is
+    // the one the exterior frames show; otherwise a frame lands on a house's far inner wall, fails the
+    // depth test against the near one and drops to the bake.
+    const side = mode === 'exterior' ? THREE.DoubleSide : THREE.FrontSide;
+    for (const o of byClass.landscape || []) {
+      if (o.material && !o.material.transparent && o.material.side !== side) {
+        o.material.side = side;
+        o.material.needsUpdate = true;
+      }
+    }
     const planes = cutaway ? [cutPlane] : null;
     for (const m of wallMats) {
       if ((m.clippingPlanes ? 1 : 0) !== (planes ? 1 : 0)) m.needsUpdate = true;
       m.clippingPlanes = planes;
     }
-    // Depth cubes describe the walk-mode geometry; they are stale once furniture or garden change.
-    const key = `${furniture}|${garden}|${parts}`;
+    // Depth cubes describe the geometry of the mode they were rendered in (walk: ceilings, no roof;
+    // exterior: roof, no ceilings); they are stale once the mode, furniture or garden change.
+    const key = `${projGroup(mode)}|${furniture}|${garden}|${parts}`;
     if (key !== visKey) {
       visKey = key;
       for (const e of panos.values()) e.depthReady = false;
@@ -346,7 +400,9 @@ void main() {
   // center: the stop's eye point in SCENE feet; offset: the manifest's yaw offset (radians).
   // full: true for the full-resolution file (a later half-resolution copy is ignored).
   // instant: skip the fade-in (the page already shows this panorama, e.g. coming from the 360° view).
-  function setPanorama(id, image, center, offset = 0, full = false, instant = false) {
+  // frame: for a perspective render instead of a panorama, {matrix}: its camera's projection x view
+  // (column-major, SCENE feet -> clip, the app's mul(perspective, lookAt)); center is then its eye.
+  function setPanorama(id, image, center, offset = 0, full = false, instant = false, frame = null) {
     let e = panos.get(id);
     if (e && e.full && !full) {
       if (image.close) image.close();
@@ -355,7 +411,8 @@ void main() {
     const tex = new THREE.Texture(image);
     tex.flipY = false;
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.wrapS = THREE.RepeatWrapping;
+    const persp = frame && frame.matrix ? new THREE.Matrix4().fromArray(frame.matrix) : null;
+    tex.wrapS = persp ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.magFilter = THREE.LinearFilter;
     tex.minFilter = THREE.LinearMipmapLinearFilter;
@@ -369,11 +426,11 @@ void main() {
     const now = performance.now();
     if (e) {
       releaseTexture(e.tex);
-      Object.assign(e, { tex, full, offset });
+      Object.assign(e, { tex, full, offset, persp });
       if (instant) e.born = now - PANO_FADE * 1000;
     } else {
       e = {
-        id, tex, full, offset, center: new THREE.Vector3(center[0], center[1], center[2]),
+        id, tex, full, offset, persp, center: new THREE.Vector3(center[0], center[1], center[2]),
         cube: null, depthReady: false, born: instant ? now - PANO_FADE * 1000 : now, used: now,
       };
       panos.set(id, e);
@@ -451,7 +508,11 @@ void main() {
   function renderDepth(e, busy) {
     const rt = cubeFor(e, busy).rt;
     if (e.depthReady) return;
-    if (!cubeCam) cubeCam = new THREE.CubeCamera(0.05, PANO_DEPTH_FAR, rt);
+    const far = depthFar();
+    if (!cubeCam) cubeCam = new THREE.CubeCamera(0.05, far, rt);
+    for (const c of cubeCam.children) {
+      if (c.far !== far) { c.far = far; c.updateProjectionMatrix(); }
+    }
     cubeCam.renderTarget = rt;
     cubeCam.position.copy(e.center);
     cubeCam.updateMatrixWorld(true);
@@ -460,6 +521,7 @@ void main() {
     const backdropShown = backdrop.visible;
     backdrop.visible = false;
     depthMat.uniforms.uCenter.value.copy(e.center);
+    depthMat.uniforms.uFar.value = far;
     scene.overrideMaterial = depthMat;
     renderer.getClearColor(clearTmp);
     const clearAlpha = renderer.getClearAlpha();
@@ -472,6 +534,14 @@ void main() {
     e.depthReady = true;
   }
 
+  function projGroup(mode) {
+    return mode === 'walk' || mode === 'exterior' ? mode : 'other';
+  }
+
+  function depthFar() {
+    return state.mode === 'exterior' ? PANO_DEPTH_FAR_EXTERIOR : PANO_DEPTH_FAR;
+  }
+
   function smooth(a, b, x) {
     const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
@@ -481,8 +551,14 @@ void main() {
     const now = performance.now();
     const dt = (now - projClock) / 1000;
     projClock = now;
-    const walk = state.mode === 'walk';
-    if (!walk) projWeights.clear();       // depth cubes are only valid for the walk-mode geometry
+    const group = projGroup(state.mode);
+    const walk = group !== 'other';       // the walk, or the exterior orbit
+    if (group !== projMode) {             // the other mode's panoramas never blend in
+      projMode = group;
+      projWeights.clear();
+    }
+    proj.uTgBox.value.copy(group === 'exterior' ? boxAll : boxInterior);
+    proj.uTgFar.value = depthFar();
     const target = new Map(walk ? projTargets.map((t) => [t.id, t.weight]) : []);
     // Ease the blend weights so a stop coming into view (through a doorway) never pops.
     const k = dt > ADAPT_SNAP ? 1 : 1 - Math.exp(-dt / PANO_TAU);
@@ -514,6 +590,9 @@ void main() {
     proj.uTgW.value.set(w[0], w[1]);
     proj.uTgOcc.value.set(occ[0], occ[1]);
     proj.uTgOffset.value.set(slots[0] ? slots[0].e.offset : 0, slots[1] ? slots[1].e.offset : 0);
+    proj.uTgPersp.value.set(slots[0] && slots[0].e.persp ? 1 : 0, slots[1] && slots[1].e.persp ? 1 : 0);
+    if (slots[0] && slots[0].e.persp) proj.uTgMatA.value.copy(slots[0].e.persp);
+    if (slots[1] && slots[1].e.persp) proj.uTgMatB.value.copy(slots[1].e.persp);
     proj.uTgCenterA.value.copy(slots[0] ? slots[0].e.center : camera.position);
     proj.uTgCenterB.value.copy(slots[1] ? slots[1].e.center : camera.position);
     proj.uTgPanoA.value = slots[0] ? slots[0].e.tex : null;

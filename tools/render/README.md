@@ -5,7 +5,8 @@ This folder turns the tour's measured model (`data/scene.json`, frozen from `ind
 | Output | Script | Used by the site as |
 |---|---|---|
 | 27 path-traced 360° panoramas (4096×2048) | `render_panos.py` | Styled Tour (`assets/panos/`, via `tools/web/publish_panos.py`) |
-| Perspective hero stills | `render_heroes.py` | Design window images (`assets/design/`) |
+| Perspective hero stills | `render_heroes.py` | Front page and Design window images (`assets/design/`) |
+| 32 path-traced exterior orbit frames (3000×2000) | `render_exterior.py` | Photoreal Exterior view (`assets/exterior/`, via `tools/web/publish_exterior.py`) |
 | Lightmapped web model (GLB + walk collision) | `bake_web.py` | Dollhouse / 3D Walk / Floor plan / Exterior (`assets/model/`, drawn by `assets/js/house3d.js`) |
 | Walk eye adaptation (`adapt.json`) | `adapt_web.py` | Per-stop exposure / white balance for the 3D walk |
 
@@ -41,9 +42,12 @@ $BLENDER -b .cache/house.blend --python render_heroes.py -- --width 2400 --sampl
 $BLENDER -b .cache/house.blend --python bake_web.py -- --out ../../assets/model/house.glb
 # 6. per-stop eye adaptation for the 3D walk (a few seconds)
 $BLENDER -b .cache/house.blend --python adapt_web.py -- --out ../../assets/model/adapt.json
+# 7. exterior orbit frames (~30 s each), then publish them
+$BLENDER -b .cache/house.blend --python render_exterior.py -- --width 3000 --samples 512 --out .cache/exterior
+.cache/venv/bin/python ../web/publish_exterior.py .cache/exterior
 ```
 
-`final_run.sh [width] [samples]` runs steps 1, 2 and 4–6 into `.cache/` (about two hours at 4096 px /
+`final_run.sh [width] [samples]` runs steps 1, 2, 4–6 and the exterior frames of step 7 into `.cache/` (about two hours at 4096 px /
 768 spp on one RTX-class GPU); publish with the commands at the top of the script.
 
 Bump `HOUSE_VERSION` in `index.html` when you publish a new model, so browsers don't serve a cached copy.
@@ -118,10 +122,47 @@ In walk mode the page projects the path-traced panoramas themselves onto this mo
   1024² on desktops and 512² on touch and low-memory devices.
 * **Opt-out:** `?walk=model` shows the baked model alone. Hiding furniture also turns the
   projection off, because the panoramas contain the furniture.
+* **Exterior frames:** the same engine takes perspective frames (`setPanorama(..., frame)` with the
+  frame camera's projection × view matrix); see "Photoreal exterior" above.
 
 The projection needs the stops to match the render cameras exactly. `render_panos.py` places
 each equirectangular camera at the stop's `p` (eye height included), with yaw 0 = −z, so a
 re-render keeps them aligned.
+
+## Photoreal exterior (orbit frames)
+
+The Exterior view orbits a fixed target. `render_exterior.py` renders perspective frames from orbit
+positions the page can reach exactly:
+
+* **Rings:** 24 frames at drone height (~50 ft, every 15°) and 8 roof-overview frames (~95 ft, every 45°).
+* **Framing:** 90° horizontal, 3:2. That is wider than any screen, so a window of any shape is a crop
+  of the frame.
+* **Look:** one shared exposure and white balance, so neighbouring frames blend without a step.
+
+The page projects them onto the baked model, like the walk (below), with these differences:
+
+* **Settling:** the camera settles on the nearest frame when you let go; a short drag moves one frame
+  that way.
+* **Zoom:** zoom narrows the field of view from the frame position, so the view stays exact.
+* **Occluders:** every occluder counts outside, and the depth cubes reach 700 ft.
+* **Double-sided neighbourhood:** the neighbours' houses in the web model are partly inside out.
+  Cycles renders both sides, so the bake never showed it. The Exterior view therefore draws the
+  `landscape` class double-sided.
+
+`?exterior=model` shows the baked model alone, and so does hiding the garden.
+
+From the air the whole neighbourhood is in view. `bl/zones/exterior_far.py` fills it out:
+
+* **Streets:** parallel streets every 219 ft, laid out like the aerial photo of the street
+  (`assets/references/img-3202.webp`), cross streets, and street trees.
+* **Lots:** about 1,250 ranch lots with houses, driveways, fences, backyard trees and the odd pool.
+* **Horizon:** a tree belt to the horizon and the hills around the valley.
+
+It lives in the `ext_far` collection, excluded from the view layer. Only `render_exterior.py`
+switches it on, so the panoramas, hero stills and the web bake are unchanged.
+
+The neighbouring houses' roof colours follow the aerial photo (`NEIGHBOUR_ROOFS` in
+`exterior_context.py`): red-brown next door to the east, grey to the west, orange-tan behind.
 
 ## Review tools
 

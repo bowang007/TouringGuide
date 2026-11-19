@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# Full production run: build -> 27 panoramas -> hero stills -> baked web model.
+# Full production run: build -> 27 panoramas -> hero stills -> baked web model -> exterior orbit frames.
 #   BLENDER=/path/to/blender tools/render/final_run.sh [width=4096] [samples=768]
 # Outputs in tools/render/.cache/{house.blend,panos,heroes,web}. Publish afterwards with:
 #   .cache/venv/bin/python ../web/publish_panos.py .cache/panos
 #   .cache/venv/bin/python ../web/publish_design.py .cache/heroes
 #   cp .cache/web/house.glb .cache/web/collision.json .cache/web/adapt.json ../../assets/model/
+#   .cache/venv/bin/python ../web/publish_exterior.py .cache/exterior
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BLENDER="${BLENDER:-blender}"
 export BLENDER
 WIDTH="${1:-4096}"; SAMPLES="${2:-768}"
 C="$HERE/.cache"
-mkdir -p "$C/panos" "$C/heroes" "$C/web"
+mkdir -p "$C/panos" "$C/heroes" "$C/web" "$C/exterior"
 log() { echo "[final $(date +%H:%M:%S)] $*"; }
 
 log "build"
@@ -34,4 +35,7 @@ log "web bake"
 log "walk eye adaptation"
 "$BLENDER" -b "$C/house.blend" -noaudio --python "$HERE/adapt_web.py" -- --meta "$C/panos/render_meta.json" \
   --out "$C/web/adapt.json" 2>&1 | grep -E '^\[adapt\] wrote|Error|Traceback' || true
+log "exterior orbit frames"
+"$HERE/gpu.sh" -b "$C/house.blend" -noaudio --python "$HERE/render_exterior.py" -- --width 3000 --samples 512 \
+  --force --out "$C/exterior" 2>&1 | grep -E '\[exterior\]|Error|Traceback' || true
 log "done"
