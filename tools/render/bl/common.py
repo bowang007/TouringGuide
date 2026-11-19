@@ -35,8 +35,16 @@ def bl2ft(v):
     return (v.x / FT, v.z / FT, -v.y / FT)
 
 
+# The house is built on the concept plan (the frozen pre-PDF SCENE) and then carried onto the
+# architect's plan by bl/warp.py; everything after the build (renders, bake) uses DATA_DIR.
+CONCEPT_DIR = os.path.join(DATA_DIR, 'concept')
+
+
 def _load(name):
-    with open(os.path.join(DATA_DIR, name)) as f:
+    path = os.path.join(CONCEPT_DIR, name)
+    if not os.path.exists(path):
+        path = os.path.join(DATA_DIR, name)
+    with open(path) as f:
         return json.load(f)
 
 

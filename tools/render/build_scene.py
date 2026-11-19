@@ -57,6 +57,8 @@ def main():
             print(f'zone {z}: FAILED, skipped (use --strict to stop on errors)')
             continue
         print(f'zone {z}: {res} ({time.time() - tz:.1f}s)')
+    from bl import warp
+    print('warp:', warp.warp())               # concept plan -> architect's plan (sizes/sizes.pdf)
     lighting.setup_daylight(ctx, a.hdri)
     print('portals:', lighting.add_window_portals(ctx))
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
