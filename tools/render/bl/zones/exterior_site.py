@@ -404,8 +404,21 @@ def porch_and_walk(ctx):
     # the two 1'-5" stucco piers at the porch's front corners (SKA002), up to the eave soffit
     mb = MB()
     for (qx0, qx1, qz0, qz1) in L.PORCH_POSTS:
-        mb.box(qx0, qx1, top, 7.95, qz0, qz1)
+        mb.box(qx0, qx1, top, L.PORCH_SOFFIT, qz0, qz1)
     mb.obj(ctx, 'ext porch piers', 'stucco', SUB, bevel=0.02, segments=2)
+    # covered porch (SKA001 "(N) COVERED PORCH"): a slim flat canopy on the piers, charcoal edges and a
+    # standing-seam top like the house roof, warm wood soffit like the entry cladding
+    x0, x1, z0, z1 = L.PORCH_ROOF
+    ys, yt = L.PORCH_SOFFIT, L.PORCH_ROOF_TOP
+    mb = MB()
+    mb.box(x0, x1, ys, yt - 0.05, z0, z1)
+    mb.obj(ctx, 'ext porch canopy fascia', 'fascia_charcoal', SUB, bevel=0.01, segments=1)
+    mb = MB()
+    mb.box(x0 + 0.02, x1 - 0.02, yt - 0.05, yt, z0, z1 - 0.02)
+    mb.obj(ctx, 'ext porch canopy roof', 'roof_metal', SUB)
+    mb = MB()
+    mb.box(x0 + 0.18, x1 - 0.18, ys - 0.012, ys, z0 + 0.02, z1 - 0.18)
+    mb.obj(ctx, 'ext porch canopy soffit', 'wood_cladding', SUB)
     wx0, wx1 = L.WALKWAY
     tops = [-0.21, -0.40]
     z = pz1 + 0.12

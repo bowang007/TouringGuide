@@ -20,6 +20,9 @@ GARAGE_FRONT = 52.85                     # garage stucco face (wall 52.335..52.7
 BED3_FRONT = 53.96                       # bedroom 3 stucco face (wall 53.442..53.892 + skin); bay to ~56.0
 PORCH = (14.218, 21.218, 47.47, 54.80)   # covered porch, 7'-0" x 7'-4" (foyer wall face .. porch front)
 PORCH_POST = 1.417                       # 1'-5" square stucco piers at the porch's front corners
+# flat porch canopy: under the high entry window (sill 7.5 ft), over the front door (head 6.67 ft)
+PORCH_ROOF = (PORCH[0] - 1.62, PORCH[1] + 1.62, PORCH[2], PORCH[3] + 0.35)   # x0, x1, z0, z1 (outer edges)
+PORCH_SOFFIT, PORCH_ROOF_TOP = 6.95, 7.45
 PORCH_POSTS = [(PORCH[0] - PORCH_POST, PORCH[0], 53.5, PORCH[3]),           # against the bedroom-3 face
                (PORCH[1], PORCH[1] + PORCH_POST, GARAGE_FRONT - 0.2, PORCH[3])]  # against the garage face
 GARAGE_DOOR = (22.957, 37.816)           # 14'-10" vehicle door opening, 7 ft high

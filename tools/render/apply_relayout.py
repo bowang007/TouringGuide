@@ -7,8 +7,9 @@ Reads SCENE and MEASUREMENTS from index.html and the room regions from
 tools/render/data/scene_classification.json, maps every coordinate, and writes them back (index.html
 constants, then tools/render/data/ via extract_scene.py). Architecture (walls, floors, ceilings,
 openings, roof, facade) is mapped corner by corner, so rooms take their new sizes; movable things
-(furniture, decor, lights, landscape) are translated, keeping their size. Run once, on the old plan:
-it records the conversion in SCENE.layout_revision.architect_plan and refuses to run twice.
+(furniture, decor, lights, landscape) are translated, keeping their size. It always starts from the frozen
+concept data in tools/render/data/concept/, so it can be re-run after relayout.py changes; then run
+apply_revisions_web.py, extract_scene.py and tools/web/dimension_plan.py.
 """
 import argparse
 import json
@@ -164,11 +165,11 @@ def main():
     ap.add_argument('--no-cls', action='store_true', help='do not rewrite data/scene_classification.json')
     a = ap.parse_args()
     src = open(a.html, encoding='utf-8').read()
-    scene, s0, s1 = _grab(src, 'const SCENE=')
-    if scene.get('layout_revision', {}).get('architect_plan'):
-        raise SystemExit('already converted to the architect plan')
+    _, s0, s1 = _grab(src, 'const SCENE=')
+    # always start from the frozen concept-plan data, so the conversion can be re-run
+    scene = json.load(open(os.path.join(DATA, 'concept', 'scene.json')))
     cls_path = os.path.join(DATA, 'scene_classification.json')
-    cls = json.load(open(cls_path))
+    cls = json.load(open(os.path.join(DATA, 'concept', 'scene_classification.json')))
     if len(cls['objects']) != len(scene['objects']):
         raise SystemExit('classification does not match SCENE.objects')
     counts = {}
@@ -217,7 +218,8 @@ def main():
         'method': 'tools/render/relayout.py: old wall faces mapped to the plan\'s clear dimensions',
         'outer_width_ft': 39.87,
     }
-    meas, m0, m1 = _grab(src, 'const MEASUREMENTS=')
+    _, m0, m1 = _grab(src, 'const MEASUREMENTS=')
+    meas = json.load(open(os.path.join(DATA, 'concept', 'measurements.json')))
     remap_measurements(meas)
     for k, v in cls['meta']['rooms'].items():
         b = v.get('bounds_ft_x0x1z0z1')

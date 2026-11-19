@@ -76,12 +76,12 @@ INF = 1e9
 REGIONS = [
     (-INF, 12.26, -INF, 21.098, X_PRIMARY, Z_LEFT, 'primary suite'),   # incl. its east wall
     (-INF, 10.572, 21.098, 29.458, X_BATHS, Z_LEFT, 'primary bath'),
-    (-INF, 14.35, 37.45, 43.2, X_FRONT_LEFT, Z_LEFT, 'front bath + closets'),
-    (-INF, 14.35, 29.458, INF, X_FRONT_ROOMS, Z_LEFT, 'office + front bedroom'),   # incl. the porch wall
+    (-INF, 14.65, 37.45, 43.2, X_FRONT_LEFT, Z_LEFT, 'front bath + closets'),
+    (-INF, 14.65, 29.458, INF, X_FRONT_ROOMS, Z_LEFT, 'office + front bedroom'),   # incl. the porch wall + gable overhang
     (10.572, 16.182, 21.098, 29.458, X_BATHS, Z_MID, 'shared bath'),
     (12.26, 23.098, -INF, 15.322, X_REAR, Z_MID, 'bedroom 2'),
     (12.26, 20.690, 15.322, 29.458, X_HALL, Z_MID, 'hall'),
-    (14.35, 20.60, 29.458, INF, X_FRONT, Z_MID, 'foyer + porch'),
+    (14.65, 20.60, 29.458, INF, X_FRONT, Z_MID, 'foyer + porch'),
     (20.60, INF, 31.40, INF, X_GARAGE, Z_RIGHT, 'garage'),         # from the kitchen/garage wall; incl. its west wall
     (23.098, INF, -INF, 15.322, X_REAR, Z_RIGHT, 'living'),
     (-INF, INF, -INF, INF, X_HALL, Z_RIGHT, 'kitchen + dining'),
