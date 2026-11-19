@@ -52,6 +52,9 @@ Y_HI0, Y_HI1 = 2.06, 2.74
 COLL = 'kd_kitchen'
 
 
+
+STOOLS = True        # kitchen_dining turns them off when the dining table stands at the island
+
 def _mats():
     return {
         'black_glass': principled('black_glass', srgb('#060607'), 0.04, coat=0.0),
@@ -239,7 +242,8 @@ def build(ctx, g: Geo):
     # ===================================================================== island
     isl = g.sub('kd island')
     _island(g, M, isl, lights)
-    _stools(g, M)
+    if STOOLS:
+        _stools(g, M)
     _pendant(g, M, lights)
     notes.append('kitchen: tall bank (fridge+ovens), L base runs, uppers/hood/shelves, island, 3 stools, linear pendant')
     return notes

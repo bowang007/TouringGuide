@@ -121,13 +121,13 @@ def classify(ob, scene_objs, world_bb):
     core = {c.name for c in ob.users_collection}
     zone = None if idx is not None or core & {'openings', 'exterior_shell', 'shell'} else zone_of(ob)
     outside = idx is None and not core & {'openings', 'exterior_shell', 'shell'} and (
-        zone == 'exterior' or zone is None and (x1 < 0 or x0 > 40.9 or z1 < 0 or z0 > 54.3))
+        zone == 'exterior' or zone is None and (x1 < 0 or x0 > 39.7 or z1 < 0 or z0 > 54.0))   # architect-plan outline
     if outside:                                          # site, garden, fences, neighbours, garage door
         if VEG.search(name) or any(VEG.search(m) for m in mat_names(ob)):
             return None, 'vegetation'
         if re.search(r'garage.?door', name, re.I):
             return ('glass' if is_glass(ob) else 'wall'), region
-        if y0 > 7.0 and (x0 > -1 and x1 < 42 and z0 > -1 and z1 < 55):
+        if y0 > 7.0 and (x0 > -1 and x1 < 40.8 and z0 > -1 and z1 < 56.5):
             return 'exterior', region
         return 'landscape', region                       # (far glazing is baked opaque here)
     if is_glass(ob):
@@ -221,7 +221,7 @@ def decimate(ob, max_tris):
 
 TEXEL_SCALE = {'base': 1.4, 'wall': 1.0, 'furniture': 1.3, 'decor_high': 1.1, 'ceiling': 0.6,
                'exterior': 0.55, 'landscape': 0.45}
-INSIDE = (-0.05, 40.9, -0.05, 54.3)   # house footprint (ft) for attic-side culling
+INSIDE = (-0.05, 39.5, -0.05, 53.95)  # house footprint (ft, architect's plan) for attic-side culling
 
 
 def cull_hidden_faces(ob, cls):

@@ -52,6 +52,9 @@ CAMERAS = ('K0', 'D0', 'H2', 'L2', 'H3')
 # the run end and crowded the east wall).
 INCLUDE_DINING = False
 INCLUDE_CONSOLE = False
+# The architect's plan (sizes/sizes.pdf) puts a rectangular table in line with the island, running
+# toward the living room, and no stools at the island: kitchen_dining_dining.build_rect().
+DINING_RECT = True
 INCLUDE_OLIVE = not INCLUDE_DINING
 
 
@@ -129,7 +132,10 @@ def build(ctx):
     t0 = time.time()
     g = Geo(ctx)
     res = {}
+    kitchen.STOOLS = not DINING_RECT
     res['kitchen'] = kitchen.build(ctx, g)
+    if DINING_RECT:
+        res['dining'] = dining.build_rect(ctx, g)
     if INCLUDE_DINING:
         res['dining'] = dining.build(ctx, g)
     if INCLUDE_CONSOLE:

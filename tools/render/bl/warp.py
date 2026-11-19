@@ -15,6 +15,7 @@ function that converted the web tour's SCENE, so the render and the web data agr
 The exterior zone is built directly on the new site plan (bl/zones/exterior_layout.py) and is not
 warped.
 """
+import math
 import os
 import re
 import sys
@@ -87,6 +88,48 @@ def _bbox_ft(ob):
     return t.x / FT, t.x / FT, -t.y / FT, -t.y / FT
 
 
+# Pieces that sit in a wall's thickness on a region boundary but belong to the room on one side.
+REGION_BY_NAME = [(re.compile(r'entry vault knee wall', re.I), 'foyer + porch')]
+
+
+def _region_for(ob, x, z):
+    for rx, name in REGION_BY_NAME:
+        if rx.search(ob.name):
+            return next(r for r in R.REGIONS if r[6] == name)
+    return R.region((x.min() + x.max()) / 2, (z.min() + z.max()) / 2)
+
+
+def _warp_slab(ob):
+    """Flat slabs (floors, substrates, foundations, ceilings) that run across several rooms: each
+    vertex is mapped with the region of a point just inside the slab from it, so every edge follows
+    the room it borders."""
+    if ob.data.users > 1:
+        ob.data = ob.data.copy()
+    w, mw = _world_co(ob)
+    x = w[:, 0] / FT
+    z = -w[:, 1] / FT
+    cx, cz = (x.min() + x.max()) / 2, (z.min() + z.max()) / 2
+    nx = np.empty_like(x)
+    nz = np.empty_like(z)
+    for i in range(len(x)):
+        px = x[i] + math.copysign(min(0.6, abs(cx - x[i])), cx - x[i])
+        pz = z[i] + math.copysign(min(0.6, abs(cz - z[i])), cz - z[i])
+        nx[i], nz[i] = R.remap_xz(float(x[i]), float(z[i]), (px, pz))
+    w[:, 0] = nx * FT
+    w[:, 1] = -nz * FT
+    _set_world_co(ob, w, mw)
+
+
+def _is_slab(ob):
+    if ob.type != 'MESH' or not len(ob.data.vertices):
+        return False
+    w, _ = _world_co(ob)
+    dy = (w[:, 2].max() - w[:, 2].min()) / FT
+    sx = (w[:, 0].max() - w[:, 0].min()) / FT
+    sz = (w[:, 1].max() - w[:, 1].min()) / FT
+    return dy < 0.8 and max(sx, sz) > 4.0 and min(sx, sz) > 1.0
+
+
 def _warp_mesh(ob, per_vertex=False):
     if ob.data.users > 1:
         ob.data = ob.data.copy()
@@ -99,7 +142,7 @@ def _warp_mesh(ob, per_vertex=False):
         for i in range(len(x)):
             nx[i], nz[i] = R.remap_xz(float(x[i]), float(z[i]))
     else:
-        r = R.region((x.min() + x.max()) / 2, (z.min() + z.max()) / 2)
+        r = _region_for(ob, x, z)
         nx = np.array([r[4](float(v)) for v in x])
         nz = np.array([r[5](float(v)) for v in z])
     w[:, 0] = nx * FT
@@ -148,6 +191,10 @@ def warp():
             continue
         if _skip(ob) or not ob.users_collection:
             stats['skipped'] += 1
+            continue
+        if ob.type == 'MESH' and _arch(ob) and _is_slab(ob) and not re.search(r'roof|ridge|hip|valley|canopy', ob.name, re.I):
+            _warp_slab(ob)
+            stats['slab'] = stats.get('slab', 0) + 1
             continue
         if ob.type == 'MESH' and _arch(ob):
             roof = bool(re.search(r'roof|ridge|hip|valley|fascia|gable|eave|soffit|cap\b|flashing|stucco skin', ob.name, re.I))

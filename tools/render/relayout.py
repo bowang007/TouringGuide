@@ -82,7 +82,7 @@ REGIONS = [
     (12.26, 23.098, -INF, 15.322, X_REAR, Z_MID, 'bedroom 2'),
     (12.26, 20.690, 15.322, 29.458, X_HALL, Z_MID, 'hall'),
     (14.35, 20.60, 29.458, INF, X_FRONT, Z_MID, 'foyer + porch'),
-    (20.60, INF, 29.458, INF, X_GARAGE, Z_RIGHT, 'garage'),        # incl. its west wall (centre 20.69)
+    (20.60, INF, 31.40, INF, X_GARAGE, Z_RIGHT, 'garage'),         # from the kitchen/garage wall; incl. its west wall
     (23.098, INF, -INF, 15.322, X_REAR, Z_RIGHT, 'living'),
     (-INF, INF, -INF, INF, X_HALL, Z_RIGHT, 'kitchen + dining'),
 ]

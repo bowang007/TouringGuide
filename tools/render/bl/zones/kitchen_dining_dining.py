@@ -119,3 +119,78 @@ def _chandelier(g, cx, cz, col, lights):
     # light emitted by the rings: soft point lights at the ring centres + small area downlight
     g.point_light('chandelier glow 0', cx, 5.66, cz, 22.0, 3000, 1.0, lights)
     g.point_light('chandelier glow 1', cx, 5.96, cz, 14.0, 3000, 0.7, lights)
+
+
+# ------------------------------------------------------------------ rectangular set by the island
+# The architect's plan (sizes/sizes.pdf, SKA002) draws the dining table running north-south from the
+# island's north face toward the living room, chairs on its long sides and no stools at the island.
+# Concept coordinates (bl/warp.py carries them onto the new plan): island worktop x 28.4-34.4,
+# north face z 22.0; living rug ends at z 13.3, its south lounge chair at z 12.4.
+RECT_CX = 31.4                # on the island's centre line
+RECT_Z1 = 21.95               # south end, against the island's waterfall
+RECT_LEN = 6.5                # 78in, seats four (two each side) with room at the ends
+RECT_W = 3.17                 # 38in
+RECT_TOP = 2.5                # 30in
+RECT_CHAIR_OUT = 0.55         # chair centre beyond the table's long edge
+RECT_CHAIR_DZ = 1.5           # chair centres +- this from the table's mid-length
+
+
+def rect_footprint():
+    """(x0, x1, z0, z1) of the table plus chairs."""
+    z0 = RECT_Z1 - RECT_LEN
+    half = RECT_W / 2 + RECT_CHAIR_OUT + 0.93
+    return RECT_CX - half, RECT_CX + half, z0, RECT_Z1
+
+
+def build_rect(ctx, g: Geo):
+    """Walnut table (6'-6" x 3'-2") on black steel legs, four bouclé barrel chairs, a linear LED
+    pendant along the table, and a flat-weave rug, in line with the island."""
+    col = g.sub('kd dining')
+    lights = g.sub('kd_lights')
+    cx, z1 = RECT_CX, RECT_Z1
+    z0 = z1 - RECT_LEN
+    x0, x1 = cx - RECT_W / 2, cx + RECT_W / 2
+    cz = (z0 + z1) / 2
+    # rug under the set, stopping short of the island
+    g.box('kd dining rug', cx - 3.3, cx + 3.3, 0.001, RUG_T, z0 - 1.5, z1 - 0.05, 'rug_wool_grey', 0.008, coll=col)
+    # 1.25in walnut top with a softened edge
+    g.box('kd dining table top', x0, x1, RECT_TOP - 0.104, RECT_TOP, z0, z1, 'walnut_slab', 0.02, coll=col)
+    # black steel legs: slim square posts set in from the corners, joined by a low stretcher
+    for lx in (x0 + 0.42, x1 - 0.42):
+        for lz in (z0 + 0.55, z1 - 0.55):
+            g.box('kd dining table leg', lx - 0.09, lx + 0.09, RUG_T, RECT_TOP - 0.104, lz - 0.09, lz + 0.09,
+                  'black_metal', 0.008, coll=col)
+        g.box('kd dining table stretcher', lx - 0.04, lx + 0.04, 0.55, 0.62, z0 + 0.55, z1 - 0.55, 'black_metal', 0.004, coll=col)
+    g.box('kd dining table apron', x0 + 0.42 - 0.05, x1 - 0.42 + 0.05, RECT_TOP - 0.30, RECT_TOP - 0.104,
+          cz - 0.04, cz + 0.04, 'black_metal', 0.004, coll=col)
+    # chairs: two along each long side, facing the table
+    chair = _chair(g, col)
+    seats = [(x0 - RECT_CHAIR_OUT, cz - RECT_CHAIR_DZ), (x0 - RECT_CHAIR_OUT, cz + RECT_CHAIR_DZ),
+             (x1 + RECT_CHAIR_OUT, cz - RECT_CHAIR_DZ), (x1 + RECT_CHAIR_OUT, cz + RECT_CHAIR_DZ)]
+    for i, (x, z) in enumerate(seats):
+        rot = math.atan2(cx - x, 0.0)              # face the table across its long edge
+        for p in chair:
+            q = p if i == 0 else p.copy()
+            if i:
+                g._link(q, col)
+            q.name = f'{p.name.split(" #")[0]} #{i}'
+            q.location = (x * 0.3048, -z * 0.3048, RUG_T * 0.3048)
+            q.rotation_euler = (0, 0, rot)
+    # stoneware bowl on the table
+    bowl = [(0.0, 0.0), (0.22, 0.0), (0.34, 0.06), (0.42, 0.18), (0.44, 0.24), (0.41, 0.24), (0.38, 0.18),
+            (0.30, 0.09), (0.0, 0.07)]
+    g.lathe('kd dining bowl', bowl, cx, cz + 0.4, 'ceramic_white', 64, col, y_base=RECT_TOP)
+    # linear LED pendant along the table (the island's pendant runs across, this one along)
+    from ..lighting import emitter
+    yb = RECT_TOP + 2.55
+    pz0, pz1 = cz - 2.3, cz + 2.3
+    g.box('kd dining pendant bar', cx - 0.065, cx + 0.065, yb, yb + 0.12, pz0, pz1, 'black_metal', 0.012, coll=col)
+    dif = emitter('kd_dining_pendant_diffuser', 2900, 40.0)
+    g.box('kd dining pendant diffuser', cx - 0.045, cx + 0.045, yb - 0.006, yb + 0.004, pz0 + 0.04, pz1 - 0.04, dif, coll=col)
+    for zz in (pz0 + 0.6, pz1 - 0.6):
+        g.cyl('kd dining pendant cable', cx, yb + 0.12, CEIL - 0.05, zz, 0.006, 'black_metal', 8, col)
+        g.cyl('kd dining pendant canopy', cx, CEIL - 0.055, CEIL - 0.001, zz, 0.19, 'black_metal', 40, col, bevel=0.01)
+    g.area_light('kd dining pendant light', cx, yb - 0.03, cz, 0.09, pz1 - pz0 - 0.1, 34.0, 2900, lights)
+    g.area_light('kd dining pendant uplight', cx, yb + 0.14, cz, 0.06, pz1 - pz0 - 0.3, 5.0, 2900, lights, facing='up')
+    return {'table': 1, 'chairs': len(seats), 'pendant': 1, 'rug': 1}
+

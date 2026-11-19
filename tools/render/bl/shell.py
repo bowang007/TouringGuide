@@ -179,6 +179,10 @@ def _skylight_roof_cut(ctx, roof_objs):
     return hit
 
 
+# The concept's kitchen skylight straddled the garage-gable ridge; bl/revisions.py removes it and
+# builds the architect-plan skylight on the east roof plane instead, so the old roof hole is not cut.
+KITCHEN_SKYLIGHT_CUT = False
+
 FRONT_DOOR_PIVOT = (18.74, 46.84)        # hinge axis of the inward-opening front door (SCENE x, z)
 FRONT_DOOR_EXTRA_DEG = 25.0              # swing it from 90 to 115 deg, toward the hall wall, clear of E0's view
 
@@ -222,6 +226,7 @@ def build(ctx):
     bpy.context.view_layer.update()
     for ob in ctx._wall_targets:
         _wall_faces(ob, regions)
-    counts['roof_cut'] = _skylight_roof_cut(ctx, roof_objs)
+    if KITCHEN_SKYLIGHT_CUT:
+        counts['roof_cut'] = _skylight_roof_cut(ctx, roof_objs)
     ctx.stats['shell'] = counts
     return counts

@@ -59,6 +59,8 @@ def main():
         print(f'zone {z}: {res} ({time.time() - tz:.1f}s)')
     from bl import warp
     print('warp:', warp.warp())               # concept plan -> architect's plan (sizes/sizes.pdf)
+    from bl import revisions
+    print('revisions:', revisions.apply(ctx))   # owner's design changes on the new plan
     lighting.setup_daylight(ctx, a.hdri)
     print('portals:', lighting.add_window_portals(ctx))
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
