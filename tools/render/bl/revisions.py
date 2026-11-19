@@ -191,6 +191,9 @@ def _slab(name, corners_lo, corners_hi, mat, coll_name, ctx):
     me.update()
     bm = bmesh.new()
     bm.from_mesh(me)
+    # weld the six faces into one closed shell first: on loose faces recalc can't tell outside from
+    # inside, and inward normals bake black for the walk model
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(me)
     bm.free()
@@ -279,16 +282,35 @@ def _inside_xz(ob, x0, x1, z0, z1):
 def bedroom4_flat(ctx):
     n = remove(find(r'Bedroom 4 vaulted ceiling|Bedroom 4 gable infill'))
     box(ctx, 'Bedroom 4 flat ceiling', 0.0, 14.04, 8.0, 8.12, 28.54, 36.90, 'paint_ceiling', COLL_SHELL)
-    moved = 0
-    for ob in bpy.data.objects:                      # fixtures hung in the vault come down to 8 ft
-        if not ob.name.startswith('B4'):
-            continue
-        b = bbox(ob)
-        if b[3] > 7.95 and 0 < b[0] < 14.0 and 28.5 < b[4] < 37.0:
-            dy = 7.95 - b[3]
-            ob.location.z += dy * FT
-            moved += 1
-    return {'removed': n, 'lowered': moved}
+    # The vault's cans sat on the slope above the new ceiling: drop them (the pendant lights the room).
+    n += remove([ob for ob in find(r'^slope can') if (lambda b: b[1] < 14.6 and 28.5 < b[4] and b[5] < 37.0)(bbox(ob))])
+    # The pendant hung from the vault on a long stem. Rehang it as one piece under the flat ceiling:
+    # canopy at the ceiling, globe (with its collar) 0.35 ft below, the stem shortened to span the gap.
+    parts = {k: find(rf'^B4 pendant {k}$') for k in ('canopy', 'collar', 'globe', 'stem')}
+    lamp = find(r'^B4 globe lamp')
+    lowered = 0
+    if all(parts.values()):
+        canopy, collar, globe, stem = (parts[k][0] for k in ('canopy', 'collar', 'globe', 'stem'))
+        ceil = 7.995
+        canopy.location.z += (ceil - bbox(canopy)[3]) * FT   # its top was at the old vault
+        g = bbox(globe)
+        g_top = ceil - 0.35
+        dg = g_top - g[3]
+        for ob in (globe, collar):                   # the collar is the globe's fitter; they move together
+            ob.location.z += dg * FT
+        bpy.context.view_layer.update()
+        s = bbox(stem)
+        top, bot = bbox(canopy)[2] + 0.02, max(g_top, bbox(collar)[3]) - 0.02
+        stem.scale.z *= max(0.05, (top - bot) / max(1e-3, s[3] - s[2]))
+        bpy.context.view_layer.update()
+        s = bbox(stem)
+        stem.location.z += (bot - s[2]) * FT
+        gc = (g_top + (g_top - (g[3] - g[2]))) / 2
+        for ob in lamp:                              # the bulb sits in the middle of the globe
+            ob.location.z = gc * FT
+        lowered = 4 + len(lamp)
+    bpy.context.view_layer.update()
+    return {'removed': n, 'rehung': lowered}
 
 
 def _sills(x0, x1):

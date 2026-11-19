@@ -1,9 +1,9 @@
 {
- "version": "e59c3e054187",
+ "version": "274cebb7ca7d",
  "target": [
-  20.42,
+  19.71,
   4.6,
-  28.0
+  27.8
  ],
  "hfov": 90.0,
  "aspect": 1.5,

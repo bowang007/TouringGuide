@@ -1,5 +1,5 @@
 {
- "version": "b2d59b044882",
+ "version": "08a67158c801",
  "convention": "Equirectangular 2:1, top row = up (+y). Centre column = world yaw `offset` (yaw 0 = SCENE -z, plan north); u increases clockwise seen from above. Paths are relative to this file.",
  "nodes": {
   "E0": {

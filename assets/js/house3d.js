@@ -275,7 +275,11 @@ void main() {
 		c += uTgW.y * s.a * s.rgb;
 		a += uTgW.y * s.a;
 	}
-	gl_FragColor = vec4( mix( uTgSky, c / max( a, 1e-5 ), clamp( a, 0.0, 1.0 ) ), 1.0 );
+	// Steeply up the backdrop is only seen through a skylight, where the panoramas show the ceiling
+	// around their own skylight instead: use the sky there.
+	float up = smoothstep( 0.45, 0.7, d.y );
+	vec3 col = mix( uTgSky, c / max( a, 1e-5 ), clamp( a, 0.0, 1.0 ) );
+	gl_FragColor = vec4( mix( col, uTgSky * 1.08, up ), 1.0 );
 	#include <colorspace_fragment>
 }`,
     side: THREE.BackSide, depthTest: false, depthWrite: false,
