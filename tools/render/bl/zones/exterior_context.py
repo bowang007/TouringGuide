@@ -778,13 +778,17 @@ def build(ctx):
     from . import exterior_far as far             # (imports this module: keep the import local)
     n = 0
     lots = []
+    # The houses were laid out on the original site; the architect's site plan moved the street side south
+    # (F = L.FRONT_DZ, +10.06 ft) and the rear lot line north (R = L.REAR_DZ, -10.83 ft). Houses on our street
+    # keep their front setback (+F), the rear neighbours keep their yards' depth behind our fence (+R).
+    F, R = L.FRONT_DZ, L.REAR_DZ
     # side neighbours (front faces on our street, garages toward the street on the front wings)
-    house(ctx, 'west', -52.0, -12.5, 6.0, 44.0, 1, wings=[(-33.0, -12.5, 30.0, 50.0)], garage=False, porch=False,
-          yard=False, roof=NEIGHBOUR_ROOFS['west'])
-    house(ctx, 'east', 53.0, 93.0, 4.0, 45.0, 2, wings=[(53.0, 75.0, 28.0, 50.0)], garage=False, porch=False,
-          yard=False, roof=NEIGHBOUR_ROOFS['east'])
+    house(ctx, 'west', -52.0, -12.5, 6.0 + F, 44.0 + F, 1, wings=[(-33.0, -12.5, 30.0 + F, 50.0 + F)], garage=False,
+          porch=False, yard=False, roof=NEIGHBOUR_ROOFS['west'])
+    house(ctx, 'east', 53.0, 93.0, 4.0 + F, 45.0 + F, 2, wings=[(53.0, 75.0, 28.0 + F, 50.0 + F)], garage=False,
+          porch=False, yard=False, roof=NEIGHBOUR_ROOFS['east'])
     n += 2
-    for nm, gxx, cz, seed in (('west', (-31.0, -15.0), 50.0, 1), ('east', (55.0, 71.0), 50.0, 2)):
+    for nm, gxx, cz, seed in (('west', (-31.0, -15.0), 50.0 + F, 1), ('east', (55.0, 71.0), 50.0 + F, 2)):
         M = _house_mats(ctx, seed, rng(seed), NEIGHBOUR_ROOFS.get(nm))
         g, tr, dk = MB(), MB(), MB()
         _garage_door(g, tr, dk, gxx[0], gxx[1], cz, 1, GRADE + 0.05, 7.5, seed % 3)
@@ -796,18 +800,21 @@ def build(ctx):
         d.box(gxx[0] + 0.5, gxx[1] - 0.5, GRADE - 0.3, -0.52, L.PARK[0], L.CURB[1])
         d.obj(ctx, f'ext nb {nm} driveway', drive_mat(ctx), SUB)
     # further along our street
-    house(ctx, 'west2', -112.0, -70.0, 4.0, 46.0, 3); n += 1
-    house(ctx, 'east2', 110.0, 152.0, 5.0, 46.0, 4); n += 1
+    house(ctx, 'west2', -112.0, -70.0, 4.0 + F, 46.0 + F, 3); n += 1
+    house(ctx, 'east2', 110.0, 152.0, 5.0 + F, 46.0 + F, 4); n += 1
     # rear neighbours (their backs face our fence)
-    house(ctx, 'rear1', -14.0, 24.0, -82.0, -40.0, 5, front='N', gwing=0.0, roof=NEIGHBOUR_ROOFS['rear1']); n += 1
-    house(ctx, 'rear2', 34.0, 74.0, -80.0, -42.0, 6, front='N', gwing=0.0); n += 1
-    house(ctx, 'rear3', -70.0, -30.0, -82.0, -42.0, 7, front='N', gwing=0.0); n += 1
-    house(ctx, 'rear4', 88.0, 128.0, -80.0, -40.0, 8, front='N', gwing=0.0); n += 1
-    # across the street (fronts face north toward us): the row the front door and the B3 bay look at
+    house(ctx, 'rear1', -14.0, 24.0, -82.0 + R, -40.0 + R, 5, front='N', gwing=0.0, roof=NEIGHBOUR_ROOFS['rear1'])
+    house(ctx, 'rear2', 34.0, 74.0, -80.0 + R, -42.0 + R, 6, front='N', gwing=0.0)
+    house(ctx, 'rear3', -70.0, -30.0, -82.0 + R, -42.0 + R, 7, front='N', gwing=0.0)
+    house(ctx, 'rear4', 88.0, 128.0, -80.0 + R, -40.0 + R, 8, front='N', gwing=0.0)
+    n += 4
+    # across the street (fronts face north toward us): the row the front door and the B3 bay look at;
+    # fronts 20.5 ft (+3 on every other house) behind the far sidewalk, backs 63.5 ft
     across = [(-128.0, 10, 9.0), (-70.0, 11, 0.0), (-14.0, 12, 0.0), (42.0, 13, 8.0), (98.0, 14, 0.0),
               (154.0, 15, 9.0)]
+    zw = L.FAR_WALK[1]
     for i, (x, seed, gwing) in enumerate(across):
-        lots.append(house(ctx, f'south{i}', x, x + 40.0, 143.0 + (i % 2) * 3, 186.0, seed, front='N',
+        lots.append(house(ctx, f'south{i}', x, x + 40.0, zw + 20.5 + (i % 2) * 3, zw + 63.5, seed, front='N',
                           gwing=gwing))
         n += 1
     # side-yard fences + gates between the across-street houses (hide the open ground behind)
@@ -844,9 +851,9 @@ def build(ctx):
         bins(ctx, bx, b4['gcz'] - 1.4, -1)
     # more houses down the street both ways (fill the street perspective)
     for i, x in enumerate((-172.0, 166.0, 222.0, -228.0)):
-        house(ctx, f'street{i}', x, x + 42.0, 4.0 + (i % 2) * 2, 46.0, 20 + i); n += 1
+        house(ctx, f'street{i}', x, x + 42.0, 4.0 + (i % 2) * 2 + F, 46.0 + F, 20 + i); n += 1
     for i, x in enumerate((-186.0, 210.0, 266.0, -242.0)):
-        house(ctx, f'south_far{i}', x, x + 40.0, 145.0, 186.0, 30 + i, front='N', yard=False); n += 1
+        house(ctx, f'south_far{i}', x, x + 40.0, zw + 22.5, zw + 63.5, 30 + i, front='N', yard=False); n += 1
     # neighbourhood trees: backyard shade trees above the fences, street trees, a few big background trees
     r = rng(77)
     leaf = dict(amount=0.3)
@@ -854,26 +861,27 @@ def build(ctx):
     # drone-height exterior renders see that, so they now stand in backyards and in the rear park strip,
     # clear of the rear neighbours' driveways)
     pk = far.STREET_Z0 - far.PITCH_Z + 21.25           # rear street's park strip on our side
-    spots = [(-24, -24, 24), (14, -30, 26), (52, -27, 22), (86, -28, 25), (-48, -20, 21), (-30, -4, 20),
-             (70, -4, 22), (-90, -4, 24), (125, -10, 26), (-8, pk, 34), (28, pk, 36), (80, pk, 32),
-             (-80, pk, 33), (160, 60, 30), (-150, 60, 30)]
+    # (rear neighbours' backyards move with R, the gaps between our street's front yards with F)
+    spots = [(-24, -24 + R, 24), (14, -30 + R, 26), (52, -27 + R, 22), (86, -28 + R, 25), (-48, -20 + R, 21),
+             (-30, -4, 20), (70, -4, 22), (-90, -4, 24), (125, -10, 26), (-8, pk, 34), (28, pk, 36), (80, pk, 32),
+             (-80, pk, 33), (160, 60 + F, 30), (-150, 60 + F, 30)]
     for (x, z, h) in spots:
         plant(ctx, 'tree_small_02', 'main', x, z, height_ft=h * r.uniform(0.9, 1.1), leaf=leaf, sub=SUB)
     # backyard trees behind the across-street row, so the skyline over their roofs reads leafy
     for lot in lots:
         for k in range(2):
             x = r.uniform(lot['x0'] + 4, lot['x1'] - 4)
-            plant(ctx, 'tree_small_02', 'main', x, r.uniform(192.0, 206.0), height_ft=r.uniform(26, 36), leaf=leaf,
+            plant(ctx, 'tree_small_02', 'main', x, zw + r.uniform(69.5, 83.5), height_ft=r.uniform(26, 36), leaf=leaf,
                   sub=SUB)
     # background canopy: mature trees behind the far rows so horizons read as a leafy suburb
     for k in range(46):
         side = k % 3
         if side == 0:
-            x, z = r.uniform(-320, 360), r.uniform(205, 300)
+            x, z = r.uniform(-320, 360), r.uniform(205, 300) + F
         elif side == 1:
-            x, z = r.uniform(-320, 360), r.uniform(-260, -95)
+            x, z = r.uniform(-320, 360), r.uniform(-260, -95) + R
         else:
-            x, z = r.choice((r.uniform(-330, -140), r.uniform(150, 380))), r.uniform(-60, 140)
+            x, z = r.choice((r.uniform(-330, -140), r.uniform(150, 380))), r.uniform(-60 + R, 140 + F)
         h = r.uniform(26, 44)
         if not far.in_backyards(z):                    # keep them out of streets and houses: nearest spine
             sp = far.spine_z(z)
@@ -881,7 +889,7 @@ def build(ctx):
             if abs(sp - far.spine_z(0.0)) < 1.0 and -60.0 < x < 140.0:
                 z = far.spine_z(-300.0)                 # never into our own or the side neighbours' gardens
         plant(ctx, 'tree_small_02', 'main', x, z, height_ft=h, leaf=leaf, sub=SUB)
-    for (x, z, h) in [(-34, -18, 13), (63, -24, 14), (100, -22, 13), (-60, -24, 12)]:
+    for (x, z, h) in [(-34, -18 + R, 13), (63, -24 + R, 14), (100, -22 + R, 13), (-60, -24 + R, 12)]:
         plant(ctx, 'island_tree_02', 'main', x, z, height_ft=h, leaf=leaf, sub=SUB)
     # street trees along both park strips
     pz = (L.PARK[0] + L.PARK[1]) / 2

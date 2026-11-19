@@ -183,8 +183,9 @@ The page projects them onto the baked model, like the walk (below), with these d
 
 From the air the whole neighbourhood is in view. `bl/zones/exterior_far.py` fills it out:
 
-* **Streets:** parallel streets every 219 ft, laid out like the aerial photo of the street
-  (`assets/references/img-3202.webp`), cross streets, and street trees.
+* **Streets:** parallel streets every ~240 ft, laid out like the aerial photo of the street
+  (`assets/references/img-3202.webp`; its 219 ft spacing is stretched to the site plan's 100 ft deep lot),
+  cross streets, and street trees.
 * **Lots:** about 1,250 ranch lots with houses, driveways, fences, backyard trees and the odd pool.
 * **Horizon:** a tree belt to the horizon and the hills around the valley.
 

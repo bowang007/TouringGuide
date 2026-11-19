@@ -12,10 +12,13 @@ from .. import lighting
 
 SUB = 'garage_door'
 
-# D15 opening: x 23.402..38.259, y 0..7.0 in the garage front wall (z 50.83..51.28)
-OX0, OX1, OH = 23.402, 38.259, 7.0
-WALL_IN = 50.83                          # interior face of the garage front wall
-DZ0, DZ1 = 50.595, 50.775                # door leaf thickness (sits just inside the jambs)
+# vehicle door opening: x 22.957..37.816 (14'-10", centred in the garage), y 0..7.0 in the garage front wall
+# (z 52.335..52.785)
+OX0, OX1 = L.GARAGE_DOOR
+OH = 7.0
+XC = (OX0 + OX1) / 2                     # door centre line (torsion shaft, opener rail)
+WALL_IN = 52.335                         # interior face of the garage front wall
+DZ0, DZ1 = WALL_IN - 0.235, WALL_IN - 0.055   # door leaf thickness (sits just inside the jambs)
 DX0, DX1 = OX0 - 0.15, OX1 + 0.15        # 1-3/4" overlap on the jambs
 DY0, DY1 = 0.03, OH + 0.10
 NSEC, NLITE = 4, 5
@@ -132,9 +135,9 @@ def door(ctx):
     # bottom astragal seal + top weather seal
     seal.box(DX0 + 0.02, DX1 - 0.02, 0.0, DY0 + 0.02, DZ0 + 0.02, DZ1 - 0.02)
     # inside lift handle on the bottom section
-    hw.box(30.6, 31.06, 1.0, 1.06, DZ0 - 0.11, DZ0 - 0.05)
-    hw.box(30.6, 30.66, 1.0, 1.06, DZ0 - 0.05, DZ0)
-    hw.box(31.0, 31.06, 1.0, 1.06, DZ0 - 0.05, DZ0)
+    hw.box(XC - 0.23, XC + 0.23, 1.0, 1.06, DZ0 - 0.11, DZ0 - 0.05)
+    hw.box(XC - 0.23, XC - 0.17, 1.0, 1.06, DZ0 - 0.05, DZ0)
+    hw.box(XC + 0.17, XC + 0.23, 1.0, 1.06, DZ0 - 0.05, DZ0)
     frame.obj(ctx, 'ext garage door frame', alu, SUB, bevel=0.012, segments=2)
     glass.obj(ctx, 'ext garage door glass', garage_glass(), SUB)
     hw.obj(ctx, 'ext garage door hinges', 'black_metal', SUB, bevel=0.008, segments=1)
@@ -179,7 +182,7 @@ def hardware(ctx):
     for xc in (DX0 - 0.13, DX1 + 0.13):
         _arc_track(trk, xc, zt, y_vt, y_h, z_back)
         # jamb angle (flag) bolted to the wall face
-        side = -1 if xc < 30 else 1
+        side = -1 if xc < XC else 1
         trk.box(xc + side * 0.1, xc + side * 0.16, 0.55, y_vt, zt, WALL_IN - 0.002)
         # rear hanger strap to the ceiling + diagonal brace
         trk.box(xc - 0.03, xc + 0.03, y_h + 0.06, 7.995, z_back + 0.2, z_back + 0.35)
@@ -194,23 +197,23 @@ def hardware(ctx):
     # torsion spring assembly above the door (shaft, drums, springs, bearing plates)
     ys, zs = 7.62, WALL_IN - 0.33
     parts = []
-    shaft = ctx.cylinder('ext garage torsion shaft', (30.83, ys, zs), 0.045, DX1 - DX0 + 0.7, 'black_metal',
+    shaft = ctx.cylinder('ext garage torsion shaft', (XC, ys, zs), 0.045, DX1 - DX0 + 0.7, 'black_metal',
                          'ext_garage_door', verts=16, axis='X')
     parts.append(shaft)
     for xd in (DX0 - 0.13, DX1 + 0.13):
         parts.append(ctx.cylinder('ext garage cable drum', (xd, ys, zs), 0.2, 0.28, 'black_metal', 'ext_garage_door',
                                   verts=24, axis='X'))
-    for xs in (30.83 - 1.45, 30.83 + 1.45):
+    for xs in (XC - 1.45, XC + 1.45):
         parts.append(ctx.cylinder('ext garage torsion spring', (xs, ys, zs), 0.115, 2.6,
                                   flat_mat('Z_exterior_spring', '#2c2c2c', 0.35, 0.8), 'ext_garage_door', verts=20,
                                   axis='X'))
     bp = MB()
-    for xb in (DX0 - 0.13, 30.83, DX1 + 0.13):
+    for xb in (DX0 - 0.13, XC, DX1 + 0.13):
         bp.box(xb - 0.06, xb + 0.06, 7.45, ys + 0.25, zs - 0.08, WALL_IN - 0.002)
     bp.obj(ctx, 'ext garage spring plates', 'black_metal', SUB)
     # opener: T-rail under the torsion tube, header bracket on the wall above the door, motor head
     op = MB()
-    xr = 30.83
+    xr = XC
     zr0, zr1 = WALL_IN - 0.002, DZ0 - 11.0
     op.box(xr - 0.06, xr + 0.06, 7.28, 7.40, zr1, zr0 - 0.05)
     op.box(xr - 0.15, xr + 0.15, 7.18, 7.48, zr0 - 0.05, zr0)              # header bracket
@@ -311,15 +314,18 @@ def mailbox(ctx, x, z):
 
 
 def build(ctx):
-    mailbox(ctx, 14.75, 65.4)
+    mailbox(ctx, L.WALKWAY[0] - 0.35, L.SIDEWALK[0] - 1.1)
     door(ctx)
     hardware(ctx)
     gf = L.GARAGE_FRONT
-    sconce(ctx, 'garage W', (20.69 + OX0) / 2, 6.35, gf, 0.0, 1.0)
-    sconce(ctx, 'garage E', (OX1 + 41.10) / 2, 6.35, gf, 0.0, 1.0)
-    sconce(ctx, 'entry', 15.06, 5.95, 47.15, 0.0, 1.0)
-    # rear: a pair flanking the living-room garden door D14 (x 25.28..27.86), as on the 1077 patio
-    sconce(ctx, 'rear W', 24.68, 6.3, L.HZ0, 0.0, -1.0)
-    sconce(ctx, 'rear E', 28.32, 6.3, L.HZ0, 0.0, -1.0)
-    house_number(ctx, '1095', (20.69 + OX0) / 2, 5.25, gf)
+    # the porch's east pier stands on the garage face west of the door: its west sconce goes on the pier's
+    # side facing the driveway, the house number on the pier's street face
+    px0, px1, pz0, pz1 = L.PORCH_POSTS[1]
+    sconce(ctx, 'garage W', px1, 6.35, (max(pz0, gf) + pz1) / 2, 1.0, 0.0)
+    sconce(ctx, 'garage E', (OX1 + L.HX1) / 2, 6.35, gf, 0.0, 1.0)
+    sconce(ctx, 'entry', 15.17, 5.95, 47.58, 0.0, 1.0)        # foyer wall between porch wall and door
+    # rear: a pair flanking the living-room garden door (x 24.45..26.93), as on the 1077 patio
+    sconce(ctx, 'rear W', 23.85, 6.3, L.HZ0, 0.0, -1.0)
+    sconce(ctx, 'rear E', 27.39, 6.3, L.HZ0, 0.0, -1.0)
+    house_number(ctx, '1095', (px0 + px1) / 2, 5.25, pz1)
     return {'door_sections': NSEC, 'lites': NSEC * NLITE}

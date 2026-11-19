@@ -31,7 +31,7 @@ sys.argv = [sys.argv[0]] + (['--'] + sys.argv[sys.argv.index('--') + 1:] if '--'
 import render_panos as rp  # noqa: E402  (re-uses setup_cycles / set_look / probe)
 
 # Orbit target (SCENE feet): the middle of the house footprint at about window-head height.
-TARGET = (20.42, 4.6, 28.0)
+TARGET = (19.71, 4.6, 27.8)
 # Rings: (prefix, elevation phi (rad), radius (ft), frames, first theta (rad)). theta 0 looks at the street
 # front (from +z), +pi/2 from the east (garage side), pi from the garden, -pi/2 from the west.
 RINGS = (
