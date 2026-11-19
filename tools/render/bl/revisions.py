@@ -10,12 +10,19 @@ the built objects by name, so it survives re-runs of the build:
    one over the hall section, one in the vaulted entry.
 4. Primary bedroom: the large rear window becomes a two-panel sliding door to the garden.
 5. Bedroom 2 (next to the primary): its rear window runs floor to ceiling.
-6. Primary bathroom: the west window runs floor to ceiling (obscured glass), between the vanity and
-   the shower; the linen cabinet that stood in front of it is gone.
+6. Primary bathroom: the west window runs floor to ceiling (clear glass, a transom at 6 ft), between
+   the vanity and the shower; the linen cabinet that stood in front of it is gone.
 7. Kitchen skylight: moved off the garage-gable ridge (where the old 4 x 3 ft unit straddled two roof
    planes) to the continuous east-facing roof plane over the sink / dishwasher run, 3'-6" x 4'-0"
    as on the architect's plan.
 (8, the dining table in line with the island, is built by the kitchen zone.)
+
+Second round (2026-11-19):
+9. Primary bathroom: a 2'-0" x 2'-6" skylight over the shower.
+10. The office / bedroom-3 foyer-side wall lines up with the shared bath's east wall: that is the
+    conversion itself (relayout.FOYER_WALL); here only the office ceiling and the foyer skylights follow.
+
+Repairs to the conversion run first: ceiling_seam and floor_seam close seams the slab warp opened.
 """
 import math
 import re
@@ -29,7 +36,8 @@ from .common import FT, ft2bl
 
 COLL_SHELL, COLL_OPEN = 'shell', 'openings'
 
-from .revision_spec import BATH_WIN_Z, FOYER_SKY, KITCHEN_SKY, SLIDER_HEAD, SLIDER_X  # noqa: F401
+from .revision_spec import (BATH_WIN_Z, FOYER_SKY, KITCHEN_SKY, OFFICE_CEILING, PRIMARY_BATH_SKY,  # noqa: F401
+                            SLIDER_HEAD, SLIDER_X)
 
 
 # ------------------------------------------------------------------------------------- helpers
@@ -278,12 +286,72 @@ def _inside_xz(ob, x0, x1, z0, z1):
     return x0 <= cx <= x1 and z0 <= cz <= z1
 
 
+# ------------------------------------------------------------------------------------ repairs
+def ceiling_seam(ctx):
+    """The original house's two flat ceiling panels (west of the addition | central) met on one line
+    of the concept plan. warp.py maps each slab corner with the room it borders, and the far ends of
+    that line border different rooms (Bedroom 2 / the shared bath at one, the hall at the other), so
+    the seam opened into a wedge up to 1.9 ft wide over Bedroom 2 and the shared bath, open to the
+    attic. Put the west panel's east edge on the central panel's west edge. Runs before any skylight
+    cut, while both panels are still plain 8-vertex prisms."""
+    west = find(r'^\d* ?Original house ceiling west of addition')
+    cen = find(r'^\d* ?Original house ceiling central panel')
+    if len(west) != 1 or len(cen) != 1:
+        return f'panels not found ({len(west)}, {len(cen)})'
+    wc, _ = _world(cen[0])
+    cx, cz = wc[:, 0] / FT, -wc[:, 1] / FT
+    side = sorted({(round(a, 4), round(b, 4)) for a, b in zip(cx, cz) if a < cx.min() + 2.5}, key=lambda p: p[1])
+    (xa, za), (xb, zb) = side[0], side[-1]          # the central panel's west edge, rear .. front
+    ww, mw = _world(west[0])
+    wx, wz = ww[:, 0] / FT, -ww[:, 1] / FT
+    east = wx > wx.max() - 0.6
+    old = sorted({(round(a, 2), round(b, 2)) for a, b in zip(wx[east], wz[east])})
+    nx = xa + (xb - xa) * (wz[east] - za) / (zb - za)
+    ww[east, 0] = nx * FT
+    _set_world(west[0], ww, mw)
+    new = sorted({(round(a, 2), round(b, 2)) for a, b in zip(nx, wz[east])})
+    return {'edge': [(xa, za), (xb, zb)], 'west panel east edge': [old, new]}
+
+
+def _set_z(ob, pick, value):
+    """Move the vertices whose SCENE z satisfies pick(z) to z = value."""
+    w, mw = _world(ob)
+    m = pick(-w[:, 1] / FT)
+    w[m, 1] = -value * FT
+    _set_world(ob, w, mw)
+    return int(m.sum())
+
+
+def floor_seam(ctx):
+    """The same corner mapping at the foyer's rear end: the floor (and foundation) slab under the
+    bedroom-4 / foyer row ended on a line from z 43.18 (bedroom 3 side) to 44.17 (foyer side), while
+    bedroom 3's slab starts at 43.18 and the foyer front slab at 44.17. That left a wedge up to 0.28 ft
+    wide across the foyer floor, open to the plinth, and an overlap under bedroom 3. Square both
+    seams on bedroom 3's rear edge (the foyer front slab is extended back to it)."""
+    out = {}
+    for fam, front in (('Oak floor substrate', 'Hall in enclosed porch substrate'),
+                       ('Foundation', 'Front hall infill foundation')):
+        pieces = [(o, bbox(o)) for o in find(rf'^\d* ?{fam}$')]
+        row = [o for o, b in pieces if b[1] > 21.0 and b[4] < 31.5 and 43.5 < b[5] < 45.0]
+        west = [b for o, b in pieces if b[1] < 15.6 and 42.8 < b[4] < 43.6]
+        hall = find(rf'^\d* ?{front}$')
+        if len(row) != 1 or len(west) != 1 or len(hall) != 1:
+            out[fam] = f'not found ({len(row)}, {len(west)}, {len(hall)})'
+            continue
+        z = west[0][4]
+        out[fam] = {'seam z': round(z, 3),
+                    'row front verts': _set_z(row[0], lambda v: v > 42.8, z),
+                    'foyer slab rear verts': _set_z(hall[0], lambda v: v < 45.0, z)}
+    return out
+
+
 # ---------------------------------------------------------------------------------- changes
 def bedroom4_flat(ctx):
     n = remove(find(r'Bedroom 4 vaulted ceiling|Bedroom 4 gable infill'))
-    box(ctx, 'Bedroom 4 flat ceiling', 0.0, 14.04, 8.0, 8.12, 28.54, 36.90, 'paint_ceiling', COLL_SHELL)
+    cx0, cx1, cz0, cz1 = OFFICE_CEILING
+    box(ctx, 'Bedroom 4 flat ceiling', cx0, cx1, 8.0, 8.12, cz0, cz1, 'paint_ceiling', COLL_SHELL)
     # The vault's cans sat on the slope above the new ceiling: drop them (the pendant lights the room).
-    n += remove([ob for ob in find(r'^slope can') if (lambda b: b[1] < 14.6 and 28.5 < b[4] and b[5] < 37.0)(bbox(ob))])
+    n += remove([ob for ob in find(r'^slope can') if (lambda b: b[1] < OFFICE_CEILING[1] + 0.3 and 28.5 < b[4] and b[5] < 37.0)(bbox(ob))])
     # The pendant hung from the vault on a long stem. Rehang it as one piece under the flat ceiling:
     # canopy at the ceiling, globe (with its collar) 0.35 ft below, the stem shortened to span the gap.
     parts = {k: find(rf'^B4 pendant {k}$') for k in ('canopy', 'collar', 'globe', 'stem')}
@@ -405,9 +473,10 @@ def bath_window(ctx):
     box(ctx, 'Primary bath tall window jamb N', xc - fd / 2, xc + fd / 2, 0.0, 8.0, z0, z0 + fw, 'black_aluminum', c)
     box(ctx, 'Primary bath tall window jamb S', xc - fd / 2, xc + fd / 2, 0.0, 8.0, z1 - fw, z1, 'black_aluminum', c)
     box(ctx, 'Primary bath tall window transom', xc - fd / 2, xc + fd / 2, 6.0, 6.1, z0, z1, 'black_aluminum', c)
-    g = box(ctx, 'Primary bath tall window obscured glass', xc - 0.015, xc + 0.015, 0.08, 6.0, z0 + fw, z1 - fw, 'glass_frosted', c)
+    # clear glass: the side yard outside is fenced (6'-2") and screened by an evergreen (exterior_plants)
+    g = box(ctx, 'Primary bath tall window lower glass', xc - 0.015, xc + 0.015, 0.08, 6.0, z0 + fw, z1 - fw, 'glass_clear', c)
     g.visible_shadow = True
-    g2 = box(ctx, 'Primary bath tall window upper glass', xc - 0.015, xc + 0.015, 6.1, 8.0 - fw, z0 + fw, z1 - fw, 'glass_frosted', c)
+    g2 = box(ctx, 'Primary bath tall window upper glass', xc - 0.015, xc + 0.015, 6.1, 8.0 - fw, z0 + fw, z1 - fw, 'glass_clear', c)
     g2.visible_shadow = True
     return {'removed': gone}
 
@@ -425,6 +494,10 @@ def foyer_skylights(ctx):
     for i, r in enumerate(FOYER_SKY):
         out[f'foyer {i}'] = skylight(ctx, f'Foyer skylight {i}', *r, r'ceiling|vault')
     return out
+
+
+def primary_bath_skylight(ctx):
+    return skylight(ctx, 'Primary bath skylight', *PRIMARY_BATH_SKY, r'ceiling')
 
 
 def entry_vault_closure(ctx):
@@ -452,8 +525,8 @@ def entry_vault_closure(ctx):
 def apply(ctx):
     bpy.context.view_layer.update()
     res = {}
-    for f in (bedroom4_flat, bay_to_floor, primary_slider, bedroom2_full_height, bath_window, kitchen_skylight,
-              foyer_skylights, entry_vault_closure):
+    for f in (ceiling_seam, floor_seam, bedroom4_flat, bay_to_floor, primary_slider, bedroom2_full_height, bath_window, kitchen_skylight,
+              foyer_skylights, primary_bath_skylight, entry_vault_closure):
         try:
             res[f.__name__] = f(ctx)
         except Exception as e:                       # report, keep building

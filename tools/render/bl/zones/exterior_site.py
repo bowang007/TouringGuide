@@ -119,7 +119,8 @@ def plinth(ctx):
     # 0.01 ft inside the stucco faces (rear/sides, garage, porch walls + foyer wall, bedroom 3)
     e = 0.01
     outline = [(L.HX0 + e, L.HZ0 + e), (L.HX1 - e, L.HZ0 + e), (L.HX1 - e, L.GARAGE_FRONT - e),
-               (21.22, L.GARAGE_FRONT - e), (21.22, 47.57), (14.31, 47.57), (14.31, L.BED3_FRONT - e),
+               (L.PORCH[1] + 0.002, L.GARAGE_FRONT - e), (L.PORCH[1] + 0.002, L.PORCH[2] + 0.1 - e),
+               (L.PORCH[0] + 0.1 - e, L.PORCH[2] + 0.1 - e), (L.PORCH[0] + 0.1 - e, L.BED3_FRONT - e),
                (L.HX0 + e, L.BED3_FRONT - e)]
     mb.box_pts(outline, y0, y1)
     # the canted bay's outline from its stucco plinth. The shell is still on the concept plan while the
@@ -408,17 +409,20 @@ def porch_and_walk(ctx):
     mb.obj(ctx, 'ext porch piers', 'stucco', SUB, bevel=0.02, segments=2)
     # covered porch (SKA001 "(N) COVERED PORCH"): a slim flat canopy on the piers, charcoal edges and a
     # standing-seam top like the house roof, warm wood soffit like the entry cladding
+    # The side overhangs only start in front of the bedroom-3 and garage faces (between the walls the
+    # canopy runs back to the foyer wall), so they never pass through those walls.
     x0, x1, z0, z1 = L.PORCH_ROOF
     ys, yt = L.PORCH_SOFFIT, L.PORCH_ROOF_TOP
-    mb = MB()
-    mb.box(x0, x1, ys, yt - 0.05, z0, z1)
+    parts = [(L.PORCH[0], L.PORCH[1], z0), (x0, L.PORCH[0], L.BED3_FRONT), (L.PORCH[1], x1, L.GARAGE_FRONT)]
+    mb, mt, ms = MB(), MB(), MB()
+    for (a0, a1, b0) in parts:
+        mb.box(a0, a1, ys, yt - 0.05, b0, z1)
+        mt.box(a0 + (0.02 if a0 == x0 else 0.0), a1 - (0.02 if a1 == x1 else 0.0), yt - 0.05, yt, b0, z1 - 0.02)
+        ms.box(a0 + (0.18 if a0 == x0 else 0.0), a1 - (0.18 if a1 == x1 else 0.0), ys - 0.012, ys,
+               b0 + (0.02 if b0 == z0 else 0.0), z1 - 0.18)
     mb.obj(ctx, 'ext porch canopy fascia', 'fascia_charcoal', SUB, bevel=0.01, segments=1)
-    mb = MB()
-    mb.box(x0 + 0.02, x1 - 0.02, yt - 0.05, yt, z0, z1 - 0.02)
-    mb.obj(ctx, 'ext porch canopy roof', 'roof_metal', SUB)
-    mb = MB()
-    mb.box(x0 + 0.18, x1 - 0.18, ys - 0.012, ys, z0 + 0.02, z1 - 0.18)
-    mb.obj(ctx, 'ext porch canopy soffit', 'wood_cladding', SUB)
+    mt.obj(ctx, 'ext porch canopy roof', 'roof_metal', SUB)
+    ms.obj(ctx, 'ext porch canopy soffit', 'wood_cladding', SUB)
     wx0, wx1 = L.WALKWAY
     tops = [-0.21, -0.40]
     z = pz1 + 0.12

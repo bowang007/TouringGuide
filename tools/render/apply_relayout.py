@@ -98,7 +98,7 @@ def remap_object(o, role):
             at = None if per_vertex else (o['p'][0], o['p'][2])
             new = []
             for w in world:
-                nx, nz = R.remap_xz(w[0], w[2], at)
+                nx, nz = R.remap_xz(w[0], w[2], at, roof=per_vertex)
                 new.append([nx, w[1], nz])
             world = new
         _mesh_set(o, world)
@@ -106,10 +106,10 @@ def remap_object(o, role):
     box = _aabb(o)
     movable = role in MOVABLE or o['group'] in MOVABLE or o['group'] in ('lighting', 'mirror')
     if box is None or movable:
-        dx, dz = R.shift_xz(o['p'][0], o['p'][2])
+        dx, dz = R.shift_box(*box) if box else R.shift_xz(o['p'][0], o['p'][2])
         o['p'] = [o['p'][0] + dx, o['p'][1], o['p'][2] + dz]
         return 'moved'
-    x0, x1, z0, z1 = R.remap_box(*box)
+    x0, x1, z0, z1 = R.remap_box(*box, name=o.get('name'))
     k = _rot_quarter(o.get('rot', 0) or 0)
     sx, sz = x1 - x0, z1 - z0
     if k % 2:

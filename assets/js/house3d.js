@@ -44,6 +44,10 @@ const GLASS_OPACITY = 0.16;
 // f(x) = k x / (1 + (k - 1) x) on linear display colour, shared by every non-glass material.
 // k = 1 is the bake as-is; tools/render/adapt_web.py measures each tour stop's k so the walk matches
 // that stop's panorama exposure and white balance. It only affects the bake, never the panoramas.
+// Outdoor groups ('exterior', 'landscape') were baked at the exterior exposure (bake_web.py
+// --exposure-ext), so they get their own gain ko: seen through a window from inside, where the walk
+// falls back to the bake, they then read as bright and pale as in the panorama instead of dark and
+// saturated.
 const ADAPT_TAU = 0.35;                  // s, easing time constant
 const ADAPT_SNAP = 0.5;                  // s without frames -> jump straight to the target
 
@@ -160,7 +164,7 @@ const PANO_FRAGMENT = `
 		diffuseColor.rgb = mix( diffuseColor.rgb, tgSum / max( tgSeenW, 1e-5 ), tgStrength );
 	}`;
 
-function prepareMaterial(mat, cap, adapt, proj) {
+function prepareMaterial(mat, cap, adapt, proj, outdoor = false) {
   // cap: back faces of clipped walls show a solid section colour instead of the wall's inside.
   if (cap) mat.side = THREE.DoubleSide;
   mat.onBeforeCompile = (shader) => {
@@ -169,7 +173,15 @@ function prepareMaterial(mat, cap, adapt, proj) {
     shader.vertexShader = 'varying vec3 vTgWorld;\n' + shader.vertexShader.replace('#include <project_vertex>',
       '#include <project_vertex>\n\tvTgWorld = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;');
     let head = '#include <packing>\nuniform vec3 uAdapt;\n' + PANO_SAMPLE_GLSL + PANO_DEPTH_GLSL;
-    let body = '#include <map_fragment>\n\tdiffuseColor.rgb = uAdapt * diffuseColor.rgb / ( 1.0 + ( uAdapt - 1.0 ) * diffuseColor.rgb );' + PANO_FRAGMENT;
+    let body = '#include <map_fragment>\n\tdiffuseColor.rgb = uAdapt * diffuseColor.rgb / ( 1.0 + ( uAdapt - 1.0 ) * diffuseColor.rgb );';
+    if (outdoor) {
+      // pushed several stops brighter (seen from inside), highlights go to white the way the panoramas'
+      // filmic view does, instead of staying saturated
+      body += '\n\tfloat tgL = dot( diffuseColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );'
+        + '\n\tfloat tgPush = clamp( ( max( max( uAdapt.r, uAdapt.g ), uAdapt.b ) - 1.5 ) / 5.0, 0.0, 1.0 );'
+        + '\n\tdiffuseColor.rgb = mix( diffuseColor.rgb, vec3( tgL ), tgPush * smoothstep( 0.25, 0.95, tgL ) );';
+    }
+    body += PANO_FRAGMENT;
     if (cap) {
       shader.uniforms.capColor = { value: CAP };
       head += 'uniform vec3 capColor;\n';
@@ -178,7 +190,7 @@ function prepareMaterial(mat, cap, adapt, proj) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\n' + head)
       .replace('#include <map_fragment>', body);
   };
-  mat.customProgramCacheKey = () => (cap ? 'tgcap2' : 'tgpano2');
+  mat.customProgramCacheKey = () => (cap ? 'tgcap2' : outdoor ? 'tgout2' : 'tgpano2');
   return mat;
 }
 
@@ -207,6 +219,8 @@ export function createEngine(canvas, opts = {}) {
   let state = { mode: 'exterior', cut: true, furniture: true, garden: true };
   const adapt = { value: new THREE.Vector3(1, 1, 1) };
   const adaptTarget = new THREE.Vector3(1, 1, 1);
+  const adaptOut = { value: new THREE.Vector3(1, 1, 1) };
+  const adaptOutTarget = new THREE.Vector3(1, 1, 1);
   let adaptClock = 0;
   let parts = 0;
 
@@ -316,7 +330,8 @@ void main() {
         const map = old && old.map ? old.map : null;
         if (map) { map.anisotropy = Math.min(8, maxAniso); map.colorSpace = THREE.SRGBColorSpace; }
         mat = new THREE.MeshBasicMaterial({ map, color: map ? 0xffffff : (old && old.color ? old.color : 0xdddddd) });
-        prepareMaterial(mat, cls === 'wall', adapt, proj);
+        const outdoor = cls === 'exterior' || cls === 'landscape';
+        prepareMaterial(mat, cls === 'wall', outdoor ? adaptOut : adapt, proj, outdoor);
         if (cls === 'wall') wallMats.push(mat);
       }
       if (cls === 'glass') wallMats.push(mat);
@@ -384,18 +399,28 @@ void main() {
     }
   }
 
-  // k = [r, g, b] gains (see prepareMaterial), or null for the bake as-is. Eased in render().
-  function setAdaptation(k) {
+  // k = [r, g, b] gains (see prepareMaterial), or null for the bake as-is; ko the same for the outdoor
+  // groups (defaults to k). Eased in render().
+  function setAdaptation(k, ko) {
     if (k && k.length === 3) adaptTarget.set(k[0], k[1], k[2]);
     else adaptTarget.set(1, 1, 1);
+    if (ko && ko.length === 3) adaptOutTarget.set(ko[0], ko[1], ko[2]);
+    else adaptOutTarget.copy(adaptTarget);
+    // out of walk mode the outdoor groups are the view itself: back to the bake at once, not eased
+    if (!(k && k.length === 3)) adaptOut.value.set(1, 1, 1);
   }
 
   function stepAdaptation() {
     const now = performance.now();
     const dt = (now - adaptClock) / 1000;
     adaptClock = now;
-    if (dt > ADAPT_SNAP) adapt.value.copy(adaptTarget);
-    else adapt.value.lerp(adaptTarget, 1 - Math.exp(-dt / ADAPT_TAU));
+    if (dt > ADAPT_SNAP) {
+      adapt.value.copy(adaptTarget);
+      adaptOut.value.copy(adaptOutTarget);
+    } else {
+      adapt.value.lerp(adaptTarget, 1 - Math.exp(-dt / ADAPT_TAU));
+      adaptOut.value.lerp(adaptOutTarget, 1 - Math.exp(-dt / ADAPT_TAU));
+    }
   }
 
   // ---- Panorama projection -------------------------------------------------------------------
@@ -651,6 +676,7 @@ void main() {
     return {
       triangles: Math.round(tris), meshes, parts, calls: renderer.info.render.calls, classes: Object.keys(byClass),
       adaptation: adapt.value.toArray().map((v) => Math.round(v * 1000) / 1000),
+      adaptationOutdoor: adaptOut.value.toArray().map((v) => Math.round(v * 1000) / 1000),
       projection: Object.assign({ cached: [...panos.keys()] }, projInfo),
     };
   }

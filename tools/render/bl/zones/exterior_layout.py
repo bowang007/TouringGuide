@@ -18,7 +18,10 @@ FENCE_TOP = 5.6                          # top of the 6'-2" slat fence (grade is
 HX0, HX1, HZ0 = -0.225, 39.645, -0.225  # west, east, rear wall outer faces
 GARAGE_FRONT = 52.85                     # garage stucco face (wall 52.335..52.785 + skin)
 BED3_FRONT = 53.96                       # bedroom 3 stucco face (wall 53.442..53.892 + skin); bay to ~56.0
-PORCH = (14.218, 21.218, 47.47, 54.80)   # covered porch, 7'-0" x 7'-4" (foyer wall face .. porch front)
+# covered porch (foyer-side wall face .. garage wall face, foyer front wall face .. porch front): the
+# plan's 7'-4" deep; 5'-9 1/4" wide since the office / bedroom-3 wall lines up with the shared bath's
+# east wall (owner's change, relayout.FOYER_WALL)
+PORCH = (15.445, 21.218, 47.582, 54.915)
 PORCH_POST = 1.417                       # 1'-5" square stucco piers at the porch's front corners
 # flat porch canopy: under the high entry window (sill 7.5 ft), over the front door (head 6.67 ft)
 PORCH_ROOF = (PORCH[0] - 1.62, PORCH[1] + 1.62, PORCH[2], PORCH[3] + 0.35)   # x0, x1, z0, z1 (outer edges)
@@ -32,7 +35,9 @@ FRONT_DZ = 76.559 - 66.5                 # street side moved south: old sidewalk
 REAR_DZ = FN - (-12.4)                   # rear lot line moved north: old rear fence z -12.4
 
 # ---- back garden ------------------------------------------------------------------------
-DECK = (21.85, HX1, -6.5, HZ0)           # ipe platform outside the living room = its (N) LANDING
+# ipe landing outside the living room = the plan's (N) LANDING (~x 25'-5" .. 38'-3", 3'-0" deep), carried
+# west to cover the garden door (x 24.45 .. 26.93)
+DECK = (23.75, 38.25, -3.225, HZ0)
 DECK_TOP = -0.05                         # just below the oak floor / door threshold
 STEP_W = 1.0                             # wrap-around step tread width
 STEP_TOP = -0.33
@@ -78,7 +83,7 @@ FRONT_FENCE_Z = SIDEWALK[0] - 0.45       # low front fence line (west front lawn
 
 DRIVE = (PORCH_POSTS[1][1] + 0.12, GARAGE_DOOR[1] + 1.64, 52.56, SIDEWALK[0])   # garage slab edge .. sidewalk
 DRIVE_TOP0, DRIVE_TOP1 = 0.0, WALK_TOP    # at the garage / at the sidewalk
-WALKWAY = (15.47, 19.97)                 # paver x extents, centred on the porch
+WALKWAY = ((PORCH[0] + PORCH[1]) / 2 - 2.25, (PORCH[0] + PORCH[1]) / 2 + 2.25)   # pavers, centred on the porch
 CORRIDOR = (PORCH[0], DRIVE[0], PORCH[3], SIDEWALK[0])     # dark pebble field around the walk
 W_FRONT_BED = (FW + 0.12, -0.26, GATE_WZ + 0.12, BED3_FRONT)
 FRONT_BED = (FW + 0.12, PORCH[0], BED3_FRONT, 59.0)        # (runs under the west pier)

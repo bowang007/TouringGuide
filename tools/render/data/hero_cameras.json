@@ -4,7 +4,7 @@
   "K0": {"eye": [23.415, 4.8, 17.403], "aim": [34.76, 3.8, 26.203], "fov_deg": 80, "aspect": 1.5, "exposure": "auto"},
   "living": {"eye": [23.799, 4.8, 15.426], "aim": [36.684, 4.0, 5.935], "fov_deg": 80, "aspect": 1.5, "exposure": "auto"},
   "primary": {"eye": [10.461, 4.8, 12.03], "aim": [1.911, 3.5, 4.967], "fov_deg": 80, "aspect": 1.5, "exposure": "auto"},
-  "A0": {"eye": [8.424, 5.0, 24.977], "aim": [0.949, 4.2, 23.186], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},
+  "A0": {"eye": [7.7, 5.2, 23.7], "aim": [2.6, 5.6, 26.4], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},
   "B3": {"eye": [8.978, 4.8, 42.967], "aim": [3.492, 3.9, 52.582], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},
   "B4": {"eye": [9.976, 4.8, 36.24], "aim": [0.998, 4.0, 30.113], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},
   "A1": {"eye": [13.845, 5.0, 21.663], "aim": [12.131, 3.6, 27.755], "fov_deg": 90, "aspect": 1.5, "exposure": "auto"}

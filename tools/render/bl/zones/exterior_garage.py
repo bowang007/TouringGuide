@@ -323,7 +323,9 @@ def build(ctx):
     px0, px1, pz0, pz1 = L.PORCH_POSTS[1]
     sconce(ctx, 'garage W', px1, 6.35, (max(pz0, gf) + pz1) / 2, 1.0, 0.0)
     sconce(ctx, 'garage E', (OX1 + L.HX1) / 2, 6.35, gf, 0.0, 1.0)
-    sconce(ctx, 'entry', 15.17, 5.95, 47.58, 0.0, 1.0)        # foyer wall between porch wall and door
+    # on the foyer front wall between the porch-side wall's stucco and the 3'-0" door (centred, relayout)
+    door_w = (L.PORCH[0] + L.PORCH[1]) / 2 - 1.5
+    sconce(ctx, 'entry', (L.PORCH[0] + 0.09 + door_w) / 2, 5.95, L.PORCH[2] + 0.112, 0.0, 1.0)
     # rear: a pair flanking the living-room garden door (x 24.45..26.93), as on the 1077 patio
     sconce(ctx, 'rear W', 23.85, 6.3, L.HZ0, 0.0, -1.0)
     sconce(ctx, 'rear E', 27.39, 6.3, L.HZ0, 0.0, -1.0)

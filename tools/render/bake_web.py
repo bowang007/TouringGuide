@@ -38,7 +38,8 @@ from mathutils import Vector  # noqa: E402
 
 from bl.common import CACHE_DIR, DATA_DIR, FT, bl2ft  # noqa: E402
 
-VEG = re.compile(r'tree|shrub|grass|bush|fern|weed|plant_bed|hedge|leaf|leaves|foliage|flower|ivy|lawn_blade|canopy', re.I)
+VEG = re.compile(r'tree|shrub|grass|bush|fern|weed|plant_bed|hedge|leaf|leaves|foliage|flower|ivy|lawn_blade|'
+                 r'(?<!porch )canopy', re.I)                # (not the covered porch's canopy)
 INDOOR_PLANT = re.compile(r'potted|pachira|calathea|anthurium|ficus|fiddle|olive|planter|pampas|vase', re.I)
 WALLISH_GROUPS = {'walls', 'trim', 'windows', 'glass', 'garageDoor', 'door'}
 
@@ -201,6 +202,22 @@ def evaluated_copy(ob, depsgraph, coll):
     cp = bpy.data.objects.new('bk_' + ob.name[:50], me)
     coll.objects.link(cp)
     return cp
+
+
+def lawn_green(cp):
+    """The rendered lawn is instanced grass blades over an olive thatch surface. The blades are not
+    baked (VEG), so the walk model would show the thatch: bake the lawn surfaces in the blades' green."""
+    mats = cp.data.materials
+    for i, m in enumerate(mats):
+        if m and m.name.startswith('Z_exterior_lawn_soil'):
+            g = bpy.data.materials.get('WEB_lawn_green')
+            if g is None:
+                g = bpy.data.materials.new('WEB_lawn_green')
+                g.use_nodes = True
+                bsdf = g.node_tree.nodes.get('Principled BSDF')
+                bsdf.inputs['Base Color'].default_value = (0.085, 0.165, 0.028, 1.0)   # ~#52722e, blade mid tone
+                bsdf.inputs['Roughness'].default_value = 0.9
+            mats[i] = g
 
 
 def tri_count(me):
@@ -564,6 +581,7 @@ def main():
             if not cp.data.polygons:
                 bpy.data.objects.remove(cp)
                 continue
+            lawn_green(cp)
             if legacy_group(ob) is None:
                 tris += decimate(cp, a.max_tris)
             else:

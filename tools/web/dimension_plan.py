@@ -52,7 +52,7 @@ TAG_FILL, TAG_LINE = '#fffef8', '#97aca1'
 # Spaces the schedule does not measure, labelled at their tour stop: (node, title, subtitle, place),
 # place = (dx, dz) feet from the stop, or 'span' to centre the label between the walls around the stop.
 EXTRA_LABELS = [('L0', 'LIVING ROOM', 'Open plan', (0, 0)), ('K0', 'KITCHEN + DINING', 'Open plan', (0, -3)),
-                ('G0', 'GARAGE', 'Existing size to confirm', 'span')]
+                ('G0', 'GARAGE', '17′7⅜″ × 20′11″', 'span')]   # relayout X_GARAGE / Z_RIGHT (the plan's 17'-7" x 20'-11")
 SOURCE_LINE = "Architect's plan · sizes/sizes.pdf, sheet SKA002 (Nov 13 2026) · clear interior sizes"
 
 

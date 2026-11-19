@@ -59,14 +59,33 @@ the same rooms in the same arrangement as the earlier concept model, but differe
 
 * **`relayout.py`:** maps every concept-plan coordinate onto the plan's clear dimensions, region
   by region. Its breakpoints are the wall faces.
-* **`apply_relayout.py`:** converted the web tour's `SCENE` and `MEASUREMENTS`, together with
-  `data/`. It is a one-off and refuses to run twice.
+  * Owner's change (second round): the foyer-side wall of the office and the front bedroom lines up
+    with the shared bath's east wall (`FOYER_WALL`). Both rooms and the closets between them are
+    1'-2 3/4" wider; the foyer and porch are 5'-9 1/4" wide, and the foyer is the plan's 18'-6" long.
+    The 3'-0" front door keeps its width and stays centred.
+  * Rigid things keep an edge on a wall they touch (`shift_box`), so they don't sink into a wall
+    where a room narrows.
+  * Roof vertices on the entry gable's front band use the foyer's map in the bedroom and garage
+    columns, and the bedroom-wing ridge keeps one line over the primary bath and the office
+    (`remap_xz(..., roof=True)`), so the roof planes meet without folding.
+  * `REGION_BY_NAME` pins pieces whose centre falls on the wrong side of a region edge.
+* **`apply_relayout.py`:** converts the web tour's `SCENE` and `MEASUREMENTS`, together with
+  `data/`. It always starts from the frozen concept data, so it can be re-run. The full sequence:
+  `python3 tools/render/apply_relayout.py && python3 tools/render/apply_revisions_web.py &&
+  python3 tools/render/extract_scene.py && python3 tools/web/dimension_plan.py`.
 * **Blender build:** it still reads the concept data (`data/concept/`), because the room modules
   are written against it. After the zones are built, `bl/warp.py` carries the house onto the new
   plan with the same map:
   * architecture and fitted pieces are reshaped;
-  * loose furniture moves in clusters and keeps its size;
-  * flat slabs follow the rooms on each side.
+  * loose furniture moves in clusters and keeps its size (a cluster stays within one room; the
+    build prints any cluster that would run into a wall as `overflow`);
+  * flat slabs follow the rooms on each side. Each corner takes the map of the room it borders,
+    so two slabs that met on one concept line can part where that line crosses into a room with a
+    different map. `bl/revisions.py` closes the two known cases first (`ceiling_seam`: the wedge in
+    the ceiling over Bedroom 2, the bedroom hall and the shared bath; `floor_seam`: the strip
+    across the foyer floor). After a change to `relayout.py`, look up and down through the shell
+    for holes: ray-cast a grid from 7 ft up and from 1 ft down, against the `shell`, `openings`
+    and `exterior_shell` collections only.
 
   The exterior zone is built directly on the new site plan and is not warped.
 * **`bl/revisions.py`:** applies the owner's changes on the new plan. The positions live in
@@ -76,8 +95,10 @@ the same rooms in the same arrangement as the earlier concept model, but differe
   * Foyer: two skylights.
   * Primary bedroom: sliding door to the garden.
   * Bedroom 2: floor-to-ceiling window.
-  * Primary bath: floor-to-ceiling obscured window.
+  * Primary bath: floor-to-ceiling clear window (an evergreen screen in the fenced side yard).
   * Kitchen: skylight on the east roof plane.
+  * Primary bath: skylight over the shower (second round).
+  * Garage: the north cabinet run is fitted into the plan's narrower garage (`relayout.X_GARAGE_RUN`).
 
   The dining table in line with the island is built by the kitchen zone.
 * **`tools/web/dimension_plan.py`:** redraws the Dimensions sheet from `SCENE` and `MEASUREMENTS`.
@@ -132,7 +153,12 @@ The model is grouped by visibility class and plan region, one GLB node per group
   `k·x / (1 + (k−1)·x)` that maps the bake's look to that stop's panorama look. In walk mode the page
   eases towards the nearest visible stop's `k`, like a camera's auto exposure, so dim bedrooms and
   baths match their panoramas.
-* **Not baked:** vegetation, which is skipped.
+  * Outdoor groups (roof, facades, site) are baked at the exterior exposure, so each stop also gets
+    `ko`, which maps the exterior look to the stop's look. Seen through a window from inside, where
+    the walk falls back to the bake, the garden then reads as bright and pale as in the panorama;
+    `house3d.js` also lets those highlights go to white.
+* **Not baked:** vegetation, which is skipped. Lawn surfaces are baked in the grass blades' green
+  (`lawn_green`), not the olive thatch under the blades.
 
 ## Photoreal 3D walk (page side)
 

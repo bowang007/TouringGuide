@@ -10,7 +10,8 @@ function that converted the web tour's SCENE, so the render and the web data agr
     region, so shared edges stay closed);
   - loose things (furniture, lamps, decor, appliances, fixtures, art, lights, instanced plants) are
     moved without changing shape. Pieces that touch each other (a nightstand, its lamp and books; a
-    bed and its headboard) form one cluster and move by one shared offset, so assemblies stay intact.
+    bed and its headboard) form one cluster and move by one shared offset, so assemblies stay intact;
+    a cluster against a wall stays against it (relayout.shift_box).
 
 The exterior zone is built directly on the new site plan (bl/zones/exterior_layout.py) and is not
 warped.
@@ -88,15 +89,13 @@ def _bbox_ft(ob):
     return t.x / FT, t.x / FT, -t.y / FT, -t.y / FT
 
 
-# Pieces that sit in a wall's thickness on a region boundary but belong to the room on one side.
-REGION_BY_NAME = [(re.compile(r'entry vault knee wall', re.I), 'foyer + porch')]
+# Built-ins reshaped with the room even though their names read as loose (the garage cabinet wall is
+# fitted between the garage walls, relayout.X_GARAGE_RUN; the floor's saw joints span the slab).
+FORCE_FITTED = re.compile(r'^gar (tall|base|wall|worktop|undercab|toolcase)|^gar saw joint', re.I)
 
 
 def _region_for(ob, x, z):
-    for rx, name in REGION_BY_NAME:
-        if rx.search(ob.name):
-            return next(r for r in R.REGIONS if r[6] == name)
-    return R.region((x.min() + x.max()) / 2, (z.min() + z.max()) / 2)
+    return R.pinned_region(ob.name) or R.region((x.min() + x.max()) / 2, (z.min() + z.max()) / 2)
 
 
 def _warp_slab(ob):
@@ -140,7 +139,7 @@ def _warp_mesh(ob, per_vertex=False):
         nx = np.empty_like(x)
         nz = np.empty_like(z)
         for i in range(len(x)):
-            nx[i], nz[i] = R.remap_xz(float(x[i]), float(z[i]))
+            nx[i], nz[i] = R.remap_xz(float(x[i]), float(z[i]), roof=True)
     else:
         r = _region_for(ob, x, z)
         nx = np.array([r[4](float(v)) for v in x])
@@ -180,6 +179,19 @@ def _clusters(items, pad=0.12):
     return list(groups.values())
 
 
+def _through_wall(f, a, b, d):
+    """How far the rigidly moved extent a..b (+d) passes the wall faces (map breakpoints) beyond its ends."""
+    xs = [p[0] for p in f.pairs]
+    hi = [p for p in xs if p >= b - 0.01]
+    lo = [p for p in xs if p <= a + 0.01]
+    o = 0.0
+    if hi:
+        o = max(o, (b + d) - f(min(hi)))
+    if lo:
+        o = max(o, f(max(lo)) - (a + d))
+    return o
+
+
 def warp():
     bpy.context.view_layer.update()
     stats = {'arch': 0, 'roof': 0, 'fitted': 0, 'loose': 0, 'clusters': 0, 'skipped': 0}
@@ -201,7 +213,8 @@ def warp():
             _warp_mesh(ob, per_vertex=roof)
             stats['roof' if roof else 'arch'] += 1
             continue
-        if ob.type == 'MESH' and len(ob.data.vertices) and FITTED.search(ob.name) and not LOOSE.search(ob.name):
+        if ob.type == 'MESH' and len(ob.data.vertices) and (FORCE_FITTED.search(ob.name) or
+                                                            FITTED.search(ob.name) and not LOOSE.search(ob.name)):
             _warp_mesh(ob)
             stats['fitted'] += 1
             continue
@@ -211,7 +224,12 @@ def warp():
         x1 = max(loose[i][1][1] for i in g)
         z0 = min(loose[i][1][2] for i in g)
         z1 = max(loose[i][1][3] for i in g)
-        dx, dz = R.shift_xz((x0 + x1) / 2, (z0 + z1) / 2)
+        dx, dz = R.shift_box(x0, x1, z0, z1)
+        r = R.region((x0 + x1) / 2, (z0 + z1) / 2)
+        over = max(_through_wall(r[4], x0, x1, dx), _through_wall(r[5], z0, z1, dz))
+        if over > 0.1:                       # a rigid group now runs into a wall: report it
+            names = sorted({loose[i][0].name for i in g})
+            stats.setdefault('overflow', []).append((round(over, 2), r[6], len(g), names[:3]))
         for i in g:
             _translate(loose[i][0], dx, dz)
         stats['loose'] += len(g)

@@ -24,6 +24,9 @@ _LIB = {}
 
 
 # =============================================================================== library
+
+BATH_SCREEN_Z = 23.85      # opposite the primary bath's tall window (bl/revision_spec.BATH_WIN_Z)
+
 def _lib_root(ctx):
     return coll(ctx, 'library')
 
@@ -519,8 +522,9 @@ def build(ctx, surfaces):
     ]
     for aid, var, x, z, h, rs, lf in trees:
         _check_clear(plant(ctx, aid, var, x, z, height_ft=h, res=rs, leaf=lf), x, z)
-    # narrow evergreen screens in the side yards (outside the primary's added west window and kitchen W08)
-    for x, z, h in ((L.FW + 0.95, 10.6, 7.5), (L.FE - 1.2, 26.1, 8.0)):
+    # narrow evergreen screens in the side yards (outside the primary's added west window, the primary
+    # bath's floor-to-ceiling window and kitchen W08)
+    for x, z, h in ((L.FW + 0.95, 10.6, 7.5), (L.FW + 0.95, BATH_SCREEN_Z, 8.5), (L.FE - 1.2, 26.1, 8.0)):
         _check_clear(plant(ctx, 'searsia_lucida', 'b', x, z, height_ft=h, res='2k',
                            leaf=dict(amount=0.25, hue=0.5, sat=0.8)), x, z)
     # street trees in our park strip
@@ -551,7 +555,7 @@ def build(ctx, surfaces):
         k = 'feather' if int(x * 7) % 3 else 'fescue'
         place_proc(ctx, k, x, fn + 1.9 + r.uniform(-0.1, 0.1), scale=r.uniform(0.9, 1.1))
     # side-yard fence beds
-    for (bx0, bx1, bz0, bz1), skip in ((L.W_BED, (10.6,)), (L.E_BED, (26.1,))):
+    for (bx0, bx1, bz0, bz1), skip in ((L.W_BED, (10.6, BATH_SCREEN_Z)), (L.E_BED, (26.1,))):
         xc = (bx0 + bx1) / 2
         for i, z in enumerate(_row(bz0 + 1.2, bz1 - 1.0, 3.0, 0.3, r)):
             if any(abs(z - s) < 3.0 for s in skip):
@@ -598,24 +602,6 @@ def build(ctx, surfaces):
             continue
         place_proc(ctx, 'fescue', x, (L.PARK[0] + L.PARK[1]) / 2 + r.uniform(-0.6, 0.6), y=GRADE + 0.03,
                    scale=0.9)
-    # a tall charcoal fibre-cement planter on the deck beside the garden door
-    from .exterior_util import MB
-    from .exterior_util import mul_copy
-    pm = mul_copy(ctx, 'foundation', (0.14, 0.145, 0.15), 'Z_exterior_planter')     # dark fibre-cement
-    for (x, z, w, h, kind, sc) in ((23.25, -1.25, 1.7, 2.3, 'phormium', 1.0),):     # west of the door (24.45)
-        mb = MB()
-        t = 0.08
-        y0, y1 = L.DECK_TOP, L.DECK_TOP + h
-        mb.box(x - w / 2, x + w / 2, y0, y1, z - w / 2, z - w / 2 + t)
-        mb.box(x - w / 2, x + w / 2, y0, y1, z + w / 2 - t, z + w / 2)
-        mb.box(x - w / 2, x - w / 2 + t, y0, y1, z - w / 2 + t, z + w / 2 - t)
-        mb.box(x + w / 2 - t, x + w / 2, y0, y1, z - w / 2 + t, z + w / 2 - t)
-        mb.box(x - w / 2 + t, x + w / 2 - t, y0, y1 - 0.12, z - w / 2 + t, z + w / 2 - t)
-        mb.obj(ctx, f'ext deck planter {kind}', pm, SUB, bevel=0.02, segments=2)
-        sm = MB()
-        sm.box(x - w / 2 + t, x + w / 2 - t, y1 - 0.13, y1 - 0.1, z - w / 2 + t, z + w / 2 - t)
-        sm.obj(ctx, f'ext deck planter soil', ctx.mat('soil_mulch'), SUB)
-        place_proc(ctx, kind, x, z, y=y1 - 0.1, scale=sc)
     res['proc_plants'] = len([o for o in coll(ctx, SUB).objects if o.type == 'MESH'])
     res['instances'] = len([o for o in coll(ctx, SUB).objects if o.type == 'EMPTY'])
     return res
