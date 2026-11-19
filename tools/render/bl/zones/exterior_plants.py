@@ -465,7 +465,10 @@ def pebble_source(ctx, kind='river'):
 
 
 # ============================================================================ placement
-HOUSE_RECTS = [(-0.3, 41.15, -0.3, 51.4), (-0.3, 14.4, 51.4, 54.4), (2.85, 11.2, 54.4, 56.3)]
+HOUSE_RECTS = [(L.HX0 - 0.08, L.HX1 + 0.08, L.HZ0 - 0.08, L.GARAGE_FRONT + 0.05),        # main house + garage
+               (L.HX0 - 0.08, 14.4, 47.0, L.BED3_FRONT + 0.05),                         # bedroom 3
+               (2.7, 11.4, L.BED3_FRONT, 56.1),                                         # its canted bay
+               (L.PORCH_POSTS[0][0], L.PORCH_POSTS[1][1], 47.4, L.PORCH[3] + 0.05)]      # covered porch
 
 
 def _check_clear(inst, x, z, eave=0.7):
@@ -505,18 +508,19 @@ def build(ctx, surfaces):
         res[f'pebble_surfaces_{kind}'] = scatter(objs, ngp)
 
     # ---- trees (Poly Haven): olive-like island_tree_01, multi-stem island_tree_02
+    fn = L.FN                                     # rear planting is placed relative to the rear fence
     trees = [
-        ('island_tree_01', 'main', 6.0, -11.0, 15.0, '2k', leaf_olive),     # rear bed, behind primary/bed2
-        ('island_tree_01', 'main', 32.0, -11.2, 16.0, '2k', leaf_olive),    # rear bed, living-room hero
-        ('island_tree_02', 'main', -3.6, -10.6, 11.0, '1k', leaf_tree),     # NW corner
-        ('island_tree_02', 'main', 44.6, -10.4, 12.0, '1k', leaf_tree),     # NE corner
-        ('island_tree_01', 'main', -2.8, 61.2, 11.5, '2k', leaf_olive),     # front lawn, west of the bay
-        ('island_tree_02', 'main', 44.6, 58.6, 10.5, '1k', leaf_tree),      # front, east of the drive
+        ('island_tree_01', 'main', 6.0, fn + 1.4, 15.0, '2k', leaf_olive),     # rear bed, behind primary/bed2
+        ('island_tree_01', 'main', 31.0, fn + 1.2, 16.0, '2k', leaf_olive),    # rear bed, living-room hero
+        ('island_tree_02', 'main', -3.4, fn + 1.8, 11.0, '1k', leaf_tree),     # NW corner
+        ('island_tree_02', 'main', 43.8, fn + 2.0, 12.0, '1k', leaf_tree),     # NE corner
+        ('island_tree_01', 'main', -2.8, 64.5, 11.5, '2k', leaf_olive),        # front lawn, west of the bay
+        ('island_tree_02', 'main', 43.6, 61.5, 10.5, '1k', leaf_tree),         # front, east of the drive
     ]
     for aid, var, x, z, h, rs, lf in trees:
         _check_clear(plant(ctx, aid, var, x, z, height_ft=h, res=rs, leaf=lf), x, z)
-    # narrow evergreen screens in the 6 ft side yards (outside primary W14 and kitchen W08)
-    for x, z, h in ((-5.15, 13.0, 7.5), (45.8, 26.2, 8.0)):
+    # narrow evergreen screens in the side yards (outside the primary's added west window and kitchen W08)
+    for x, z, h in ((L.FW + 0.95, 10.6, 7.5), (L.FE - 1.2, 26.1, 8.0)):
         _check_clear(plant(ctx, 'searsia_lucida', 'b', x, z, height_ft=h, res='2k',
                            leaf=dict(amount=0.25, hue=0.5, sat=0.8)), x, z)
     # street trees in our park strip
@@ -531,8 +535,8 @@ def build(ctx, surfaces):
     #  lomandra fill between shrubs and a denser front row of grasses)
     xs = _row(L.REAR_BED[0] + 1.0, L.REAR_BED[1] - 1.0, 3.3, 0.35, r)
     for i, x in enumerate(xs):
-        z = -11.55 + r.uniform(-0.15, 0.15)
-        if abs(x - 6.0) < 2.2 or abs(x - 32.0) < 2.2 or x < -2.0 or x > 43.0:
+        z = fn + 0.85 + r.uniform(-0.15, 0.15)
+        if abs(x - 6.0) < 2.2 or abs(x - 31.0) < 2.2 or x < -2.0 or x > 42.4:
             place_proc(ctx, 'lomandra', x, z, scale=r.uniform(1.0, 1.2))
             continue
         if i % 3 == 1:
@@ -541,13 +545,13 @@ def build(ctx, surfaces):
             plant(ctx, 'searsia_lucida', sv[i % 3], x, z, height_ft=r.uniform(3.6, 4.8), res='2k', leaf=sl)
         if i + 1 < len(xs):                      # low fill between the back-row plants
             xm = (x + xs[i + 1]) / 2 + r.uniform(-0.2, 0.2)
-            if not (abs(xm - 6.0) < 1.6 or abs(xm - 32.0) < 1.6):
-                place_proc(ctx, 'lomandra', xm, -11.0 + r.uniform(-0.15, 0.15), scale=r.uniform(0.8, 0.95))
+            if not (abs(xm - 6.0) < 1.6 or abs(xm - 31.0) < 1.6):
+                place_proc(ctx, 'lomandra', xm, fn + 1.4 + r.uniform(-0.15, 0.15), scale=r.uniform(0.8, 0.95))
     for x in _row(L.REAR_BED[0] + 0.8, L.REAR_BED[1] - 0.8, 1.6, 0.2, r):
         k = 'feather' if int(x * 7) % 3 else 'fescue'
-        place_proc(ctx, k, x, -10.5 + r.uniform(-0.1, 0.1), scale=r.uniform(0.9, 1.1))
+        place_proc(ctx, k, x, fn + 1.9 + r.uniform(-0.1, 0.1), scale=r.uniform(0.9, 1.1))
     # side-yard fence beds
-    for (bx0, bx1, bz0, bz1), skip in ((L.W_BED, (13.0,)), (L.E_BED, (25.5,))):
+    for (bx0, bx1, bz0, bz1), skip in ((L.W_BED, (10.6,)), (L.E_BED, (26.1,))):
         xc = (bx0 + bx1) / 2
         for i, z in enumerate(_row(bz0 + 1.2, bz1 - 1.0, 3.0, 0.3, r)):
             if any(abs(z - s) < 3.0 for s in skip):
@@ -561,11 +565,12 @@ def build(ctx, surfaces):
                            scale=r.uniform(0.85, 1.0))
     # front: bed along bedroom 3 / bay, west corner bed, bank between walk and drive, east beds
     fb = L.FRONT_BED
-    for i, x in enumerate(_row(fb[0] + 0.8, fb[1] - 0.6, 2.3, 0.2, r)):
+    for i, x in enumerate(_row(fb[0] + 0.8, L.PORCH_POSTS[0][0] - 0.6, 2.3, 0.2, r)):
+        b3 = L.BED3_FRONT
         if abs(x + 2.6) < 1.6:
-            place_proc(ctx, 'fescue', x, 56.0, scale=0.9)
+            place_proc(ctx, 'fescue', x, b3 + 1.65, scale=0.9)
             continue
-        zz = 55.4 if not (2.6 < x < 11.5) else 57.3
+        zz = b3 + 1.05 if not (2.6 < x < 11.5) else 57.15          # clear of the bay (to z ~56.0)
         if i % 3 == 0:
             plant(ctx, 'searsia_lucida', 'e' if i % 2 else 'f', x, zz, height_ft=r.uniform(2.4, 3.0), res='2k',
                   leaf=sl)
@@ -575,17 +580,18 @@ def build(ctx, surfaces):
     for z in _row(L.W_FRONT_BED[2] + 0.6, L.W_FRONT_BED[3] - 0.4, 2.0, 0.15, r):
         place_proc(ctx, 'lomandra', -3.2 + r.uniform(-0.4, 0.4), z, scale=0.9)
     for z in _row(L.STRIP[2] + 1.0, L.STRIP[3] - 0.8, 1.7, 0.1, r):
-        x = 21.0 + r.uniform(-0.15, 0.15)
+        x = (L.STRIP[0] + L.STRIP[1]) / 2 + r.uniform(-0.15, 0.15)
         place_proc(ctx, 'fescue' if int(z) % 2 else 'feather', x, z, y=L.bank_top(x, z, L.STRIP[0], L.STRIP[1]),
                    scale=0.85)
     for z in _row(L.E_FRONT_BED1[2] + 0.8, L.E_FRONT_BED1[3] - 0.5, 2.2, 0.2, r):
-        place_proc(ctx, 'lomandra', 44.6 + r.uniform(-0.6, 0.6), z, scale=0.95)
+        place_proc(ctx, 'lomandra', (L.E_FRONT_BED1[0] + L.E_FRONT_BED1[1]) / 2 + r.uniform(-0.6, 0.6), z,
+                   scale=0.95)
     for i, z in enumerate(_row(L.E_FRONT_BED2[2] + 1.0, L.E_FRONT_BED2[3] - 0.8, 2.6, 0.2, r)):
-        x = 42.2 + r.uniform(-0.2, 0.2)
-        place_proc(ctx, 'feather' if i % 2 else 'fescue', x, z, y=L.bank_top(x, z, 42.6, L.DRIVE[1]) - 0.0,
+        x = L.DRIVE[1] + 2.3 + r.uniform(-0.2, 0.2)
+        place_proc(ctx, 'feather' if i % 2 else 'fescue', x, z, y=L.bank_top(x, z, L.E_BANK_X, L.DRIVE[1]) - 0.0,
                    scale=0.85)
-        if abs(z - 57.5) > 3.0:
-            place_proc(ctx, 'lomandra', 45.8 + r.uniform(-0.3, 0.3), z + 1.2, scale=0.9)
+        if abs(z - 60.5) > 3.0:                  # (clear of the front tree)
+            place_proc(ctx, 'lomandra', L.FE - 0.75 + r.uniform(-0.25, 0.25), z + 1.2, scale=0.9)
     # our park strip: grasses in gravel either side of the street trees
     for x in _row(L.FW + 1.0, L.DRIVE[0] - 1.5, 3.2, 0.3, r) + _row(L.DRIVE[1] + 1.5, L.FE - 1.0, 3.2, 0.3, r):
         if abs(x - 4.0) < 1.6 or abs(x - 48.5) < 1.6:
@@ -596,7 +602,7 @@ def build(ctx, surfaces):
     from .exterior_util import MB
     from .exterior_util import mul_copy
     pm = mul_copy(ctx, 'foundation', (0.14, 0.145, 0.15), 'Z_exterior_planter')     # dark fibre-cement
-    for (x, z, w, h, kind, sc) in ((24.0, -1.25, 1.7, 2.3, 'phormium', 1.0),):
+    for (x, z, w, h, kind, sc) in ((23.25, -1.25, 1.7, 2.3, 'phormium', 1.0),):     # west of the door (24.45)
         mb = MB()
         t = 0.08
         y0, y1 = L.DECK_TOP, L.DECK_TOP + h

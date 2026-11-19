@@ -4,8 +4,8 @@ The near context (exterior_context) was built for what the windows and the hero 
 drone-height orbit (render_exterior.py) the whole neighbourhood is in view, so this module fills it out
 the way the user's aerial photo of the street shows it (assets/references/img-3202.webp):
 
-- parallel streets every ~219 ft (two ~81 ft deep lots back to back + a 56 ft right of way), a few cross
-  streets, sidewalks, curbs and street trees;
+- parallel streets every ~240 ft (two ~91 ft deep lots back to back + a 56 ft right of way; our own lot is
+  100 ft deep, per the architect's site plan), a few cross streets, sidewalks, curbs and street trees;
 - ~60 ft ranch lots on both sides: single-storey house (hip or gable roof, windows, garage door, front
   door), driveway and walk, side and rear board fences, backyard trees, patios, dry lawn patches and the
   odd pool;
@@ -28,15 +28,17 @@ from .exterior_util import GRADE, MB, _srgb, coll, exclude_collection, flat_mat,
 SUB = 'far'
 
 # ---- street grid (pure geometry; exterior_context uses spine_z to keep its trees in the backyards) -----
-STREET_Z0 = (L.STREET[0] + L.STREET[1]) / 2     # our street's centre line (94.5)
-PITCH_Z = 219.0                                  # street spacing
+STREET_Z0 = (L.STREET[0] + L.STREET[1]) / 2     # our street's centre line (104.56)
+# street spacing: the aerial photo's 219 ft, stretched so the rear street moves with the site plan's rear lot
+# line (the street side moved +FRONT_DZ, the rear lot line REAR_DZ)
+PITCH_Z = 219.0 + L.FRONT_DZ - L.REAR_DZ         # 239.88
 STREETS_Z = [STREET_Z0 + PITCH_Z * k for k in range(-5, 6)]
 OURS = 5                                         # index of our street in STREETS_Z
 CROSS_X = (-1320.0, -700.0, 760.0, 1380.0)
 ROW = 28.0                                       # half right of way (walk + park strip + curb + street)
 GRID_X = (-1900.0, 1900.0)
 GRID_Z = (STREETS_Z[0] - 110.0, STREETS_Z[-1] + 110.0)
-LOT_D = 81.0
+LOT_D = (PITCH_Z - 2 * ROW) / 2 - 0.5                # lot depth from the back of the sidewalk (91.44)
 # x ranges already built in detail by exterior_context, per (street index, side): side -1 = lots north of
 # the street (front faces +z), +1 = lots south of it (front faces -z)
 NEAR = {(OURS, -1): (-245.0, 282.0), (OURS, 1): (-258.0, 322.0), (OURS - 1, 1): (-82.0, 142.0)}

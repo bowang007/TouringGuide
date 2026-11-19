@@ -1,4 +1,4 @@
-"""Charcoal horizontal-slat fences and gates on the original fence lines (runs inside Blender).
+"""Charcoal horizontal-slat fences and gates on the lot lines of the site plan (runs inside Blender).
 
 Design (1077 W McKinley): square charcoal posts ~7'-6" o.c., 5-1/2" horizontal boards with tight
 1/4" reveals, a semi-open top band of narrow slats and a flat cap. Boards sit between the posts.

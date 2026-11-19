@@ -116,14 +116,21 @@ def plinth(ctx):
     """Exposed concrete foundation band between grade and the stucco weep line (y -0.025)."""
     mb = MB()
     y0, y1 = GRADE - 0.5, -0.025
-    outline = [(-0.215, -0.22), (41.05, -0.22), (41.05, 51.34), (20.47, 51.34), (20.47, 47.14),
-               (14.33, 47.14), (14.33, 54.34), (-0.215, 54.34)]
+    # 0.01 ft inside the stucco faces (rear/sides, garage, porch walls + foyer wall, bedroom 3)
+    e = 0.01
+    outline = [(L.HX0 + e, L.HZ0 + e), (L.HX1 - e, L.HZ0 + e), (L.HX1 - e, L.GARAGE_FRONT - e),
+               (21.22, L.GARAGE_FRONT - e), (21.22, 47.57), (14.31, 47.57), (14.31, L.BED3_FRONT - e),
+               (L.HX0 + e, L.BED3_FRONT - e)]
     mb.box_pts(outline, y0, y1)
+    # the canted bay's outline from its stucco plinth. The shell is still on the concept plan while the
+    # exterior builds (bl/warp.py carries it over afterwards), so map the points the same way.
+    from ..warp import R as relayout
     pts = []
     for ob in bpy.data.objects:
         if ob.type == 'MESH' and 'Bay stucco plinth' in ob.name:
             for v in ob.data.vertices:
                 x, y, z = bl2ft(ob.matrix_world @ v.co)
+                x, z = relayout.remap_xz(x, z)
                 pts.append((round(x, 4), round(z, 4)))
     if pts:
         hull = _hull(pts)
@@ -234,10 +241,15 @@ def ipe_mat(ctx, along='x'):
 
 
 def deck(ctx, out):
-    r = rng(11)
+    """The ipe deck outside the living room and the small landing outside the primary bedroom."""
+    out['deck_boards'] = _platform(ctx, 'deck', L.DECK, rng(11)) + _platform(ctx, 'landing', L.LANDING, rng(12))
+
+
+def _platform(ctx, tag, rect, r):
+    """Ipe platform against the rear wall with a picture-frame border and a wrap-around step."""
     ipe = ipe_mat(ctx, 'x')
     ipe_z = ipe_mat(ctx, 'z')
-    x0, x1, z0, z1 = L.DECK
+    x0, x1, z0, z1 = rect
     top = L.DECK_TOP
     bw, gap, th = 0.458, 0.018, 0.075           # 5.5" boards, 3/16" gaps, 7/8" thick
     # dark substructure so board gaps read as shadow, not void
@@ -245,7 +257,7 @@ def deck(ctx, out):
     sub.box(x0 - L.STEP_W + 0.05, x1 + L.STEP_W - 0.05, GRADE - 0.05, L.STEP_TOP - th - 0.01,
             z0 - L.STEP_W + 0.05, z1 - 0.01)
     sub.box(x0 + 0.05, x1 - 0.05, GRADE - 0.05, top - th - 0.01, z0 + 0.05, z1 - 0.01)
-    sub.obj(ctx, 'ext deck substructure', flat_mat('Z_exterior_shadow', '#1d1a17', 0.95), SUB)
+    sub.obj(ctx, f'ext {tag} substructure', flat_mat('Z_exterior_shadow', '#1d1a17', 0.95), SUB)
     n = 0
 
     def board(name, bx0, bx1, bz0, bz1, by):
@@ -258,22 +270,25 @@ def deck(ctx, out):
 
     # picture-frame border boards (run along the edges), mitre simplified to butt joints
     fb = bw
-    board('ext deck frame N', x0, x1, z0, z0 + fb, top)
-    board('ext deck frame W', x0, x0 + fb, z0 + fb + gap, z1, top)
-    board('ext deck frame E', x1 - fb, x1, z0 + fb + gap, z1, top)
+    board(f'ext {tag} frame N', x0, x1, z0, z0 + fb, top)
+    board(f'ext {tag} frame W', x0, x0 + fb, z0 + fb + gap, z1, top)
+    board(f'ext {tag} frame E', x1 - fb, x1, z0 + fb + gap, z1, top)
     # field boards east-west, staggered butt joints
     fx0, fx1 = x0 + fb + gap, x1 - fb - gap
     z = z0 + fb + gap
     row = 0
     while z + bw <= z1 + 0.001:
         cut = fx0 + r.uniform(5.5, 12.5)
-        board(f'ext deck board {row}a', fx0, cut - gap / 2, z, z + bw, top)
-        board(f'ext deck board {row}b', cut + gap / 2, fx1, z, z + bw, top)
+        if fx1 - fx0 < 14.0:                     # short run (landing): one board
+            board(f'ext {tag} board {row}', fx0, fx1, z, z + bw, top)
+        else:
+            board(f'ext {tag} board {row}a', fx0, cut - gap / 2, z, z + bw, top)
+            board(f'ext {tag} board {row}b', cut + gap / 2, fx1, z, z + bw, top)
         z += bw + gap
         row += 1
     # fill the last sliver against the house (ripped board)
     if z1 - z > 0.06:
-        board('ext deck board rip', fx0, fx1, z, z1, top)
+        board(f'ext {tag} board rip', fx0, fx1, z, z1, top)
     # fascia (riser) boards around the platform edge, under the overhanging nosing
     fasc = MB()
     ft_ = 0.06
@@ -286,16 +301,16 @@ def deck(ctx, out):
     tb = (L.STEP_W - gap) / 2
     for k in range(2):
         a = sz0 + k * (tb + gap)
-        board(f'ext step N {k}', sx0 + (k * (tb + gap)), sx1 - (k * (tb + gap)), a, a + tb, st)
+        board(f'ext {tag} step N {k}', sx0 + (k * (tb + gap)), sx1 - (k * (tb + gap)), a, a + tb, st)
         aw = sx0 + k * (tb + gap)
-        board(f'ext step W {k}', aw, aw + tb, a + tb + gap, z1, st)
+        board(f'ext {tag} step W {k}', aw, aw + tb, a + tb + gap, z1, st)
         ae = sx1 - k * (tb + gap) - tb
-        board(f'ext step E {k}', ae, ae + tb, a + tb + gap, z1, st)
+        board(f'ext {tag} step E {k}', ae, ae + tb, a + tb + gap, z1, st)
     fasc.box(sx0, sx1, GRADE - 0.02, st - th, sz0, sz0 + ft_)
     fasc.box(sx0, sx0 + ft_, GRADE - 0.02, st - th, sz0, z1)
     fasc.box(sx1 - ft_, sx1, GRADE - 0.02, st - th, sz0, z1)
-    fasc.obj(ctx, 'ext deck fascia', ipe, SUB, bevel=0.008, segments=1)
-    out['deck_boards'] = n
+    fasc.obj(ctx, f'ext {tag} fascia', ipe, SUB, bevel=0.008, segments=1)
+    return n
 
 
 # ---------------------------------------------------------------------------- soft surfaces
@@ -312,13 +327,17 @@ def soft_surfaces(ctx, out):
                   ('west front', L.W_FRONT_BED), ('front', L.FRONT_BED), ('east front 1', L.E_FRONT_BED1)):
         beds.append(_surface(ctx, f'ext bed {nm}', r, top_bed, mulch))
     beds.append(_surface(ctx, 'ext bed east front 2', L.E_FRONT_BED2, None, mulch,
-                         hfn=lambda x, z: L.bank_top(x, z, 42.6, L.DRIVE[1]), step=0.5))
+                         hfn=lambda x, z: L.bank_top(x, z, L.E_BANK_X, L.DRIVE[1]), step=0.5))
     # pebble fields: blue-grey river pebbles in the back / side yards, black beach pebbles out front
     dark = ctx.mat('gravel_dark')
-    x0, x1, z0, z1 = L.DECK_BORDER
-    sx0, sx1, sz0 = L.DECK[0] - L.STEP_W, L.DECK[1] + L.STEP_W, L.DECK[2] - L.STEP_W
-    for nm, r in (('deck N', (x0, x1, z0, sz0)), ('deck W', (x0, sx0, sz0, z1)), ('deck E', (sx1, x1, sz0, z1)),
-                  ('drip rear', L.DRIP), ('west side', L.W_PEB), ('east side', L.E_PEB)):
+    rings = []
+    for tag, (bx0, bx1, bz0, bz1), (px0, px1, pz0, _) in (('deck', L.DECK_BORDER, L.DECK),
+                                                         ('landing', L.LANDING_BORDER, L.LANDING)):
+        sx0, sx1, sz0 = px0 - L.STEP_W, px1 + L.STEP_W, pz0 - L.STEP_W
+        rings += [(f'{tag} N', (bx0, bx1, bz0, sz0)), (f'{tag} W', (bx0, sx0, sz0, bz1)),
+                  (f'{tag} E', (sx1, bx1, sz0, bz1))]
+    for nm, r in rings + [('drip rear W', L.DRIPS[0]), ('drip rear E', L.DRIPS[1]), ('west side', L.W_PEB),
+                          ('east side', L.E_PEB)]:
         ob = _surface(ctx, f'ext pebbles {nm}', r, top_peb, peb)
         ob['pebble'] = 'river'
         pebs.append(ob)
@@ -335,11 +354,14 @@ def soft_surfaces(ctx, out):
     t = 0.02
     zb = L.REAR_BED[3]
     ed.box(L.REAR_BED[0], L.REAR_BED[1], e0, e1, zb - t, zb)
-    ed.box(L.DRIP[0], L.DRIP[1], e0, e1, L.DRIP[2] - t, L.DRIP[2])
-    ed.box(L.DRIP[0] - t, L.DRIP[0], e0, e1, L.DRIP[2], L.DRIP[3])
-    ed.box(x0, x1, e0, e1, z0 - t, z0)
-    ed.box(x0 - t, x0, e0, e1, z0, z1)
-    ed.box(x1, x1 + t, e0, e1, z0, z1)
+    for d in L.DRIPS:
+        ed.box(d[0], d[1], e0, e1, d[2] - t, d[2])
+    d = L.DRIPS[0]
+    ed.box(d[0] - t, d[0], e0, e1, d[2], d[3])
+    for (x0, x1, z0, z1) in (L.DECK_BORDER, L.LANDING_BORDER):
+        ed.box(x0, x1, e0, e1, z0 - t, z0)
+        ed.box(x0 - t, x0, e0, e1, z0, z1)
+        ed.box(x1, x1 + t, e0, e1, z0, z1)
     # side yards: edging between pebble field and fence bed, and where lawn meets them
     ed.box(L.W_BED[1] - t / 2, L.W_BED[1] + t / 2, e0, e1, L.W_BED[2], L.W_BED[3])
     ed.box(L.E_BED[0] - t / 2, L.E_BED[0] + t / 2, e0, e1, L.E_BED[2], L.E_BED[3])
@@ -372,10 +394,18 @@ def side_pavers(ctx):
 def porch_and_walk(ctx):
     pav = varied(ctx, 'concrete_paver', 0.06, 'Z_exterior_paver_var')
     px0, px1, pz0, pz1 = L.PORCH
-    # porch slab block under the shell's porch paving, with a clean front edge
+    # porch slab block under the shell's porch paving (which stops ~0.4 ft short of the PDF's 7'-4"), wall to
+    # wall and out under the two corner piers, with a clean front edge
     mb = MB()
-    mb.box(px0 + 0.005, px1 - 0.005, GRADE - 0.3, -0.005, pz0, pz1)
+    top = 0.035                                         # just under the paving top (0.04)
+    mb.box(px0 - 0.17, px1 + 0.17, GRADE - 0.3, top, pz0 - 0.15, pz1)
+    mb.box(L.PORCH_POSTS[0][0] - 0.05, L.PORCH_POSTS[1][1] + 0.05, GRADE - 0.3, top, L.PORCH_POSTS[0][2], pz1)
     mb.obj(ctx, 'ext porch slab', 'porch_pavers', SUB, bevel=0.015, segments=2)
+    # the two 1'-5" stucco piers at the porch's front corners (SKA002), up to the eave soffit
+    mb = MB()
+    for (qx0, qx1, qz0, qz1) in L.PORCH_POSTS:
+        mb.box(qx0, qx1, top, 7.95, qz0, qz1)
+    mb.obj(ctx, 'ext porch piers', 'stucco', SUB, bevel=0.02, segments=2)
     wx0, wx1 = L.WALKWAY
     tops = [-0.21, -0.40]
     z = pz1 + 0.12
@@ -485,8 +515,9 @@ def street(ctx, out):
 
 
 NEAR_LAWN_X = (-60.0, 110.0)
-NEIGHBOUR_LAWNS = [(-55.0, -31.0, 44.6, 66.4), (-15.0, -6.25, 50.3, 66.4),     # west neighbour front yard
-                   (47.1, 55.0, 50.3, 66.4), (71.0, 100.0, 45.6, 66.4)]        # east neighbour front yard
+_F, _S = L.FRONT_DZ, L.SIDEWALK[0] - 0.1
+NEIGHBOUR_LAWNS = [(-55.0, -31.0, 44.6 + _F, _S), (-15.0, L.FW - 0.15, 50.3 + _F, _S),     # west neighbour front yard
+                   (L.FE + 0.1, 55.0, 50.3 + _F, _S), (71.0, 100.0, 45.6 + _F, _S)]      # east neighbour front yard
 
 
 # extra x-ranges to leave open in the near park strip (neighbour aprons sit on top of the lawn instead)

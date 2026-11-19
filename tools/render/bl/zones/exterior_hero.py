@@ -22,13 +22,13 @@ from bl.common import CACHE_DIR, FT, ft2bl  # noqa: E402
 # name: (camera (x, y, z) ft, target (x, z) ft for the yaw, horizontal FOV deg, shift_y)
 SHOTS = {
     # straight-on street elevation from the far side of the street
-    'front': ((20.0, 4.4, 104.0), (20.0, 40.0), 58.0, 0.10),
+    'front': ((19.7, 4.4, 114.0), (19.7, 50.0), 58.0, 0.10),
     # three-quarter street view from the south-east (garage door, drive, entry, bay)
-    'front34': ((60.0, 4.6, 100.0), (20.0, 48.0), 60.0, 0.08),
+    'front34': ((60.0, 4.6, 110.0), (20.0, 58.0), 60.0, 0.08),
     # back garden from the rear planting bed toward the deck and the living-room glazing
-    'back': ((16.2, 5.2, -12.0), (31.0, -1.0), 84.0, 0.02),
+    'back': ((15.5, 5.2, -12.0), (30.2, -1.0), 84.0, 0.02),
     # back garden, full rear elevation from the same spot
-    'backwide': ((16.2, 5.2, -12.0), (16.2, 0.0), 100.0, 0.04),
+    'backwide': ((19.7, 5.2, -14.0), (19.7, 0.0), 100.0, 0.04),
 }
 
 
