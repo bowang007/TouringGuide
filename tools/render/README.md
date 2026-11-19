@@ -52,6 +52,36 @@ $BLENDER -b .cache/house.blend --python render_exterior.py -- --width 3000 --sam
 
 Bump `HOUSE_VERSION` in `index.html` when you publish a new model, so browsers don't serve a cached copy.
 
+## Architect's plan and the owner's changes
+
+The tour now follows the architect's floor plan (`sizes/sizes.pdf`, sheet SKA002, Option A). It has
+the same rooms in the same arrangement as the earlier concept model, but different sizes.
+
+* **`relayout.py`:** maps every concept-plan coordinate onto the plan's clear dimensions, region
+  by region. Its breakpoints are the wall faces.
+* **`apply_relayout.py`:** converted the web tour's `SCENE` and `MEASUREMENTS`, together with
+  `data/`. It is a one-off and refuses to run twice.
+* **Blender build:** it still reads the concept data (`data/concept/`), because the room modules
+  are written against it. After the zones are built, `bl/warp.py` carries the house onto the new
+  plan with the same map:
+  * architecture and fitted pieces are reshaped;
+  * loose furniture moves in clusters and keeps its size;
+  * flat slabs follow the rooms on each side.
+
+  The exterior zone is built directly on the new site plan and is not warped.
+* **`bl/revisions.py`:** applies the owner's changes on the new plan. The positions live in
+  `bl/revision_spec.py`. `apply_revisions_web.py` records the same changes in the web data.
+  * Bedroom 4: flat ceiling.
+  * Front bedroom: bay glazed to the floor.
+  * Foyer: two skylights.
+  * Primary bedroom: sliding door to the garden.
+  * Bedroom 2: floor-to-ceiling window.
+  * Primary bath: floor-to-ceiling obscured window.
+  * Kitchen: skylight on the east roof plane.
+
+  The dining table in line with the island is built by the kitchen zone.
+* **`tools/web/dimension_plan.py`:** redraws the Dimensions sheet from `SCENE` and `MEASUREMENTS`.
+
 ## How the look is controlled
 
 * **Daylight.** A Poly Haven sky HDRI with its own sun clamped out, plus a sun lamp (late-morning,
