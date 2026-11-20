@@ -34,6 +34,9 @@ WB_DEFAULT = (6500.0, 10.0)        # (temperature K, tint)
 WB_KELVIN = WB_DEFAULT[0]          # kept for older callers
 WB_TARGET = (1.06, 0.88)           # display R/G and B/G of white paint after balancing
 WB_LIMITS = ((3500.0, 14000.0), (-30.0, 35.0))
+# Stops whose only white paint is lit by the room's own warm materials: the auto balance would cancel the room's
+# colour, so they get a fixed balance (the shared bath's wood-look wall and Spanish-cream stone tint its ceiling).
+WB_NODE = {'A1': (5000.0, 0.0)}
 WB_MATERIALS = ('M_paint_wall', 'M_paint_ceiling', 'M_paint_trim', 'M_plaster_white', 'M_door_slab', 'M_stucco')
 WB_PASS_INDEX = 7
 
@@ -400,7 +403,7 @@ def main():
         ev, wb, info = probe(cam, n['id'], a.out, masks.get(n['id']))
         if a.exposure != 'auto':
             ev = float(a.exposure)
-        wb = fixed_wb or wb or WB_DEFAULT
+        wb = fixed_wb or WB_NODE.get(n['id']) or wb or WB_DEFAULT
         set_wb(*wb)
         sc.view_settings.exposure = ev
         sc.render.image_settings.file_format = 'PNG'

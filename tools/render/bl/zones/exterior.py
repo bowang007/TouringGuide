@@ -1,8 +1,8 @@
 """Exterior zone: everything outside the walls (runs inside Blender).
 
-Grounds and hardscape (exterior_site), charcoal slat fences + gates (exterior_fence), the black
-aluminium / frosted-glass sectional garage door with its inside hardware, sconces and house number
-(exterior_garage), lawn / pebbles / ornamental grasses / Poly Haven trees and shrubs
+Grounds and hardscape (exterior_site), charcoal slat fences + gates (exterior_fence), the stained-cedar
+carriage-house garage door (owner's styles/grage_stype.jpg) with its inside hardware, black coach lanterns
+and house number (exterior_garage), lawn / pebbles / ornamental grasses / Poly Haven trees and shrubs
 (exterior_plants) and the neighbourhood context (exterior_context). exterior_far fills out the whole
 neighbourhood for the drone-height exterior renders only (excluded from the view layer by default).
 Site plan: exterior_layout.

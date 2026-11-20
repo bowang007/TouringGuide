@@ -83,9 +83,14 @@ the same rooms in the same arrangement as the earlier concept model, but differe
     so two slabs that met on one concept line can part where that line crosses into a room with a
     different map. `bl/revisions.py` closes the two known cases first (`ceiling_seam`: the wedge in
     the ceiling over Bedroom 2, the bedroom hall and the shared bath; `floor_seam`: the strip
-    across the foyer floor). After a change to `relayout.py`, look up and down through the shell
-    for holes: ray-cast a grid from 7 ft up and from 1 ft down, against the `shell`, `openings`
-    and `exterior_shell` collections only.
+    across the foyer floor). Two general repairs run last: `floor_gaps` patches thinner floor seams
+    and the bare strips under door openings (exposed foundation), and `skirting_trim` cuts every
+    baseboard back to the stretches with a wall behind it (runs that outlived a shortened wall or
+    crossed a new opening).
+  * After a change to `relayout.py` or `bl/revisions.py`, run `check_holes.py` on the built blend
+    (`$BLENDER -b .cache/house.blend --python check_holes.py`). It ray-casts the ceilings, floors
+    and floor seams, and checks every baseboard for a wall behind it; only the entry rear gable's
+    known line should print.
 
   The exterior zone is built directly on the new site plan and is not warped.
 * **`bl/revisions.py`:** applies the owner's changes on the new plan. The positions live in
@@ -94,13 +99,18 @@ the same rooms in the same arrangement as the earlier concept model, but differe
   * Front bedroom: bay glazed to the floor.
   * Foyer: two skylights.
   * Primary bedroom: sliding door to the garden.
-  * Bedroom 2: floor-to-ceiling window.
-  * Primary bath: floor-to-ceiling clear window (an evergreen screen in the fenced side yard).
+  * Bedroom 2: tall window from a 2'-0" sill to the ceiling (third round; it ran to the floor before).
+  * Primary bath: tall clear window from a 2'-0" sill to the ceiling, with a stool and a linen roman
+    shade (third round). The room's west-wall finish (`A0 tile west ...`, any material) is cut
+    around it by name. An evergreen screens it in the fenced side yard.
   * Kitchen: skylight on the east roof plane.
   * Primary bath: skylight over the shower (second round).
   * Garage: the north cabinet run is fitted into the plan's narrower garage (`relayout.X_GARAGE_RUN`).
 
-  The dining table in line with the island is built by the kitchen zone.
+  The dining table in line with the island is built by the kitchen zone. Third-round changes made in
+  the zones themselves: Bedroom 4's bed is turned across the room (`bedrooms.build_bed4`), and the
+  kitchen, the primary bath (`baths_primary.py`), the shared bath (`baths_shared.py`) and the garage
+  door follow the owner's style images in `styles/` (reference only; never copied into the site).
 * **`tools/web/dimension_plan.py`:** redraws the Dimensions sheet from `SCENE` and `MEASUREMENTS`.
 
 ## How the look is controlled

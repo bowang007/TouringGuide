@@ -1,10 +1,11 @@
 """Dining set for the open area between the living room and the kitchen (z 14.5-20.8).
 
-The open strip is only ~6.3 ft deep between the living zone (z<14.5) and the island stools
-(z>=21.0), and the main walk-through (hall H3 -> D0 -> kitchen K0 / living L2) runs along
-x 23-29. The set therefore sits at the east end, beside window W07 (x 40.84, z 17.81-21.81),
-clear of the traffic line: a 48in round walnut pedestal table with four curved bouclé
-barrel chairs set on the diagonals (a 42in round table: the 48in variant crowded the stools), and a double-ring LED chandelier above it.
+Default (kitchen_dining.DINING_RECT, architect's plan): build_rect() puts a warm white-oak farmhouse
+table with turned legs in line with the island, four oak chairs with cream pin-striped linen seats
+and backs, a cream wool rug and a brass lantern (owner's vintage-kitchen references).
+
+build() is the older alternative (off): a 42in round walnut pedestal table beside window W07 with
+four boucle barrel chairs and a double-ring LED chandelier.
 """
 import math
 
@@ -143,54 +144,156 @@ def rect_footprint():
 
 
 def build_rect(ctx, g: Geo):
-    """Walnut table (6'-6" x 3'-2") on black steel legs, four bouclé barrel chairs, a linear LED
-    pendant along the table, and a flat-weave rug, in line with the island."""
+    """Warm white-oak farmhouse table (6'-6" x 3'-2", turned legs, apron) in line with the island,
+    four oak chairs with cream pin-striped upholstery, a brass lantern over the table and a cream
+    wool rug (vintage restyle; owner's 'kitchen cloest style' reference)."""
+    from . import kitchen_dining_lights as KL
+    from . import kitchen_dining_mats as KM
     col = g.sub('kd dining')
     lights = g.sub('kd_lights')
+    oak = KM.oak_island()
     cx, z1 = RECT_CX, RECT_Z1
     z0 = z1 - RECT_LEN
     x0, x1 = cx - RECT_W / 2, cx + RECT_W / 2
     cz = (z0 + z1) / 2
     # rug under the set, stopping short of the island
-    g.box('kd dining rug', cx - 3.3, cx + 3.3, 0.001, RUG_T, z0 - 1.5, z1 - 0.05, 'rug_wool_grey', 0.008, coll=col)
-    # 1.25in walnut top with a softened edge
-    g.box('kd dining table top', x0, x1, RECT_TOP - 0.104, RECT_TOP, z0, z1, 'walnut_slab', 0.02, coll=col)
-    # black steel legs: slim square posts set in from the corners, joined by a low stretcher
-    for lx in (x0 + 0.42, x1 - 0.42):
-        for lz in (z0 + 0.55, z1 - 0.55):
-            g.box('kd dining table leg', lx - 0.09, lx + 0.09, RUG_T, RECT_TOP - 0.104, lz - 0.09, lz + 0.09,
-                  'black_metal', 0.008, coll=col)
-        g.box('kd dining table stretcher', lx - 0.04, lx + 0.04, 0.55, 0.62, z0 + 0.55, z1 - 0.55, 'black_metal', 0.004, coll=col)
-    g.box('kd dining table apron', x0 + 0.42 - 0.05, x1 - 0.42 + 0.05, RECT_TOP - 0.30, RECT_TOP - 0.104,
-          cz - 0.04, cz + 0.04, 'black_metal', 0.004, coll=col)
+    g.box('kd dining rug', cx - 3.3, cx + 3.3, 0.001, RUG_T, z0 - 1.5, z1 - 0.05, 'rug_wool_cream', 0.008, coll=col)
+    # 1.5in oak top with an eased edge, grain along the table
+    top = g.box('kd dining table top', x0, x1, RECT_TOP - 0.125, RECT_TOP, z0, z1, oak, 0.025, coll=col)
+    top['tg_grain'] = 1
+    # apron (inset 2.5in) and four turned legs
+    ins = 0.21
+    ay0 = RECT_TOP - 0.125 - 0.33
+    for (ax0, ax1, az0, az1) in ((x0 + ins, x0 + ins + 0.07, z0 + ins, z1 - ins), (x1 - ins - 0.07, x1 - ins, z0 + ins, z1 - ins),
+                                 (x0 + ins, x1 - ins, z0 + ins, z0 + ins + 0.07), (x0 + ins, x1 - ins, z1 - ins - 0.07, z1 - ins)):
+        a = g.box('kd dining table apron', ax0, ax1, ay0, RECT_TOP - 0.125, az0, az1, oak, 0.006, coll=col)
+        if az1 - az0 > ax1 - ax0:
+            a['tg_grain'] = 1
+    leg = [(0.0, RUG_T), (0.085, RUG_T), (0.095, RUG_T + 0.03), (0.08, RUG_T + 0.08), (0.075, 0.25), (0.11, 0.33),
+           (0.075, 0.43), (0.08, 0.6), (0.12, 0.85), (0.125, 0.98), (0.09, 1.12), (0.07, 1.2), (0.085, 1.28),
+           (0.12, 1.36), (0.12, 1.4), (0.105, 1.45), (0.13, 1.5), (0.13, ay0 - 0.0), (0.0, ay0)]
+    for lx in (x0 + ins + 0.035, x1 - ins - 0.035):
+        for lz in (z0 + ins + 0.035, z1 - ins - 0.035):
+            g.lathe('kd dining table leg', leg, lx, lz, oak, 40, col, sharp_deg=55)
+            g.box('kd dining table leg block', lx - 0.13, lx + 0.13, ay0, RECT_TOP - 0.125, lz - 0.13, lz + 0.13, oak, 0.008,
+                  coll=col)
     # chairs: two along each long side, facing the table
-    chair = _chair(g, col)
+    parts = _oak_chair(g, col, oak, KM.fabric_stripe())
     seats = [(x0 - RECT_CHAIR_OUT, cz - RECT_CHAIR_DZ), (x0 - RECT_CHAIR_OUT, cz + RECT_CHAIR_DZ),
              (x1 + RECT_CHAIR_OUT, cz - RECT_CHAIR_DZ), (x1 + RECT_CHAIR_OUT, cz + RECT_CHAIR_DZ)]
     for i, (x, z) in enumerate(seats):
         rot = math.atan2(cx - x, 0.0)              # face the table across its long edge
-        for p in chair:
+        for p in parts:
             q = p if i == 0 else p.copy()
             if i:
                 g._link(q, col)
             q.name = f'{p.name.split(" #")[0]} #{i}'
             q.location = (x * 0.3048, -z * 0.3048, RUG_T * 0.3048)
             q.rotation_euler = (0, 0, rot)
-    # stoneware bowl on the table
-    bowl = [(0.0, 0.0), (0.22, 0.0), (0.34, 0.06), (0.42, 0.18), (0.44, 0.24), (0.41, 0.24), (0.38, 0.18),
-            (0.30, 0.09), (0.0, 0.07)]
-    g.lathe('kd dining bowl', bowl, cx, cz + 0.4, 'ceramic_white', 64, col, y_base=RECT_TOP)
-    # linear LED pendant along the table (the island's pendant runs across, this one along)
-    from ..lighting import emitter
-    yb = RECT_TOP + 2.55
-    pz0, pz1 = cz - 2.3, cz + 2.3
-    g.box('kd dining pendant bar', cx - 0.065, cx + 0.065, yb, yb + 0.12, pz0, pz1, 'black_metal', 0.012, coll=col)
-    dif = emitter('kd_dining_pendant_diffuser', 2900, 40.0)
-    g.box('kd dining pendant diffuser', cx - 0.045, cx + 0.045, yb - 0.006, yb + 0.004, pz0 + 0.04, pz1 - 0.04, dif, coll=col)
-    for zz in (pz0 + 0.6, pz1 - 0.6):
-        g.cyl('kd dining pendant cable', cx, yb + 0.12, CEIL - 0.05, zz, 0.006, 'black_metal', 8, col)
-        g.cyl('kd dining pendant canopy', cx, CEIL - 0.055, CEIL - 0.001, zz, 0.19, 'black_metal', 40, col, bevel=0.01)
-    g.area_light('kd dining pendant light', cx, yb - 0.03, cz, 0.09, pz1 - pz0 - 0.1, 34.0, 2900, lights)
-    g.area_light('kd dining pendant uplight', cx, yb + 0.14, cz, 0.06, pz1 - pz0 - 0.3, 5.0, 2900, lights, facing='up')
-    return {'table': 1, 'chairs': len(seats), 'pendant': 1, 'rug': 1}
+    # brass lantern over the middle of the table
+    KL.lantern(g, 'kd dining lantern', cx, cz, RECT_TOP + 2.55, col, lights)
+    return {'table': 1, 'chairs': len(seats), 'lantern': 1, 'rug': 1}
 
+
+def _oak_chair(g, col, oak, fabric):
+    """Oak dining chair (seat 18.5in, back 33in) at the local origin, front toward local +z:
+    square tapered legs, side and front stretchers, an upholstered seat cushion and a rounded
+    upholstered back panel between two slightly raked back posts."""
+    parts = []
+    W, D = 1.55, 1.5                      # outer width (x) and depth (z)
+    seat = 1.38                            # top of the seat frame
+    hx, hz = W / 2, D / 2
+    lw = 0.12
+    for sx in (-1, 1):
+        lx = sx * (hx - lw / 2)
+        # front legs (taper to 0.09 at the floor)
+        parts.append(_tapered(g, 'kd dining chair leg', lx, hz - lw / 2, 0.0, seat, lw, 0.09, oak, col))
+        # back posts: rear leg continuing up, raked back 0.12 at the top
+        parts.append(_post(g, 'kd dining chair back post', lx, -hz + lw / 2, seat, oak, col, lw))
+    # seat rails (aprons) and stretchers
+    for (a0, a1, b0, b1, y0, y1, grain) in ((-hx + lw, hx - lw, hz - 0.075, hz - 0.02, seat - 0.26, seat, 0),
+                                            (-hx + lw, hx - lw, -hz + 0.02, -hz + 0.075, seat - 0.26, seat, 0),
+                                            (-hx + 0.02, -hx + 0.075, -hz + lw, hz - lw, seat - 0.26, seat, 1),
+                                            (hx - 0.075, hx - 0.02, -hz + lw, hz - lw, seat - 0.26, seat, 1),
+                                            (-hx + 0.03, -hx + 0.075, -hz + lw, hz - lw, 0.42, 0.48, 1),
+                                            (hx - 0.075, hx - 0.03, -hz + lw, hz - lw, 0.42, 0.48, 1),
+                                            (-hx + lw, hx - lw, hz - 0.08, hz - 0.035, 0.5, 0.56, 0)):
+        ob = g.box('kd dining chair rail', a0, a1, y0, y1, b0, b1, oak, 0.006, coll=col)
+        if grain:
+            ob['tg_grain'] = 1
+        parts.append(ob)
+    # upholstered seat cushion (soft rounded box on the frame)
+    cu = g.box('kd dining chair cushion', -hx + 0.03, hx - 0.03, seat, seat + 0.17, -hz + lw + 0.005, hz + 0.02, fabric, coll=col)
+    g.bevel_mod(cu, 0.06, 4)
+    g.subsurf(cu, 1)
+    parts.append(cu)
+    # upholstered back panel between the posts (raked like the posts)
+    bp = g.box('kd dining chair back cushion', -hx + lw + 0.01, hx - lw - 0.01, seat + 0.42, seat + 1.22,
+               -hz + 0.02, -hz + 0.15, fabric, coll=col)
+    g.bevel_mod(bp, 0.045, 4)
+    g.subsurf(bp, 1)
+    parts.append(bp)
+    parts.append(g.box('kd dining chair back rail', -hx + lw - 0.01, hx - lw + 0.01, seat + 1.27, seat + 1.39,
+                       -hz + lw / 2 - 0.055, -hz + lw / 2 + 0.055, oak, 0.01, coll=col))
+    for p in parts:
+        _bake(p)
+    # rake the back cushion and top rail with the posts (pivot at the back of the seat)
+    import mathutils
+    pivot = mathutils.Vector((0.0, -(-hz + 0.08) * 0.3048, seat * 0.3048))
+    R = mathutils.Matrix.Rotation(-math.atan2(0.12, 1.42), 4, 'X')
+    for p in parts[-2:]:
+        for v in p.data.vertices:
+            v.co = R @ (v.co - pivot) + pivot
+    for p in parts:
+        p['y0'] = RUG_T
+    return parts
+
+
+def _bake(ob):
+    """Move the object's transform into its mesh so its origin is the chair origin."""
+    import mathutils
+    if ob.location.length or any(ob.rotation_euler):
+        ob.data.transform(ob.matrix_basis)
+        ob.location = (0.0, 0.0, 0.0)
+        ob.rotation_euler = (0.0, 0.0, 0.0)
+
+
+def _tapered(g, name, x, z, y0, y1, w0, w1, mat, col):
+    """Square leg tapering from w1 at the floor to w0 at the top (local coordinates)."""
+    import bmesh
+    from .kitchen_dining_geo import P
+    bm = bmesh.new()
+    vs = []
+    for y, w in ((y0, w1), (y1, w0)):
+        h = w / 2
+        vs.append([bm.verts.new(P(x + dx, y, z + dz)) for dx, dz in ((-h, -h), (h, -h), (h, h), (-h, h))])
+    bm.faces.new(vs[0])
+    bm.faces.new(list(reversed(vs[1])))
+    for i in range(4):
+        j = (i + 1) % 4
+        bm.faces.new((vs[0][i], vs[0][j], vs[1][j], vs[1][i]))
+    ob = g.from_bmesh(name, bm, mat, col)
+    g.ctx.add_bevel(ob, 0.008, 2)
+    ob['tg_grain'] = 0
+    return ob
+
+
+def _post(g, name, x, z, seat, mat, col, w):
+    """Rear leg + back post: straight to the seat, then raked back 0.12 ft over 1.4 ft."""
+    import bmesh
+    from .kitchen_dining_geo import P
+    bm = bmesh.new()
+    pts = [(0.0, z, 0.095), (seat, z, w), (seat + 1.42, z - 0.12, 0.1)]
+    rings = []
+    for y, zz, ww in pts:
+        h = ww / 2
+        rings.append([bm.verts.new(P(x + dx, y, zz + dz)) for dx, dz in ((-h, -h), (h, -h), (h, h), (-h, h))])
+    bm.faces.new(rings[0])
+    bm.faces.new(list(reversed(rings[-1])))
+    for a, b in zip(rings[:-1], rings[1:]):
+        for i in range(4):
+            j = (i + 1) % 4
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    ob = g.from_bmesh(name, bm, mat, col)
+    g.ctx.add_bevel(ob, 0.008, 2)
+    return ob

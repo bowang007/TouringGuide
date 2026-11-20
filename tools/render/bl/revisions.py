@@ -9,9 +9,9 @@ the built objects by name, so it survives re-runs of the build:
 3. Foyer: two skylights, on the entry roof's east slope (the ridge runs down the foyer's middle):
    one over the hall section, one in the vaulted entry.
 4. Primary bedroom: the large rear window becomes a two-panel sliding door to the garden.
-5. Bedroom 2 (next to the primary): its rear window runs floor to ceiling.
-6. Primary bathroom: the west window runs floor to ceiling (clear glass, a transom at 6 ft), between
-   the vanity and the shower; the linen cabinet that stood in front of it is gone.
+5. Bedroom 2 (next to the primary): its rear window runs up to the ceiling (from a 2'-0" sill, third round).
+6. Primary bathroom: a tall west window (clear glass, a transom at 6 ft, a 2'-0" sill since the third round),
+   between the vanity and the shower; the linen cabinet that stood in front of it is gone.
 7. Kitchen skylight: moved off the garage-gable ridge (where the old 4 x 3 ft unit straddled two roof
    planes) to the continuous east-facing roof plane over the sink / dishwasher run, 3'-6" x 4'-0"
    as on the architect's plan.
@@ -22,7 +22,11 @@ Second round (2026-11-19):
 10. The office / bedroom-3 foyer-side wall lines up with the shared bath's east wall: that is the
     conversion itself (relayout.FOYER_WALL); here only the office ceiling and the foyer skylights follow.
 
-Repairs to the conversion run first: ceiling_seam and floor_seam close seams the slab warp opened.
+Third round (2026-11-19): 5 and 6 stop at a 2'-0" sill (revision_spec.TALL_SILL) instead of the floor.
+
+Repairs to the conversion run first: ceiling_seam and floor_seam close seams the slab warp opened. Two general
+repairs run last, after every change has cut or moved walls and slabs: floor_gaps (thin floor seams and the bare
+strips under door openings) and skirting_trim (baseboards cut back to the walls behind them).
 """
 import math
 import re
@@ -36,8 +40,8 @@ from .common import FT, ft2bl
 
 COLL_SHELL, COLL_OPEN = 'shell', 'openings'
 
-from .revision_spec import (BATH_WIN_Z, FOYER_SKY, KITCHEN_SKY, OFFICE_CEILING, PRIMARY_BATH_SKY,  # noqa: F401
-                            SLIDER_HEAD, SLIDER_X)
+from .revision_spec import (BATH_OLD_HOLE_Y, BATH_WIN_Z, FOYER_SKY, KITCHEN_SKY, OFFICE_CEILING,  # noqa: F401
+                            PRIMARY_BATH_SKY, SLIDER_HEAD, SLIDER_X, TALL_SILL)
 
 
 # ------------------------------------------------------------------------------------- helpers
@@ -436,49 +440,124 @@ def primary_slider(ctx):
     return {'removed': gone}
 
 
-def bedroom2_full_height(ctx):
-    obs = find(r'^\d+ Bedroom 2 — rear wall$')
-    gone = remove([ob for ob in obs if any(cc.name == COLL_SHELL for cc in ob.users_collection)
-                   and (lambda b: b[0] > 14.3 and b[1] < 19.8 and (b[3] <= 2.6 or b[2] >= 6.9))(bbox(ob))])
-    gone += remove([ob for ob in find(r'Painted skirting — Bedroom 2 — rear wall') if (lambda b: b[0] > 14.3 and b[1] < 19.8)(bbox(ob))])
-    gone += remove(_sills(14.3, 19.8))
+def bedroom2_tall_window(ctx):
+    """Bedroom 2's rear window (concept sill 2'-6", head 7'-0") runs from a 2'-0" sill (TALL_SILL) up to the 8 ft
+    ceiling: the wall below keeps its skirting and is cut down to the sill, the stool and outside sill drop with it, the
+    header above goes."""
+    s = TALL_SILL
+    shell = [ob for ob in find(r'^\d+ Bedroom 2 — rear wall$') if any(cc.name == COLL_SHELL for cc in ob.users_collection)
+             and (lambda b: b[0] > 14.3 and b[1] < 19.8)(bbox(ob))]
+    low = [ob for ob in shell if bbox(ob)[3] <= 2.6]
+    gone = remove([ob for ob in shell if bbox(ob)[2] >= 6.9])
+    for ob in low:
+        map_y(ob, [(0.0, 0.0), (2.5, s)])
+    sills = _sills(14.3, 19.8)
+    for ob in sills:
+        ob.location.z -= (2.5 - s) * FT
     k = 0
     for ob in find(r'^\d+ Bedroom 2 — rear wall$', COLL_OPEN):
-        map_y(ob, [(2.5, 0.0), (2.6, 0.1), (6.9, 7.9), (7.0, 8.0)])
+        map_y(ob, [(2.5, s), (2.6, s + 0.1), (6.9, 7.9), (7.0, 8.0)])
         k += 1
-    return {'removed': gone, 'stretched': k}
+    return {'removed header': gone, 'wall below cut to the sill': len(low), 'sills lowered': len(sills), 'stretched': k}
+
+
+def _copy(ob, name):
+    c = ob.copy()
+    c.data = ob.data.copy()
+    c.name = name
+    for col in ob.users_collection:
+        col.objects.link(c)
+    return c
+
+
+def _clamp(ob, z=None, y=None):
+    """Clamp vertex z (SCENE ft) to the range z and height to the range y; the rest of the mesh collapses onto it."""
+    w, mw = _world(ob)
+    if z is not None:
+        w[:, 1] = -np.clip(-w[:, 1] / FT, *z) * FT
+    if y is not None:
+        w[:, 2] = np.clip(w[:, 2] / FT, *y) * FT
+    _set_world(ob, w, mw)
+
+
+def _cut_finish(ob, z0, z1, y0, y1, below=None):
+    """Split a west-wall finish piece around the opening z0..z1 x y0..y1: the parts north and south of it and those
+    below and above it (each a copy clamped to its range; the part below stops at `below`, under the stool).
+    Returns the pieces; the original goes."""
+    b = bbox(ob)
+    if b[5] <= z0 + 0.005 or b[4] >= z1 - 0.005 or b[3] <= y0 + 0.005 or b[2] >= y1 - 0.005:
+        return [ob]
+    out = []
+    for tag, zr, yr in (('N', (b[4], z0), (b[2], b[3])), ('S', (z1, b[5]), (b[2], b[3])),
+                        ('below', (z0, z1), (b[2], min(b[3], y0 if below is None else below))),
+                        ('above', (z0, z1), (max(b[2], y1), b[3]))):
+        if zr[1] - zr[0] > 0.01 and yr[1] - yr[0] > 0.01:
+            c = _copy(ob, f'{ob.name} {tag}')
+            _clamp(c, zr, yr)
+            out.append(c)
+    remove([ob])
+    return out
 
 
 def bath_window(ctx):
+    """Primary bath west window between the vanity and the shower: clear glass from a 2'-0" sill (TALL_SILL) to the
+    8 ft ceiling with a transom at 6 ft. The wall below the sill is a copy of the neighbouring wall (paint inside,
+    stucco outside); the room's west-wall finish ('A0 tile west ...', built by the baths zone around the concept
+    window) is cut around the new opening and closed where the concept window was; a stool and a linen roman shade."""
     z0, z1 = BATH_WIN_Z
+    s = TALL_SILL
     gone = remove(find(r'Primary bathroom west wall — (below|above) privacy window|Primary bathroom privacy-window|'
                        r'Primary bathroom operable awning|Primary bathroom obscured privacy glazing'))
     gone += remove(find(r'Painted skirting — Primary bathroom west wall — below'))
     gone += remove(find(r'^A0 (linen|succulent)'))
-    gone += remove([ob for ob in find(r'^A0 tile west') if (lambda b: b[4] > 22.1 and b[5] < 24.95)(bbox(ob))])
-    for ob in find(r'Primary bathroom west wall — north solid'):
+    north = find(r'Primary bathroom west wall — north solid')
+    for ob in north:
         move_face(ob, 'z', 22.20, z0)
     for ob in find(r'Primary bathroom west wall — south solid'):
         move_face(ob, 'z', 24.89, z1)
+    if north:                               # stretch a copy of the north solid across the opening, up to the sill
+        apron = _copy(north[0], 'Primary bathroom west wall — below tall window')
+        w, mw = _world(apron)
+        z = -w[:, 1] / FT
+        w[:, 1] = -(z0 + (z - z.min()) / (z.max() - z.min()) * (z1 - z0)) * FT
+        w[:, 2] = np.minimum(w[:, 2], s * FT)
+        _set_world(apron, w, mw)
+    stool_t = 0.06
+    pieces = []
     for ob in find(r'^A0 tile west'):
+        pieces += _cut_finish(ob, z0, z1, s, 8.0, below=s - stool_t)
+    face = max([bbox(p)[1] for p in pieces if bbox(p)[1] < 1.0] or [0.29])     # room face of the wall finish
+    closed = 0
+    h0, h1 = BATH_OLD_HOLE_Y
+    for ob in pieces:                       # beside the new opening, close the concept window's hole
         b = bbox(ob)
-        if b[5] < 22.3:
-            move_face(ob, 'z', b[5], z0)
-        elif b[4] > 24.8:
-            move_face(ob, 'z', b[4], z1)
+        if abs(b[3] - h0) < 0.02 and (b[5] <= z0 + 0.01 or b[4] >= z1 - 0.01) and b[4] < 25.0 and b[5] > 22.0:
+            closed += move_face(ob, 'y', h0, h1) > 0
     xc, fd, fw = 0.0, 0.22, 0.12
     c = COLL_OPEN
     box(ctx, 'Primary bath tall window head', xc - fd / 2, xc + fd / 2, 8.0 - fw, 8.0, z0, z1, 'black_aluminum', c)
-    box(ctx, 'Primary bath tall window sill', xc - fd / 2, xc + fd / 2, 0.0, 0.08, z0, z1, 'black_aluminum', c)
-    box(ctx, 'Primary bath tall window jamb N', xc - fd / 2, xc + fd / 2, 0.0, 8.0, z0, z0 + fw, 'black_aluminum', c)
-    box(ctx, 'Primary bath tall window jamb S', xc - fd / 2, xc + fd / 2, 0.0, 8.0, z1 - fw, z1, 'black_aluminum', c)
+    box(ctx, 'Primary bath tall window sill', xc - fd / 2, xc + fd / 2, s, s + 0.08, z0, z1, 'black_aluminum', c)
+    box(ctx, 'Primary bath tall window jamb N', xc - fd / 2, xc + fd / 2, s, 8.0, z0, z0 + fw, 'black_aluminum', c)
+    box(ctx, 'Primary bath tall window jamb S', xc - fd / 2, xc + fd / 2, s, 8.0, z1 - fw, z1, 'black_aluminum', c)
     box(ctx, 'Primary bath tall window transom', xc - fd / 2, xc + fd / 2, 6.0, 6.1, z0, z1, 'black_aluminum', c)
     # clear glass: the side yard outside is fenced (6'-2") and screened by an evergreen (exterior_plants)
-    g = box(ctx, 'Primary bath tall window lower glass', xc - 0.015, xc + 0.015, 0.08, 6.0, z0 + fw, z1 - fw, 'glass_clear', c)
+    g = box(ctx, 'Primary bath tall window lower glass', xc - 0.015, xc + 0.015, s + 0.08, 6.0, z0 + fw, z1 - fw,
+            'glass_clear', c)
     g.visible_shadow = True
-    g2 = box(ctx, 'Primary bath tall window upper glass', xc - 0.015, xc + 0.015, 6.1, 8.0 - fw, z0 + fw, z1 - fw, 'glass_clear', c)
+    g2 = box(ctx, 'Primary bath tall window upper glass', xc - 0.015, xc + 0.015, 6.1, 8.0 - fw, z0 + fw, z1 - fw,
+             'glass_clear', c)
     g2.visible_shadow = True
-    return {'removed': gone}
+    # interior stool on the apron (its front lip with short horns on the wall finish) and a linen roman shade,
+    # inside-mounted under the head, drawn up to about 6'-4"
+    box(ctx, 'Primary bath window stool', fd / 2, face, s - stool_t, s, z0, z1, 'white_oak_veneer', c)
+    box(ctx, 'Primary bath window stool lip', face, face + 0.07, s - 0.075, s, z0 - 0.07, z1 + 0.07, 'white_oak_veneer', c)
+    box(ctx, 'Primary bath roman shade headrail', 0.13, 0.27, 7.74, 8.0 - fw, z0 + 0.02, z1 - 0.02, 'paint_trim', c)
+    box(ctx, 'Primary bath roman shade fabric', 0.215, 0.235, 6.62, 7.74, z0 + 0.03, z1 - 0.03, 'fabric_linen_white', c)
+    for i, yb in enumerate((6.30, 6.47)):
+        fold = box(ctx, f'Primary bath roman shade fold {i}', 0.20, 0.30 - 0.025 * i, yb, yb + 0.19, z0 + 0.03, z1 - 0.03,
+                   'fabric_linen_white', c)
+        ctx.add_bevel(fold, 0.06, 4)
+    return {'removed': gone, 'finish pieces': len(pieces), 'old hole closed': closed, 'finish face x': round(face, 3)}
 
 
 def kitchen_skylight(ctx):
@@ -522,11 +601,177 @@ def entry_vault_closure(ctx):
     return 2
 
 
+# ---- repairs that run last (after every change above has cut or moved walls and slabs)
+def _bvh(colls, skip=None):
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get()
+    verts, polys, owner = [], [], []
+    for ob in bpy.data.objects:
+        if ob.type != 'MESH' or ob.hide_render or not ({c.name for c in ob.users_collection} & colls):
+            continue
+        if skip is not None and skip(ob):
+            continue
+        ev = ob.evaluated_get(dg)
+        me = ev.to_mesh()
+        mw, base = ob.matrix_world, len(verts)
+        verts += [mw @ v.co for v in me.vertices]
+        for p in me.polygons:
+            polys.append([base + i for i in p.vertices])
+            owner.append(ob)
+        ev.to_mesh_clear()
+    return BVHTree.FromPolygons(verts, polys), owner
+
+
+SKIRT = re.compile(r'skirting|baseboard', re.I)
+
+
+def skirting_trim(ctx):
+    """Every baseboard needs a wall right behind it. The warp carries a run with its wall, but where a wall got
+    shorter (the kitchen / garage wall's end in the hall, the garage wall at the porch) or an opening was cut
+    afterwards (the primary bedroom's sliding door) the run stuck out into the room on its own. Each run is
+    sampled every 0.05 ft and cut back to the stretches with a shell wall within 0.25 ft behind it; a run with
+    none is removed."""
+    bvh, _ = _bvh({COLL_SHELL, 'exterior_shell'},
+                  skip=lambda ob: bool(SKIRT.search(ob.name)) or bool(re.search(r'glass|glazing', ob.name, re.I)))
+    step, out = 0.05, {}
+    for ob in [o for o in bpy.data.objects if o.type == 'MESH' and SKIRT.search(o.name)
+               and any(c.name == COLL_SHELL for c in o.users_collection)]:
+        x0, x1, _, _, z0, z1 = bbox(ob)
+        along_x = (x1 - x0) >= (z1 - z0)
+        a0, a1 = (x0, x1) if along_x else (z0, z1)
+        if a1 - a0 < 0.1:
+            continue
+        backed = []
+        t = a0 + step / 2
+        while t < a1:
+            x, z = (t, (z0 + z1) / 2) if along_x else ((x0 + x1) / 2, t)
+            o = ft2bl(x, 0.2, z)
+            ok = False
+            for d in ((0, -1, 0), (0, 1, 0)) if along_x else ((1, 0, 0), (-1, 0, 0)):
+                if bvh.ray_cast(o, Vector(d), 0.25 * FT)[0] is not None:
+                    ok = True
+                    break
+            backed.append((t, ok))
+            t += step
+        runs = []
+        for t, ok in backed:
+            if not ok:
+                continue
+            if runs and t - runs[-1][1] < 0.2:
+                runs[-1][1] = t
+            else:
+                runs.append([t, t])
+        runs = [(max(a0, a - step / 2), min(a1, b + step / 2)) for a, b in runs if b - a + step >= 0.15]
+        if len(runs) == 1 and runs[0][0] - a0 < 0.08 and a1 - runs[0][1] < 0.08:
+            continue
+        key = re.sub(r'^\d+ ', '', ob.name)
+        if not runs:
+            remove([ob])
+            out[key] = 'removed (no wall behind it)'
+            continue
+        for i, (a, b) in enumerate(runs):
+            piece = ob if i == 0 else _copy(ob, f'{ob.name} {i}')
+            w, mw = _world(piece)
+            if along_x:
+                w[:, 0] = np.clip(w[:, 0], a * FT, b * FT)
+            else:
+                w[:, 1] = -np.clip(-w[:, 1] / FT, a, b) * FT
+            _set_world(piece, w, mw)
+        out[key] = [(round(a, 2), round(b, 2)) for a, b in runs] + [f'was {a0:.2f}..{a1:.2f}']
+    return out
+
+
+def floor_gaps(ctx):
+    """Slab warp seams too thin for floor_seam's targeted fix: where the floor slabs part, the foundation shows as
+    grey lines across the oak (the hall's north end, the hall / living line), and under door openings, where
+    the slabs stop at the wall faces. A 0.1 x 0.03 ft grid of downward rays (under a roof: a ceiling or door
+    head above) finds them; each find is then followed along its line in 0.1 ft steps, probing across it every
+    0.005 ft, until the seam runs out (they taper to a hairline), and collinear finds are merged. Each seam gets
+    a patch of the neighbouring floor's material 1/32 in below the finished floor."""
+    import collections
+    bvh, owner = _bvh({COLL_SHELL, COLL_OPEN, 'exterior_shell'})
+    down = Vector((0, 0, -1))
+
+    def probe(x, z):
+        """(is exposed foundation, floor object or None, floor y)"""
+        loc, _, i, _ = bvh.ray_cast(ft2bl(x, 1.0, z), down, 3 * FT)
+        if loc is None:
+            return False, None, None
+        ob, y = owner[i], loc.z / FT
+        if re.search(r'foundation', ob.name, re.I):
+            up = bvh.ray_cast(ft2bl(x, 1.0, z), Vector((0, 0, 1)), 12 * FT)[0]
+            return (-0.5 < y and up is not None and up.z / FT > 6.0), None, None
+        return False, (ob if -0.005 < y < 0.2 else None), y
+
+    hits = []
+    x = 0.3
+    while x < 39.6:
+        z = 0.3
+        while z < 54.0:
+            if probe(x, z)[0]:
+                hits.append((x, z))
+            z += 0.03
+        x += 0.1
+    clusters = []
+    for x, z in hits:
+        for c in clusters:
+            if any(abs(x - p[0]) < 0.25 and abs(z - p[1]) < 0.2 for p in c[-80:]):
+                c.append((x, z))
+                break
+        else:
+            clusters.append([(x, z)])
+    seams = []
+    for c in clusters:
+        xs, zs = [p[0] for p in c], [p[1] for p in c]
+        along_x = max(xs) - min(xs) >= max(zs) - min(zs)
+        a0, a1 = (min(xs), max(xs)) if along_x else (min(zs), max(zs))
+        b0, b1 = (min(zs), max(zs)) if along_x else (min(xs), max(xs))
+        for sgn in (-1, 1):                                  # follow the seam past both ends
+            t, miss = (a0 if sgn < 0 else a1), 0
+            while miss < 3 and 0.0 < t < 55.0:
+                t += 0.1 * sgn
+                across = [b0 - 0.15 + k * 0.005 for k in range(int((b1 - b0 + 0.3) / 0.005) + 1)]
+                found = [v for v in across if probe(*((t, v) if along_x else (v, t)))[0]]
+                if found:
+                    miss = 0
+                    a0, a1 = min(a0, t), max(a1, t)
+                    b0, b1 = min(b0, min(found)), max(b1, max(found))
+                else:
+                    miss += 1
+        seams.append([along_x, a0, a1, b0, b1])
+    merged = []
+    for sm in sorted(seams, key=lambda v: (v[0], v[1])):
+        m = merged[-1] if merged else None
+        if m and m[0] == sm[0] and sm[1] <= m[2] + 0.3 and abs((sm[3] + sm[4]) - (m[3] + m[4])) / 2 < 0.15:
+            m[2], m[3], m[4] = max(m[2], sm[2]), min(m[3], sm[3]), max(m[4], sm[4])
+        else:
+            merged.append(list(sm))
+    out = []
+    for k, (along_x, a0, a1, b0, b1) in enumerate(merged):
+        x0, x1, z0, z1 = (a0, a1, b0, b1) if along_x else (b0, b1, a0, a1)
+        nb = collections.Counter()
+        for fx, fz in ((x0 - 0.1, (z0 + z1) / 2), (x1 + 0.1, (z0 + z1) / 2), ((x0 + x1) / 2, z0 - 0.1),
+                       ((x0 + x1) / 2, z1 + 0.1), (x0 + 0.3, z0 - 0.08), (x1 - 0.3, z1 + 0.08)):
+            _, ob, y = probe(fx, fz)
+            if ob is not None:
+                nb[(ob.name, round(y, 3))] += 1
+        if not nb:
+            continue
+        (name, y), _ = nb.most_common(1)[0]
+        src = bpy.data.objects[name]
+        patch = ctx.box(f'Floor seam patch {k}', x0 - 0.06, x1 + 0.06, y - 0.1, y - 0.0026, z0 - 0.04, z1 + 0.04,
+                        None, COLL_SHELL)
+        if src.data.materials:
+            patch.data.materials.append(src.data.materials[0])
+        out.append((re.sub(r'^\d+ ', '', name)[:24], round(x0, 2), round(x1, 2), round(z0, 3), round(z1, 3)))
+    return out
+
+
 def apply(ctx):
     bpy.context.view_layer.update()
     res = {}
-    for f in (ceiling_seam, floor_seam, bedroom4_flat, bay_to_floor, primary_slider, bedroom2_full_height, bath_window, kitchen_skylight,
-              foyer_skylights, primary_bath_skylight, entry_vault_closure):
+    for f in (ceiling_seam, floor_seam, bedroom4_flat, bay_to_floor, primary_slider, bedroom2_tall_window, bath_window, kitchen_skylight,
+              foyer_skylights, primary_bath_skylight, entry_vault_closure, floor_gaps, skirting_trim):
         try:
             res[f.__name__] = f(ctx)
         except Exception as e:                       # report, keep building

@@ -1,252 +1,513 @@
-"""Modern kitchen for the kitchen_dining zone: walnut slab cabinetry with finger-pull channels,
-Calacatta quartz worktops and full-height backsplash, stainless column fridge + stacked wall
-ovens, induction cooktop under a white plaster hood, undermount sink with a matte-black faucet,
-waterfall island with leather counter stools and a linear LED pendant.
+"""Warm vintage-American kitchen for the kitchen_dining zone (owner's style images: "kitchen
+closet / cloest style", "kitchen island and style", "kitchen window (style)").
 
-All numbers are SCENE feet. Plan anchors (from data/scene.json layout_revision and the
-original fixtures):
-  south (garage) wall face z=31.41, east wall face x=40.61, flat ceiling y=8.0
-  south counter front z=29.13, east counter front x=38.405
-  island worktop x 28.4-34.4, z 22-25, top 36in; base 5.8 x 1.92 centred (31.4, 23.96)
-  stools (29.4|31.4|33.4, 21.7); pendant centres (30, 23.5) and (32.8, 23.5)
-  W08 window z 23.387-29.387, sill 3.15 (sink centred at z 26.387); W07 ends at z 21.814
-  original fridge x 22.68-25.48 (tall units), cooktop centred x 34.8
+Same plan as before (fridge column + wall ovens at the west end of the south wall, cooktop under the
+hood, dishwasher and sink on the east wall under the window, island with the dining table in line),
+restyled: painted cream shaker base and upper cabinetry with unlacquered-brass cup pulls and knobs,
+crown moulding and a painted toe kick; the tall fridge/oven wall in a soft greige as the "pantry
+wall" (integrated fridge behind shaker panels with long brass appliance pulls); glass-front uppers
+with dishes; a walnut open-shelf bay with brass gallery rails against whitewashed brick; honed
+grey-veined marble worktops with a scalloped marble slab behind the cooktop and a brass pot filler;
+a cream plaster hood with a dentil band; a white fireclay apron-front sink with a brass bridge
+faucet; a white-oak drawer island with brass knobs under a thick honed quartzite top.
+
+All numbers are SCENE feet on the concept plan (bl/warp.py carries them onto the architect's plan).
+Plan anchors: south (garage) wall face z=31.41, east wall face x=40.61, flat ceiling y=8.0;
+south counter front z=29.13, east counter front x=38.405; island top x 28.4-34.4, z 22-25;
+W08 window z 23.387-29.387, sill 3.15, head 7.75 (sink centred at z 26.387); W07 ends at z 21.814.
+
+Warp naming: run fronts / carcasses / crowns / splashes are '... panel / carcass / cove / splash /
+tile ...' (fitted, reshaped with the room); knobs and cup pulls are '... hardware panel' (fitted, so
+each stays on its front, see kitchen_dining_cabs); appliances, appliance pulls, the faucet and pot
+filler are loose (moved rigidly); the hood is '... soffit ...' (fitted) so it keeps meeting the
+cabinets.
 """
 import math
 
-from .kitchen_dining_geo import Geo, principled, srgb
+import bmesh
+
+from . import kitchen_dining_cabs as C
+from . import kitchen_dining_mats as KM
+from .kitchen_dining_geo import Geo, P, principled, srgb
 
 # ----------------------------------------------------------------------------- constants
 WALL_S = 31.41
 WALL_E = 40.61
 CEIL = 8.0
 TOP = 3.0                 # finished counter height (36in)
-CT_T = 0.1                # perimeter worktop thickness (1.2in)
-CT_UNDER = TOP - CT_T     # 2.9
-SPL = 0.06                # quartz backsplash slab thickness
-FT_T = 0.0625             # 3/4in slab fronts
+CT_T = 0.104              # perimeter marble (1-1/4in)
+CT_UNDER = TOP - CT_T
+SPL = 0.06                # backsplash slab / thin-brick thickness
+FT_T = 0.0625             # 3/4in fronts
 GAP = 0.011               # reveal between fronts (~1/8in)
-TOE_H = 0.333             # toe-kick height (4in)
-TOE_D = 0.25              # toe-kick recess (3in)
+RECESS = 0.022            # shaker centre-panel recess (kitchen_dining_cabs.Acc.shaker default)
+TOE_H = 0.333             # toe kick height (4in)
+TOE_D = 0.25              # toe kick recess (3in)
 CT_FRONT_S = 29.13
-FRONT_S = 29.21           # face of south-run fronts
+FRONT_S = 29.21           # face of the south-run fronts
 CT_FRONT_E = 38.405
-FRONT_E = 38.488          # face of east-run fronts
+FRONT_E = 38.488          # face of the east-run fronts
 RUN_E0 = 21.84            # north end of the east run (W07 jamb)
-TALL_X0 = 22.60           # outer face of the tall-bank end panel
+TALL_X0 = 22.60           # outer face of the tall-wall end panel
 FRIDGE = (22.6625, 25.6625)
 OVEN = (25.6625, 28.10)
 BASE_X0 = 28.1625
 HOOD = (33.2, 36.4)
 UPPER_Y0 = 4.75
+UPPER_TOP = 7.53          # top of the upper / tall doors (crown above)
+CROWN_Y = 7.55
+CROWN_H = 0.44
 UPPER_FRONT = 30.2675     # face of the upper doors
+SHELF_FRONT = 30.55       # face of the walnut open-shelf bay
 SINK_Z = 26.387
-SINK_X = (38.68, 40.02)   # undermount bowl (x), 16in front-to-back
-SINK_HALF_Z = 1.25        # 30in long bowl
-SINK_BOTTOM = 2.15        # bowl floor (9in deep)
-# finger-pull channel layout (y): bottom front | channel | top drawer | channel | worktop
-Y_LO0, Y_LO1 = TOE_H + 0.012, 1.93
-Y_CH0, Y_CH1 = 1.93, 2.06
-Y_HI0, Y_HI1 = 2.06, 2.74
+SINK = (38.44, 40.10, 25.137, 27.637)   # fireclay apron sink outer footprint (x0, x1, z0, z1): 30 x 20in
+SINK_BOT = 2.16           # bottom of the apron (10in apron)
+Y_B0 = TOE_H + 0.012      # bottom of base fronts
+Y_B1 = CT_UNDER - 0.012   # top of base fronts
+Y_DR = Y_B1 - 0.5         # top drawer bottom (6in drawers)
+COOK = (33.30, 36.30, 29.32, 31.05)     # 36in gas cooktop (x0, x1, z0, z1)
+POT_FILLER = (34.80, 4.55)               # (x, y) on the wall inside the slab's scallop
 
 COLL = 'kd_kitchen'
+STOOLS = False            # the dining table continues the island (architect's plan): no stools
 
 
-
-STOOLS = True        # kitchen_dining turns them off when the dining table stands at the island
-
-def _mats():
-    return {
-        'black_glass': principled('black_glass', srgb('#060607'), 0.04, coat=0.0),
-        'cooktop_mark': principled('cooktop_mark', srgb('#3a3a3a'), 0.35),
-        'oven_cavity': principled('oven_cavity', srgb('#101010'), 0.3),
-        'rubber': principled('rubber', srgb('#0d0d0d'), 0.6),
-        'led': None,
-    }
+class _Mats:
+    def __init__(self, g):
+        self.cream = KM.paint_cream()
+        self.greige = KM.paint_greige()
+        self.brass = KM.brass()
+        self.marble = KM.marble_honed()
+        self.quartzite = KM.quartzite()
+        self.oak = KM.oak_island()
+        self.brick = KM.brick()
+        self.plaster = KM.plaster_hood()
+        self.fireclay = KM.fireclay()
+        self.iron = KM.cast_iron()
+        self.enamel = KM.enamel_black()
+        self.glass = KM.glass_cabinet()
+        self.black_glass = principled('black_glass', srgb('#060607'), 0.04)
+        self.rubber = principled('rubber', srgb('#0d0d0d'), 0.6)
 
 
 def build(ctx, g: Geo):
-    from ..lighting import emitter
-    M = _mats()
-    M['led'] = emitter('kd_led_strip', 3000, 25.0)
+    M = _Mats(g)
     col = g.sub(COLL)
+    hw = g.sub('kd hardware')
     lights = g.sub('kd_lights')
     notes = []
+    _tall_wall(g, M, col, hw)
+    _base_runs(g, M, col, hw, lights)
+    _worktop_and_splash(g, M, col)
+    _uppers(g, M, col, hw, lights)
+    _open_shelves(g, M, col)
+    _hood(g, M, col, lights)
+    _cooktop(g, M, col)
+    _pot_filler(g, M, col)
+    _sink(g, M, col)
+    _bridge_faucet(g, M, col)
+    isl = g.sub('kd island')
+    _island(g, M, isl, hw)
+    notes.append('kitchen: greige pantry wall (panelled fridge + ovens), cream shaker L runs, glass uppers, '
+                 'walnut open shelves, plaster hood, fireclay sink, oak island with quartzite top')
+    return notes
 
-    # ======================================================================= tall bank
-    # finished walnut end panel (exposed to the hall), floor to ceiling
-    g.box('kd tall end panel', TALL_X0, TALL_X0 + FT_T, 0.0, CEIL - 0.005, FRONT_S - 0.0, WALL_S, 'walnut_slab', 0.006, coll=col)
-    # carcass behind fronts
-    g.box('kd tall carcass', FRIDGE[0], OVEN[1], 0.0, CEIL - 0.005, FRONT_S + FT_T + 0.01, WALL_S, 'walnut_slab', coll=col)
-    g.box('kd tall plinth', FRIDGE[0], OVEN[1], 0.0, TOE_H, FRONT_S + 0.06, FRONT_S + FT_T + 0.02, 'paint_black', coll=col)
-    # --- integrated stainless column fridge (over-under), walnut flipper above
-    fx0, fx1 = FRIDGE
-    zf0, zf1 = FRONT_S - 0.02, FRONT_S + FT_T
-    g.box('kd fridge grille', fx0 + 0.04, fx1 - 0.04, 0.03, TOE_H, FRONT_S + 0.03, FRONT_S + 0.05, M['rubber'], coll=col)
-    g.box('kd fridge freezer drawer', fx0 + GAP, fx1 - GAP, TOE_H + 0.012, 2.42, zf0, zf1, 'stainless', 0.012, coll=col)
-    g.box('kd fridge door', fx0 + GAP, fx1 - GAP, 2.42 + GAP, 6.92, zf0, zf1, 'stainless', 0.012, coll=col)
-    g.box('kd fridge top door', fx0 + GAP, fx1 - GAP, 6.92 + GAP, CEIL - 0.012, FRONT_S, FRONT_S + FT_T, 'walnut_slab', 0.006, coll=col)
-    # bar handles (round stainless on stand-offs)
-    hz = zf0 - 0.12
-    g.cyl_axis('kd fridge handle', (fx0 + 0.32, 3.45, hz), (fx0 + 0.32, 5.85, hz), 0.035, 'stainless', coll=col)
-    for yy in (3.6, 5.7):
-        g.cyl_axis('kd fridge handle post', (fx0 + 0.32, yy, zf0 + 0.005), (fx0 + 0.32, yy, hz), 0.022, 'stainless', coll=col)
-    g.cyl_axis('kd freezer handle', (fx0 + 0.45, 2.2, hz), (fx1 - 0.45, 2.2, hz), 0.035, 'stainless', coll=col)
-    for xx in (fx0 + 0.6, fx1 - 0.6):
-        g.cyl_axis('kd freezer handle post', (xx, 2.2, zf0 + 0.005), (xx, 2.2, hz), 0.022, 'stainless', coll=col)
-    # --- stacked wall ovens in a walnut tower
-    ox0, ox1 = OVEN
-    g.box('kd oven tower drawer', ox0 + GAP, ox1 - GAP, TOE_H + 0.012, 1.55, FRONT_S, FRONT_S + FT_T, 'walnut_slab', 0.006, coll=col)
-    g.box('kd oven tower top door', ox0 + GAP, ox1 - GAP, 6.02, CEIL - 0.012, FRONT_S, FRONT_S + FT_T, 'walnut_slab', 0.006, coll=col)
-    for k, (oy0, oy1) in enumerate(((1.58, 3.78), (3.80, 6.0))):
-        g.box(f'kd oven {k} frame', ox0 + 0.02, ox1 - 0.02, oy0, oy1, FRONT_S - 0.01, FRONT_S + FT_T, 'stainless', 0.01, coll=col)
-        g.box(f'kd oven {k} door glass', ox0 + 0.07, ox1 - 0.07, oy0 + 0.06, oy1 - 0.34, FRONT_S - 0.025, FRONT_S - 0.005,
-              M['black_glass'], 0.008, coll=col)
-        g.box(f'kd oven {k} controls', ox0 + 0.07, ox1 - 0.07, oy1 - 0.24, oy1 - 0.05, FRONT_S - 0.02, FRONT_S - 0.005,
-              M['black_glass'], 0.006, coll=col)
-        hy = oy1 - 0.42
-        g.cyl_axis(f'kd oven {k} handle', (ox0 + 0.25, hy, FRONT_S - 0.14), (ox1 - 0.25, hy, FRONT_S - 0.14), 0.03, 'stainless', coll=col)
-        for xx in (ox0 + 0.35, ox1 - 0.35):
-            g.cyl_axis(f'kd oven {k} handle post', (xx, hy, FRONT_S - 0.02), (xx, hy, FRONT_S - 0.14), 0.018, 'stainless', coll=col)
-    # finished side panel facing the counter (between tall bank front and wall)
-    g.box('kd tall side panel', OVEN[1], BASE_X0, 0.0, CEIL - 0.005, FRONT_S, WALL_S, 'walnut_slab', 0.006, coll=col)
 
-    # ===================================================================== base runs
-    # carcasses (hidden behind fronts; walnut where reveals show)
-    g.box('kd south carcass', BASE_X0, WALL_E, TOE_H, CT_UNDER, FRONT_S + FT_T + 0.012, WALL_S, 'walnut_slab', coll=col)
-    # east carcass is split around the undermount bowl: a solid box here would fill the sink and
-    # show its walnut top through the worktop cut-out
+def _soft_edge(g, ob, width, seg):
+    """Eased stone edge: a fine bevel on a FLAT-shaded slab. (Smooth normals on the slab's large quads
+    interpolate across whole triangles and showed as faceted triangles at the corners in the glossy
+    stone; 4-5 flat facets on a 1/4in round are invisible.)"""
+    m = ob.modifiers.new('Bevel', 'BEVEL')
+    m.width = width * 0.3048
+    m.segments = seg + 1
+    m.limit_method = 'ANGLE'
+    m.harden_normals = False
+    ob.data.shade_flat()
+
+
+# ======================================================================== shaker helpers
+def _hw_door(g, M, F, u0, u1, v0, v1, hinge, hw, upper=False):
+    """Knob on the door's free stile, 2.5in in from the edge, near the top (base) / bottom (upper)."""
+    u = u1 - 0.12 if hinge == 'l' else u0 + 0.12
+    v = v0 + 0.3 if upper else v1 - 0.28
+    C.knob(g, M.brass, F, u, v, hw)
+
+
+def _hw_drawer(g, M, F, u0, u1, v0, v1, hw, kind='cup', sw=0.19, rw=0.19):
+    """Short drawers (6in): pull centred on the recessed centre panel, seated on the panel. Deeper
+    drawers: cup pull centred on the top rail (as in the closet reference), seated on the rail face.
+    (Hardware placed at the outer face over a recessed panel floated 1/4in off it.)"""
+    w, h = u1 - u0, v1 - v0
+    slab = w < 2 * sw + 0.12 or h < 2 * rw + 0.08          # Acc.shaker falls back to a slab
+    if h < 0.75:
+        v, depth = (v0 + v1) / 2, (0.0 if slab else -RECESS)
+    else:
+        v, depth = v1 - rw / 2 - 0.011, 0.0                  # cup spans v-0.035 .. v+0.057
+    us = [(u0 + u1) / 2] if w < 2.2 else [u0 + w * 0.27, u1 - w * 0.27]
+    for u in us:
+        if kind == 'cup':
+            C.cup_pull(g, M.brass, F, u, v, hw, w=depth)
+        else:
+            C.knob(g, M.brass, F, u, v, hw, w=depth)
+
+
+def _base_unit(acc, g, M, F, u0, u1, kind, hw, hinge='l'):
+    """One base cabinet's fronts between u0 and u1 (face frame F). kinds: 'doors2', 'door1',
+    'drawers3', 'drawers2', 'panel'."""
+    a, b = u0 + GAP / 2, u1 - GAP / 2
+    if kind == 'panel':
+        acc.shaker(F, a, b, Y_B0, Y_B1)
+        return
+    if kind in ('drawers3', 'drawers2'):
+        if kind == 'drawers3':
+            cuts = [Y_B0, Y_B0 + 1.0, Y_DR, Y_B1]
+        else:
+            cuts = [Y_B0, Y_DR, Y_B1]
+        for i in range(len(cuts) - 1):
+            v0 = cuts[i] + (GAP / 2 if i else 0.0)
+            v1 = cuts[i + 1] - (GAP / 2 if i < len(cuts) - 2 else 0.0)
+            small = v1 - v0 < 0.6
+            sw, rw = (0.15, 0.11) if small else (0.19, 0.19)
+            acc.shaker(F, a, b, v0, v1, sw=sw, rw=rw)
+            _hw_drawer(g, M, F, a, b, v0, v1, hw, sw=sw, rw=rw)
+        return
+    # top drawer over door(s)
+    acc.shaker(F, a, b, Y_DR + GAP / 2, Y_B1, sw=0.15, rw=0.11)
+    _hw_drawer(g, M, F, a, b, Y_DR + GAP / 2, Y_B1, hw, sw=0.15, rw=0.11)
+    if kind == 'doors2':
+        m = (a + b) / 2
+        acc.shaker(F, a, m - GAP / 2, Y_B0, Y_DR - GAP / 2)
+        acc.shaker(F, m + GAP / 2, b, Y_B0, Y_DR - GAP / 2)
+        _hw_door(g, M, F, a, m - GAP / 2, Y_B0, Y_DR - GAP / 2, 'l', hw)
+        _hw_door(g, M, F, m + GAP / 2, b, Y_B0, Y_DR - GAP / 2, 'r', hw)
+    else:
+        acc.shaker(F, a, b, Y_B0, Y_DR - GAP / 2)
+        _hw_door(g, M, F, a, b, Y_B0, Y_DR - GAP / 2, hinge, hw)
+
+
+# ============================================================================= tall wall
+def _tall_wall(g, M, col, hw):
+    """Fridge column + oven tower in greige: the 'pantry wall' of the closet references."""
+    F = C.Face('mz', FRONT_S)
+    acc = C.Acc()
+    x0, x1 = FRIDGE
+    # integrated fridge: freezer drawer, French doors, top cabinet
+    acc.shaker(F, x0 + GAP / 2, x1 - GAP / 2, Y_B0, 2.41)
+    xm = (x0 + x1) / 2
+    acc.shaker(F, x0 + GAP / 2, xm - GAP / 2, 2.42, 6.90, sw=0.21)
+    acc.shaker(F, xm + GAP / 2, x1 - GAP / 2, 2.42, 6.90, sw=0.21)
+    acc.shaker(F, x0 + GAP / 2, x1 - GAP / 2, 6.92, UPPER_TOP)
+    # oven tower: drawer, niche backing (ovens are loose appliances in front of it), top door
+    o0, o1 = OVEN
+    acc.shaker(F, o0 + GAP / 2, o1 - GAP / 2, Y_B0, 1.54)
+    acc.shaker(F, o0 + GAP / 2, o1 - GAP / 2, 6.03, UPPER_TOP)
+    tall = acc.done(g, 'kd tall wall door panel run', M.greige, col)
+    niche = C.Acc()
+    niche.box(F, o0, o1, 1.55, 6.02, -FT_T, -0.02)
+    niche.done(g, 'kd tall niche panel', M.greige, col, bevel=0.0)
+    # end panels (two stacked shaker panels on the hall side), side panel to the counter, kick, carcass
+    side = C.Acc()
+    Fw = C.Face('mx', TALL_X0)
+    side.shaker(Fw, FRONT_S, WALL_S, 0.0, 3.4, sw=0.24)
+    side.shaker(Fw, FRONT_S, WALL_S, 3.4, UPPER_TOP, sw=0.24)
+    side.wbox(OVEN[1], BASE_X0, 0.0, UPPER_TOP, FRONT_S, WALL_S)
+    side.done(g, 'kd tall end panel', M.greige, col)
+    g.box('kd tall plinth', FRIDGE[0], OVEN[1], 0.0, TOE_H, FRONT_S + 0.10, WALL_S - 0.02, M.greige, coll=col)
+    g.box('kd tall carcass', FRIDGE[0], OVEN[1], TOE_H, CEIL - 0.006, FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
+    # frieze behind the crown + crown with mitred returns on both ends
+    g.box('kd tall carcass frieze', TALL_X0, BASE_X0, UPPER_TOP, CEIL - 0.006, FRONT_S + 0.004, FRONT_S + FT_T + 0.012,
+          M.greige, coll=col)
+    C.sweep(g, 'kd tall crown cove', [(TALL_X0, WALL_S - 0.004), (TALL_X0, FRONT_S), (BASE_X0, FRONT_S), (BASE_X0, WALL_S - 0.004)],
+            C.crown_profile(0.24, CROWN_H), CROWN_Y, M.greige, col)
+    # hardware: long brass appliance pulls on the French doors, bar on the freezer, cups on the drawer
+    for xx in (xm - 0.16, xm + 0.16):
+        C.bar_pull(g, M.brass, F, xx, 3.75, xx, 5.55, hw, name='kd fridge pull')
+    # freezer bar on the drawer's top rail (2.22-2.41), feet on the rail face
+    C.bar_pull(g, M.brass, F, x0 + 0.75, 2.315, x1 - 0.75, 2.315, hw, name='kd freezer pull')
+    _hw_drawer(g, M, F, o0, o1, Y_B0, 1.54, hw)
+    # lift-up door over the fridge: knob centred on its bottom rail; oven-tower top door: on the stile
+    C.knob(g, M.brass, F, xm, 6.92 + 0.095, hw)
+    C.knob(g, M.brass, F, o1 - 0.12, 6.3, hw)
+    # stacked wall ovens (27in, brass handles): loose appliances. Stainless doors with a black-glass
+    # viewing window (closet reference: a stainless oven) rather than full black-glass doors, which
+    # read as two heavy dark slabs in the greige wall.
+    oc = (o0 + o1) / 2
+    for k, (oy0, oy1) in enumerate(((1.60, 3.78), (3.82, 6.0))):
+        ox0, ox1 = oc - 1.125, oc + 1.125
+        g.box(f'kd oven {k} fascia', ox0, ox1, oy0, oy1, FRONT_S - 0.035, FRONT_S + 0.012, 'stainless', 0.01, coll=col)
+        g.box(f'kd oven {k} door', ox0 + 0.05, ox1 - 0.05, oy0 + 0.05, oy1 - 0.3, FRONT_S - 0.05, FRONT_S - 0.03,
+              'stainless', 0.008, coll=col)
+        g.box(f'kd oven {k} window', ox0 + 0.32, ox1 - 0.32, oy0 + 0.3, oy1 - 0.62, FRONT_S - 0.053, FRONT_S - 0.047,
+              M.black_glass, 0.002, coll=col)
+        g.box(f'kd oven {k} controls', ox0 + 0.05, ox1 - 0.05, oy1 - 0.22, oy1 - 0.05, FRONT_S - 0.045, FRONT_S - 0.03,
+              M.black_glass, 0.006, coll=col)
+        for kx in (-0.55, 0.55):
+            g.cyl_axis(f'kd oven {k} knob', (oc + kx, oy1 - 0.135, FRONT_S - 0.045), (oc + kx, oy1 - 0.135, FRONT_S - 0.09),
+                       0.045, M.brass, 24, col)
+        hy = oy1 - 0.38
+        g.cyl_axis(f'kd oven {k} handle', (ox0 + 0.2, hy, FRONT_S - 0.17), (ox1 - 0.2, hy, FRONT_S - 0.17), 0.028, M.brass, 20, col)
+        for xx in (ox0 + 0.32, ox1 - 0.32):
+            g.cyl_axis(f'kd oven {k} handle post', (xx, hy, FRONT_S - 0.05), (xx, hy, FRONT_S - 0.17), 0.017, M.brass, 16, col)
+
+
+# ============================================================================= base runs
+def _base_runs(g, M, col, hw, lights):
+    Fs = C.Face('mz', FRONT_S)
+    Fe = C.Face('mx', FRONT_E)
+    acc = C.Acc()
+    for (x0, x1), kind in (((BASE_X0, 30.70), 'doors2'), ((30.70, 33.30), 'drawers3'),
+                           ((33.30, 36.30), 'drawers3'), ((36.30, 38.40), 'doors2')):
+        _base_unit(acc, g, M, Fs, x0, x1, kind, hw)
+    # blind corner fillers
+    acc.box(Fs, 38.40, FRONT_E + FT_T, Y_B0, Y_B1, -FT_T, 0.0)
+    acc.box(Fe, 29.12, FRONT_S + FT_T, Y_B0, Y_B1, -FT_T, 0.0)
+    # east run (u = z): narrow door | dishwasher panel | sink base | drawers
+    _base_unit(acc, g, M, Fe, RUN_E0 + FT_T, 22.887, 'door1', hw, hinge='l')
+    acc.shaker(Fe, 22.887 + GAP / 2, 24.887 - GAP / 2, Y_B0, Y_B1)                    # dishwasher
+    C.bar_pull(g, M.brass, Fe, 23.37, Y_B1 - 0.095, 24.40, Y_B1 - 0.095, hw, name='kd dishwasher pull', standoff=0.1)
+    s0, s1 = 24.887, 27.887
+    za, zb = SINK[2], SINK[3]
+    acc.box(Fe, s0 + GAP / 2, za - 0.006, SINK_BOT, Y_B1, -FT_T, 0.0)                  # stiles beside the apron
+    acc.box(Fe, zb + 0.006, s1 - GAP / 2, SINK_BOT, Y_B1, -FT_T, 0.0)
+    acc.shaker(Fe, s0 + GAP / 2, SINK_Z - GAP / 2, Y_B0, SINK_BOT - GAP)
+    acc.shaker(Fe, SINK_Z + GAP / 2, s1 - GAP / 2, Y_B0, SINK_BOT - GAP)
+    _hw_door(g, M, Fe, s0, SINK_Z - GAP / 2, Y_B0, SINK_BOT - GAP, 'l', hw)
+    _hw_door(g, M, Fe, SINK_Z + GAP / 2, s1, Y_B0, SINK_BOT - GAP, 'r', hw)
+    _base_unit(acc, g, M, Fe, 27.887, 29.12, 'drawers3', hw)
+    acc.done(g, 'kd base door panel run', M.cream, col)
+    # exposed end panel of the east run (faces north, toward W07)
+    ep = C.Acc()
+    ep.shaker(C.Face('mz', RUN_E0), FRONT_E, WALL_E, 0.0, CT_UNDER, sw=0.22)
+    ep.done(g, 'kd east end panel', M.cream, col)
+    # carcasses (hidden), split around the apron sink so nothing shows inside the bowl
+    g.box('kd south carcass', BASE_X0, WALL_E, TOE_H, CT_UNDER, FRONT_S + FT_T + 0.012, WALL_S, M.cream, coll=col)
     ex0, ez0, ez1 = FRONT_E + FT_T + 0.012, RUN_E0 + FT_T, FRONT_S + FT_T + 0.012
-    s_z0, s_z1 = SINK_Z - SINK_HALF_Z - 0.03, SINK_Z + SINK_HALF_Z + 0.03
-    g.box('kd east carcass n', ex0, WALL_E, TOE_H, CT_UNDER, ez0, s_z0, 'walnut_slab', coll=col)
-    g.box('kd east carcass s', ex0, WALL_E, TOE_H, CT_UNDER, s_z1, ez1, 'walnut_slab', coll=col)
-    g.box('kd east carcass sink floor', ex0, WALL_E, TOE_H, SINK_BOTTOM - 0.05, s_z0, s_z1, 'walnut_slab', coll=col)
-    g.box('kd east carcass sink rail', ex0, SINK_X[0] - 0.03, SINK_BOTTOM - 0.05, CT_UNDER, s_z0, s_z1, 'walnut_slab', coll=col)
-    g.box('kd east carcass sink back', SINK_X[1] + 0.03, WALL_E, SINK_BOTTOM - 0.05, CT_UNDER, s_z0, s_z1, 'walnut_slab', coll=col)
-    # toe-kick plinths (matte black so the LED glow reads)
-    g.box('kd south plinth', BASE_X0, WALL_E, 0.0, TOE_H, FRONT_S + TOE_D, WALL_S, 'paint_black', coll=col)
-    g.box('kd east plinth', FRONT_E + TOE_D, WALL_E, 0.0, TOE_H, RUN_E0 + FT_T, FRONT_S + TOE_D, 'paint_black', coll=col)
-    # exposed walnut end panel at the north end of the east run
-    g.box('kd east end panel', FRONT_E - 0.0, WALL_E, 0.0, CT_UNDER, RUN_E0, RUN_E0 + FT_T, 'walnut_slab', 0.006, coll=col)
-    # finger-pull channels (recessed black aluminium profiles)
-    ch_s = FRONT_S + FT_T + 0.004
-    ch_e = FRONT_E + FT_T + 0.004
-    for (y0, y1, tag) in ((Y_CH0, Y_CH1, 'mid'), (Y_HI1, CT_UNDER, 'top')):
-        g.box(f'kd south channel {tag}', BASE_X0, 38.55, y0, y1, ch_s, ch_s + 0.03, 'black_metal', coll=col)
-        g.box(f'kd east channel {tag}', ch_e, ch_e + 0.03, y0, y1, RUN_E0 + FT_T, 29.30, 'black_metal', coll=col)
+    g.box('kd east carcass n', ex0, WALL_E, TOE_H, CT_UNDER, ez0, SINK[2] - 0.01, M.cream, coll=col)
+    g.box('kd east carcass s', ex0, WALL_E, TOE_H, CT_UNDER, SINK[3] + 0.01, ez1, M.cream, coll=col)
+    g.box('kd east carcass sink deck', ex0, WALL_E, TOE_H, SINK_BOT - 0.03, SINK[2] - 0.01, SINK[3] + 0.01, M.cream, coll=col)
+    g.box('kd east carcass sink back', SINK[1] + 0.01, WALL_E, SINK_BOT - 0.03, CT_UNDER, SINK[2] - 0.01, SINK[3] + 0.01,
+          M.cream, coll=col)
+    # painted toe kicks (recessed)
+    g.box('kd south plinth', BASE_X0, WALL_E, 0.0, TOE_H, FRONT_S + TOE_D, WALL_S, M.cream, coll=col)
+    g.box('kd east plinth', FRONT_E + TOE_D, WALL_E, 0.0, TOE_H, RUN_E0 + FT_T, FRONT_S + TOE_D, M.cream, coll=col)
 
-    def fronts_south(x0, x1, name, split=True):
-        z0, z1 = FRONT_S, FRONT_S + FT_T
-        if split:
-            g.box(f'{name} lower', x0 + GAP / 2, x1 - GAP / 2, Y_LO0, Y_LO1, z0, z1, 'walnut_slab', 0.006, coll=col)
-            g.box(f'{name} drawer', x0 + GAP / 2, x1 - GAP / 2, Y_HI0, Y_HI1, z0, z1, 'walnut_slab', 0.006, coll=col)
-        else:
-            g.box(f'{name} panel', x0 + GAP / 2, x1 - GAP / 2, Y_LO0, Y_HI1, z0, z1, 'walnut_slab', 0.006, coll=col)
 
-    def fronts_east(z0, z1, name, split=True, lower_split=None):
-        x0, x1 = FRONT_E, FRONT_E + FT_T
-        if split:
-            if lower_split:
-                zm = lower_split
-                g.box(f'{name} door a', x0, x1, Y_LO0, Y_LO1, z0 + GAP / 2, zm - GAP / 2, 'walnut_slab', 0.006, coll=col)
-                g.box(f'{name} door b', x0, x1, Y_LO0, Y_LO1, zm + GAP / 2, z1 - GAP / 2, 'walnut_slab', 0.006, coll=col)
-            else:
-                g.box(f'{name} lower', x0, x1, Y_LO0, Y_LO1, z0 + GAP / 2, z1 - GAP / 2, 'walnut_slab', 0.006, coll=col)
-            g.box(f'{name} drawer', x0, x1, Y_HI0, Y_HI1, z0 + GAP / 2, z1 - GAP / 2, 'walnut_slab', 0.006, coll=col)
-        else:
-            g.box(f'{name} panel', x0, x1, Y_LO0, Y_HI1, z0 + GAP / 2, z1 - GAP / 2, 'walnut_slab', 0.006, coll=col)
-
-    for i, (x0, x1) in enumerate(((BASE_X0, 30.70), (30.70, 33.30), (33.30, 36.30), (36.30, 38.40))):
-        fronts_south(x0, x1, f'kd south unit {i}')
-    g.box('kd corner filler a', 38.40, FRONT_E + FT_T, Y_LO0, Y_HI1, FRONT_S, FRONT_S + FT_T, 'walnut_slab', coll=col)
-    g.box('kd corner filler b', FRONT_E, FRONT_E + FT_T, Y_LO0, Y_HI1, 29.12, FRONT_S + FT_T, 'walnut_slab', coll=col)
-    fronts_east(RUN_E0 + FT_T, 22.887, 'kd east pullout')
-    fronts_east(22.887, 24.887, 'kd dishwasher', split=False)
-    fronts_east(24.887, 27.887, 'kd sink base', lower_split=SINK_Z)
-    fronts_east(27.887, 29.12, 'kd east drawers')
-
-    # toe-kick LED (area lights under the fronts) + under-counter glow
-    g.area_light('kd toe led south', (BASE_X0 + 38.4) / 2, TOE_H - 0.02, FRONT_S + 0.10, 38.4 - BASE_X0, 0.05, 1.4, 2900, lights,
-                 spread_deg=110)
-    g.area_light('kd toe led east', FRONT_E + 0.10, TOE_H - 0.02, (RUN_E0 + 29.2) / 2, 0.05, 29.2 - RUN_E0, 1.1, 2900, lights,
-                 spread_deg=110)
-
-    # ====================================================================== worktop
-    pts = [(BASE_X0, CT_FRONT_S), (CT_FRONT_E, CT_FRONT_S), (CT_FRONT_E, RUN_E0 - 0.02), (WALL_E - SPL, RUN_E0 - 0.02),
+# ====================================================================== worktop + splash
+def _worktop_and_splash(g, M, col):
+    sx0, sx1, sz0, sz1 = SINK
+    c = 0.005
+    pts = [(BASE_X0, CT_FRONT_S), (CT_FRONT_E, CT_FRONT_S), (CT_FRONT_E, sz1 + c), (sx1 + c, sz1 + c),
+           (sx1 + c, sz0 - c), (CT_FRONT_E, sz0 - c), (CT_FRONT_E, RUN_E0 - 0.02), (WALL_E - SPL, RUN_E0 - 0.02),
            (WALL_E - SPL, WALL_S - SPL), (BASE_X0, WALL_S - SPL)]
-    top = g.poly_prism('kd worktop', pts, CT_UNDER, TOP, 'quartz_calacatta', coll=col)
-    # undermount sink cut-out (rounded rectangle)
-    sx0, sx1 = SINK_X
-    sz0, sz1 = SINK_Z - SINK_HALF_Z, SINK_Z + SINK_HALF_Z
-    cut = g.poly_prism('kd sink cutter', _rrect(sx0, sx1, sz0, sz1, 0.09), CT_UNDER - 0.2, TOP + 0.2, None, coll=col)
-    g.boolean_cut(top, cut)
-    g.bevel_mod(top, 0.012, 2, harden=True)
-    top.data.shade_smooth()
-    try:
-        top.data.set_sharp_from_angle(angle=math.radians(30))
-    except Exception:
-        pass
+    top = g.poly_prism('kd worktop', pts, CT_UNDER, TOP, M.marble, coll=col)
+    _soft_edge(g, top, 0.014, 3)
+    # marble slab behind the counter under the uppers and the cooktop, scalloped under the pot filler
+    px, _ = POT_FILLER
+    r = 0.5
+    arc = [(px + r * math.cos(-math.pi * k / 20), UPPER_Y0 + r * math.sin(-math.pi * k / 20)) for k in range(21)]
+    poly = [(BASE_X0, TOP), (HOOD[1], TOP), (HOOD[1], UPPER_Y0)] + arc + [(BASE_X0, UPPER_Y0)]
+    acc = C.Acc()
+    acc.poly_z(poly, WALL_S - SPL, WALL_S)
+    acc.done(g, 'kd splash marble', M.marble, col, bevel=0.006, seg=2)
+    # whitewashed thin brick: the open-shelf bay and the sink wall (counter to ceiling)
+    acc = C.Acc()
+    acc.wbox(HOOD[1], WALL_E - SPL, TOP, CEIL - 0.004, WALL_S - SPL, WALL_S)
+    acc.wbox(WALL_E - SPL, WALL_E, TOP, CEIL - 0.004, RUN_E0 - 0.02, 23.387)
+    acc.wbox(WALL_E - SPL, WALL_E, TOP, CEIL - 0.004, 29.387, WALL_S)
+    acc.done(g, 'kd brick tile splash', M.brick, col, bevel=0.0)
 
-    # ===================================================================== backsplash
-    bs = 'quartz_calacatta'
-    zb0, zb1 = WALL_S - SPL, WALL_S
-    g.box('kd splash south a', BASE_X0, HOOD[0], TOP, UPPER_Y0, zb0, zb1, bs, 0.004, coll=col)
-    g.box('kd splash south hood', HOOD[0], HOOD[1], TOP, 5.52, zb0, zb1, bs, 0.004, coll=col)
-    g.box('kd splash south shelves', HOOD[1], WALL_E - SPL, TOP, CEIL - 0.004, zb0, zb1, bs, 0.004, coll=col)
-    xe0, xe1 = WALL_E - SPL, WALL_E
-    g.box('kd splash east south pier', xe0, xe1, TOP, CEIL - 0.004, 29.387, WALL_S, bs, 0.004, coll=col)
-    g.box('kd splash east ledge', xe0, xe1, TOP, 3.088, 23.387, 29.387, bs, 0.003, coll=col)
-    g.box('kd splash east north pier', xe0, xe1, TOP, CEIL - 0.004, RUN_E0 - 0.02, 23.387, bs, 0.004, coll=col)
 
-    # ====================================================================== uppers
+# ================================================================================ uppers
+def _uppers(g, M, col, hw, lights):
+    """Three glass-front upper cabinets (x BASE_X0-HOOD0) with painted interiors, shelves and
+    dishes, crown moulding to the ceiling, warm under-cabinet light."""
     ux0, ux1 = BASE_X0, HOOD[0]
-    g.box('kd upper carcass', ux0, ux1, UPPER_Y0, CEIL - 0.004, UPPER_FRONT + FT_T + 0.006, WALL_S, 'walnut_slab', coll=col)
+    zf = UPPER_FRONT + FT_T + 0.006            # carcass front
+    t = 0.06
+    acc = C.Acc()
+    acc.wbox(ux0, ux1, UPPER_Y0, UPPER_Y0 + t, zf, WALL_S)                     # bottom
+    acc.wbox(ux0, ux1, UPPER_TOP - t, CEIL - 0.006, zf, WALL_S)                # top + frieze block
+    acc.wbox(ux0, ux1, UPPER_Y0 + t, UPPER_TOP - t, WALL_S - t, WALL_S)        # back
     n = 3
     w = (ux1 - ux0) / n
+    xs = [ux0 + i * w for i in range(n + 1)]
+    for i, x in enumerate(xs):                                                  # sides + partitions
+        a = x if i == 0 else (x - t if i == n else x - t / 2)
+        acc.wbox(a, a + t, UPPER_Y0 + t, UPPER_TOP - t, zf, WALL_S - t)
+    for ys in (5.66, 6.58):                                                     # shelves
+        for i in range(n):
+            a = xs[i] + (t if i == 0 else t / 2)
+            b = xs[i + 1] - (t if i == n - 1 else t / 2)
+            acc.wbox(a, b, ys, ys + 0.055, zf + 0.04, WALL_S - t)
+    acc.done(g, 'kd upper carcass', M.cream, col, bevel=0.002)
+    # glazed shaker doors
+    F = C.Face('mz', UPPER_FRONT)
+    doors = C.Acc()
+    panes = C.Acc()
     for i in range(n):
-        a, b = ux0 + i * w, ux0 + (i + 1) * w
-        g.box(f'kd upper door {i}', a + GAP / 2, b - GAP / 2, UPPER_Y0, CEIL - 0.014, UPPER_FRONT, UPPER_FRONT + FT_T,
-              'walnut_slab', 0.006, coll=col)
-    g.area_light('kd under-upper led', (ux0 + ux1) / 2, UPPER_Y0 - 0.02, UPPER_FRONT + 0.25, ux1 - ux0 - 0.2, 0.05, 6.0, 3000, lights)
-    g.box('kd under-upper led strip', ux0 + 0.05, ux1 - 0.05, UPPER_Y0 - 0.008, UPPER_Y0, UPPER_FRONT + 0.18, UPPER_FRONT + 0.22,
-          M['led'], coll=col)
+        a, b = xs[i] + GAP / 2, xs[i + 1] - GAP / 2
+        doors.shaker(F, a, b, UPPER_Y0, UPPER_TOP, sw=0.2, glass=True)
+        panes.box(F, a + 0.17, b - 0.17, UPPER_Y0 + 0.17, UPPER_TOP - 0.17, -0.036, -0.028)
+        _hw_door(g, M, F, a, b, UPPER_Y0, UPPER_TOP, 'l' if i < 2 else 'r', hw, upper=True)
+    doors.done(g, 'kd upper door panel run', M.cream, col)
+    panes.done(g, 'kd upper door pane', M.glass, col, bevel=0.0)
+    # frieze in the door plane above the doors, crown to the ceiling (dies into the tall-wall return
+    # and the hood)
+    g.box('kd upper carcass frieze', ux0, ux1, UPPER_TOP + 0.004, CEIL - 0.006, UPPER_FRONT + 0.004, zf, M.cream, coll=col)
+    C.sweep(g, 'kd upper crown cove', [(ux0, UPPER_FRONT), (ux1, UPPER_FRONT)], C.crown_profile(0.2, CROWN_H), CROWN_Y,
+            M.cream, col)
+    # warm under-cabinet light (fixture hidden under the bottom)
+    g.area_light('kd under-upper light', (ux0 + ux1) / 2, UPPER_Y0 - 0.02, UPPER_FRONT + 0.35, ux1 - ux0 - 0.3, 0.06, 5.0,
+                 2900, lights)
 
-    # ======================================================================= hood
+
+# ========================================================================= open shelves
+def _open_shelves(g, M, col):
+    """Walnut open-shelf bay between the hood and the east wall (closet reference): side panels
+    with a curved corbel foot, two shelves and a top, walnut cornice, brass gallery rails."""
+    x0, x1 = HOOD[1] + 0.02, WALL_E - SPL
+    zf, zb = SHELF_FRONT, WALL_S - SPL
+    st = 0.08
+    foot = 4.30
+    prof = [(zb, foot), (zb, CROWN_Y), (zf, CROWN_Y), (zf, foot + 0.55)]
+    for k in range(1, 12):                        # concave corbel curve from the front down to the back
+        a = math.pi / 2 * k / 12
+        prof.append((zf + (zb - zf) * 0.62 * (1 - math.cos(a)), foot + 0.55 - 0.55 * math.sin(a)))
+    prof.append((zf + (zb - zf) * 0.62, foot))
+    sides = C.Acc()
+    sides.poly_x(prof, x0, x0 + st)
+    sides.poly_x(prof, x1 - st, x1)
+    sides.done(g, 'kd shelf side panel', 'walnut_door', col, bevel=0.006)
+    shelves = C.Acc()
+    for ys in (4.86, 6.18):
+        shelves.wbox(x0 + st, x1 - st, ys, ys + 0.1, zf + 0.02, zb)
+    shelves.wbox(x0 + st, x1 - st, CROWN_Y - 0.1, CROWN_Y, zf, zb)
+    shelves.wbox(x0, x1, CROWN_Y, CEIL - 0.006, zf + 0.004, zb)              # frieze behind the cornice
+    shelves.done(g, 'kd shelf walnut', 'walnut_slab', col, bevel=0.006)
+    C.sweep(g, 'kd shelf crown cove', [(x0, zf), (x1, zf)], C.crown_profile(0.16, CROWN_H), CROWN_Y, 'walnut_slab', col)
+    # brass gallery rails 2.5in above each shelf, with uprights
+    for k, ys in enumerate((4.96, 6.28)):
+        yr = ys + 0.21
+        g.cyl_axis(f'kd shelf rail {k}', (x0 + st, yr, zf + 0.08), (x1 - st, yr, zf + 0.08), 0.014, M.brass, 16, col)
+        for xx in (x0 + st + 0.12, (x0 + x1) / 2, x1 - st - 0.12):
+            g.cyl_axis(f'kd shelf rail upright {k}', (xx, ys, zf + 0.08), (xx, yr, zf + 0.08), 0.011, M.brass, 12, col)
+
+
+# ================================================================================== hood
+def _hood(g, M, col, lights):
+    """Cream plaster hood to the ceiling with a projecting moulded band and a dentil course."""
     hx0, hx1 = HOOD
-    g.box('kd hood plaster', hx0, hx1, 5.52, CEIL - 0.003, 29.70, WALL_S, 'plaster_white', 0.02, 3, coll=col)
-    g.box('kd hood filter', hx0 + 0.18, hx1 - 0.18, 5.505, 5.53, 29.88, WALL_S - 0.2, 'stainless', 0.004, coll=col)
-    for xx in (hx0 + 0.7, hx1 - 0.7):
-        g.cyl('kd hood lamp lens', xx, 5.505, 5.525, 29.80, 0.07, M['led'], 24, coll=col)
-    g.area_light('kd hood task light', (hx0 + hx1) / 2, 5.49, 30.45, 2.4, 0.8, 7.0, 3000, lights)
+    zf = 29.80
+    yb, yt = 5.52, 5.86
+    g.box('kd hood soffit body', hx0, hx1, yt, CEIL - 0.004, zf, WALL_S, M.plaster, 0.008, 2, coll=col)
+    g.box('kd hood soffit band', hx0, hx1, yb, yt, zf, WALL_S, M.plaster, 0.004, 2, coll=col)
+    prof = [(0.0, 0.0), (0.05, 0.0), (0.06, 0.012), (0.06, 0.05), (0.03, 0.065), (0.03, 0.17)]
+    prof += C.cyma(0.03, 0.12, 0.17, 0.31, 10)[1:]
+    prof += [(0.13, 0.31), (0.13, 0.34), (0.0, 0.34)]
+    path = [(hx0, UPPER_FRONT - 0.006), (hx0, zf), (hx1, zf), (hx1, UPPER_FRONT - 0.006)]
+    C.sweep(g, 'kd hood soffit moulding', path, prof, yb, M.plaster, col)
+    # dentils: 0.055 wide, 0.07 tall, every 0.1 ft along the front and the returns
+    acc = C.Acc()
+    dy0, dy1 = yb + 0.085, yb + 0.16
+    Ff = C.Face('mz', zf)
+    n = int((hx1 - hx0 + 0.06) / 0.1)
+    off = (hx1 - hx0 + 0.06 - (n - 1) * 0.1) / 2
+    for i in range(n):
+        u = hx0 - 0.03 + off + i * 0.1
+        acc.box(Ff, u - 0.0275, u + 0.0275, dy0, dy1, 0.02, 0.075)
+    for side, Fx in ((-1, C.Face('mx', hx0)), (1, C.Face('px', hx1))):
+        z = zf + 0.07
+        while z < UPPER_FRONT - 0.05:
+            acc.box(Fx, z - 0.0275, z + 0.0275, dy0, dy1, 0.02, 0.075)
+            z += 0.1
+    acc.done(g, 'kd hood soffit dentils', M.plaster, col, bevel=0.003)
+    g.box('kd hood soffit liner', hx0 + 0.14, hx1 - 0.14, yb - 0.012, yb, zf + 0.14, WALL_S - 0.14, 'stainless', 0.004, coll=col)
+    g.area_light('kd hood task light', (hx0 + hx1) / 2, yb - 0.03, 30.45, 2.4, 0.8, 6.0, 2900, lights)
 
-    # ============================================================ floating shelves
-    for k, ys in enumerate((4.86, 6.24)):
-        g.box(f'kd shelf {k}', HOOD[1] + 0.16, WALL_E - SPL, ys, ys + 0.167, 30.50, WALL_S - SPL, 'walnut_slab', 0.01, coll=col)
-        g.box(f'kd shelf {k} led', HOOD[1] + 0.22, WALL_E - SPL - 0.05, ys - 0.006, ys + 0.002, 30.56, 30.60, M['led'], coll=col)
-        g.area_light(f'kd shelf {k} light', (HOOD[1] + 0.16 + WALL_E - SPL) / 2, ys - 0.012, 30.62,
-                     WALL_E - SPL - HOOD[1] - 0.3, 0.05, 3.5, 3000, lights)
 
-    # =================================================================== cooktop
-    cx0, cx1, cz0, cz1 = 33.55, 36.05, 29.40, 31.08
-    g.box('kd induction cooktop', cx0, cx1, TOP - 0.002, TOP + 0.016, cz0, cz1, M['black_glass'], 0.006, coll=col)
-    g.box('kd cooktop trim', cx0 - 0.01, cx1 + 0.01, TOP - 0.003, TOP + 0.008, cz0 - 0.01, cz1 + 0.01, 'stainless', coll=col)
-    for (bx, bz, r) in ((34.15, 29.98, 0.30), (35.45, 29.98, 0.24), (34.15, 30.62, 0.24), (35.45, 30.62, 0.30)):
-        g.lathe('kd cooktop zone', [(r - 0.006, 0.0), (r + 0.006, 0.0)], bx, bz, M['cooktop_mark'], 48, coll=col,
-                y_base=TOP + 0.0165, smooth=False)
-    g.box('kd cooktop controls', 34.45, 35.15, TOP + 0.0165, TOP + 0.0168, 29.47, 29.53, M['cooktop_mark'], coll=col)
+# =============================================================================== cooktop
+def _cooktop(g, M, col):
+    """36in gas cooktop: black enamel deck, three continuous cast-iron grates, brass burner caps and
+    front knobs (sits on the worktop)."""
+    x0, x1, z0, z1 = COOK
+    y = TOP
+    g.box('kd cooktop deck', x0, x1, y, y + 0.03, z0, z1, M.enamel, 0.012, coll=col)
+    g.box('kd cooktop control strip', x0 + 0.04, x1 - 0.04, y + 0.03, y + 0.034, z0 + 0.03, z0 + 0.2, M.enamel, 0.004, coll=col)
+    burners = [(x0 + 0.5, z0 + 0.62, 0.15), (x0 + 0.5, z1 - 0.42, 0.12), ((x0 + x1) / 2, (z0 + 0.2 + z1) / 2, 0.18),
+               (x1 - 0.5, z0 + 0.62, 0.12), (x1 - 0.5, z1 - 0.42, 0.15)]
+    for i, (bx, bz, r) in enumerate(burners):
+        g.lathe(f'kd cooktop burner {i}', [(0.0, 0.0), (r + 0.03, 0.0), (r + 0.03, 0.02), (r, 0.035), (r * 0.75, 0.06),
+                                         (r * 0.72, 0.075), (0.0, 0.08)], bx, bz, M.brass, 40, col, y_base=y + 0.03)
+    # grates: three cast-iron grids, fingers 0.1 tall over the burners
+    gy0, gy1 = y + 0.03, y + 0.165
+    acc = C.Acc()
+    gx = [x0 + 0.03, x0 + 1.0, x1 - 1.0, x1 - 0.03]
+    for k in range(3):
+        a, b = gx[k] + 0.015, gx[k + 1] - 0.015
+        za, zb = z0 + 0.24, z1 - 0.05
+        for (u0, u1, w0, w1) in ((a, b, za, za + 0.05), (a, b, zb - 0.05, zb), (a, a + 0.05, za, zb), (b - 0.05, b, za, zb)):
+            acc.wbox(u0, u1, gy1 - 0.035, gy1, w0, w1)
+        xm = (a + b) / 2
+        zm = (za + zb) / 2
+        acc.wbox(xm - 0.02, xm + 0.02, gy1 - 0.035, gy1, za, zb)
+        acc.wbox(a, b, gy1 - 0.035, gy1, zm - 0.02, zm + 0.02)
+        for (px, pz) in ((a + 0.025, za + 0.025), (b - 0.025, za + 0.025), (a + 0.025, zb - 0.025), (b - 0.025, zb - 0.025)):
+            acc.wbox(px - 0.02, px + 0.02, gy0, gy1 - 0.035, pz - 0.02, pz + 0.02)
+    acc.done(g, 'kd cooktop grate', M.iron, col, bevel=0.008)
+    for i in range(5):
+        kx = x0 + 0.42 + i * (x1 - x0 - 0.84) / 4
+        g.cyl('kd cooktop knob', kx, y + 0.034, y + 0.1, z0 + 0.115, 0.055, M.iron, 24, col, bevel=0.01)
+        g.cyl('kd cooktop knob collar', kx, y + 0.034, y + 0.045, z0 + 0.115, 0.07, M.brass, 24, col)
 
-    # ===================================================================== sink
-    _sink(g, sx0, sx1, sz0, sz1, M, col)
-    _faucet(g, 40.30, SINK_Z, col)
 
-    # ===================================================================== island
-    isl = g.sub('kd island')
-    _island(g, M, isl, lights)
-    if STOOLS:
-        _stools(g, M)
-    _pendant(g, M, lights)
-    notes.append('kitchen: tall bank (fridge+ovens), L base runs, uppers/hood/shelves, island, 3 stools, linear pendant')
-    return notes
+def _pot_filler(g, M, col):
+    """Wall-mounted articulated brass pot filler, folded against the wall inside the scallop."""
+    x, y = POT_FILLER
+    zw = WALL_S
+    b = M.brass
+    g.cyl_axis('kd pot filler flange', (x, y, zw), (x, y, zw - 0.04), 0.1, b, 32, col)
+    g.cyl_axis('kd pot filler stem', (x, y, zw - 0.04), (x, y, zw - 0.26), 0.035, b, 20, col)
+    g.cyl('kd pot filler elbow', x, y - 0.05, y + 0.07, zw - 0.28, 0.05, b, 24, col)
+    zc = zw - 0.28
+    # first arm runs east along the wall, knuckle, second arm folds back west, spout drops
+    g.cyl_axis('kd pot filler arm a', (x, y + 0.03, zc), (x + 0.62, y + 0.03, zc), 0.032, b, 20, col)
+    g.cyl('kd pot filler knuckle', x + 0.62, y - 0.04, y + 0.1, zc, 0.048, b, 24, col)
+    g.cyl_axis('kd pot filler arm b', (x + 0.62, y - 0.01, zc - 0.075), (x - 0.18, y - 0.01, zc - 0.075), 0.03, b, 20, col)
+    g.cyl('kd pot filler knuckle b', x + 0.62, y - 0.05, y + 0.04, zc - 0.075, 0.042, b, 24, col)
+    g.cyl_axis('kd pot filler link', (x + 0.62, y - 0.01, zc), (x + 0.62, y - 0.01, zc - 0.075), 0.028, b, 16, col)
+    g.cyl_axis('kd pot filler spout', (x - 0.18, y - 0.01, zc - 0.075), (x - 0.18, y - 0.16, zc - 0.075), 0.026, b, 16, col)
+    g.cyl('kd pot filler aerator', x - 0.18, y - 0.19, y - 0.155, zc - 0.075, 0.032, b, 20, col)
+    for (xx, zz) in ((x + 0.12, zc), (x + 0.45, zc - 0.075)):
+        g.cyl_axis('kd pot filler lever', (xx, y + 0.06, zz), (xx, y + 0.16, zz - 0.06), 0.014, b, 12, col)
+
+
+# ================================================================================== sink
+def _sink(g, M, col):
+    """White fireclay apron-front sink (30 x 20 x 10in), 1in walls, 9in bowl, brass strainer."""
+    x0, x1, z0, z1 = SINK
+    yt, yb = TOP - 0.004, SINK_BOT
+    wall = 0.08
+    floor_y = yb + 0.085
+    bm = bmesh.new()
+
+    def ring(xa, xb, za, zb, r, y):
+        return [bm.verts.new(P(x, y, z)) for x, z in _rrect(xa, xb, za, zb, r, 6)]
+    ob = ring(x0, x1, z0, z1, 0.02, yb)
+    ot = ring(x0, x1, z0, z1, 0.02, yt)
+    it = ring(x0 + wall, x1 - wall, z0 + wall, z1 - wall, 0.11, yt)
+    ib = ring(x0 + wall, x1 - wall, z0 + wall, z1 - wall, 0.11, floor_y)
+    n = len(ob)
+    for A, B in ((ob, ot), (ot, it), (it, ib)):
+        for k in range(n):
+            k2 = (k + 1) % n
+            bm.faces.new((A[k], A[k2], B[k2], B[k]))
+    bm.faces.new(ib)
+    bm.faces.new(list(reversed(ob)))
+    s = g.from_bmesh('kd fireclay sink tub', bm, M.fireclay, col, smooth=True, sharp_deg=50)
+    g.bevel_mod(s, 0.008, 2)
+    dx, dz = (x0 + x1) / 2 + 0.1, (z0 + z1) / 2
+    g.lathe('kd sink drain', [(0.0, 0.0), (0.14, 0.0), (0.15, 0.006), (0.0, 0.006)], dx, dz, M.brass, 32, col, y_base=floor_y)
+    g.lathe('kd sink drain basket', [(0.0, 0.0), (0.085, 0.0)], dx, dz, M.rubber, 24, col, y_base=floor_y + 0.0065)
 
 
 def _rrect(x0, x1, z0, z1, r, n=8):
@@ -259,126 +520,71 @@ def _rrect(x0, x1, z0, z1, r, n=8):
     return pts
 
 
-def _sink(g, x0, x1, z0, z1, M, col):
-    """Undermount stainless single bowl, walls flush with the worktop cut-out."""
-    import bmesh
-    from .kitchen_dining_geo import P
-    bm = bmesh.new()
-    rings = []
-    spec = ((-0.012, CT_UNDER - 0.001), (-0.012, 2.23), (0.04, 2.16), (0.11, 2.15))
-    for inset, y in spec:
-        pts = _rrect(x0 + inset, x1 - inset, z0 + inset, z1 - inset, max(0.09 - inset * 0.6, 0.02))
-        rings.append([bm.verts.new(P(x, y, z)) for x, z in pts])
-    n = len(rings[0])
-    for i in range(len(rings) - 1):
-        A, B = rings[i], rings[i + 1]
-        for k in range(n):
-            k2 = (k + 1) % n
-            bm.faces.new((A[k], A[k2], B[k2], B[k]))
-    bm.faces.new(rings[-1])
-    # hidden flange under the worktop so the rim never shows a gap
-    ob = g.from_bmesh('kd sink bowl', bm, 'stainless', col, smooth=True, sharp_deg=60)
-    dx, dz = (x0 + x1) / 2 + 0.15, (z0 + z1) / 2 + 0.55
-    g.lathe('kd sink drain', [(0.0, 0.0), (0.12, 0.0), (0.13, 0.004), (0.0, 0.004)], dx, dz, 'stainless', 32, col, y_base=2.152)
-    g.lathe('kd sink drain hole', [(0.0, 0.0), (0.075, 0.0)], dx, dz, M['rubber'], 24, col, y_base=2.1575)
-    return ob
+def _bridge_faucet(g, M, col):
+    """Brass bridge faucet on the deck behind the sink: two risers with cross handles, a bridge and
+    a tall gooseneck spout reaching over the bowl."""
+    b = M.brass
+    x = 40.33
+    zc = SINK_Z
+    for s in (-1, 1):
+        z = zc + s * 0.33
+        g.lathe('kd bridge faucet base', [(0.0, 0.0), (0.075, 0.0), (0.075, 0.025), (0.05, 0.06), (0.0, 0.06)], x, z, b, 32, col,
+                y_base=TOP)
+        g.cyl('kd bridge faucet riser', x, TOP + 0.05, TOP + 0.36, z, 0.032, b, 24, col)
+        g.cyl('kd bridge faucet bonnet', x, TOP + 0.36, TOP + 0.46, z, 0.045, b, 24, col)
+        g.cyl('kd bridge faucet stem', x, TOP + 0.46, TOP + 0.52, z, 0.018, b, 16, col)
+        hy = TOP + 0.53
+        for ang in (0.0, math.pi / 2):
+            dx, dz = 0.11 * math.cos(ang + 0.6), 0.11 * math.sin(ang + 0.6)
+            g.cyl_axis('kd bridge faucet handle', (x - dx, hy, z - dz), (x + dx, hy, z + dz), 0.014, b, 12, col)
+        g.cyl_axis('kd bridge faucet bridge arm', (x, TOP + 0.28, z), (x, TOP + 0.28, zc), 0.028, b, 20, col)
+    g.cyl('kd bridge faucet hub', x, TOP + 0.24, TOP + 0.32, zc, 0.045, b, 24, col)
+    # gooseneck spout: up 0.55 from the hub, then a 180 deg arc reaching toward the bowl
+    R = 0.28
+    pts = [(x, TOP + 0.3, zc), (x, TOP + 0.95, zc)]
+    for k in range(1, 19):
+        a = math.pi * k / 18
+        pts.append((x - R + R * math.cos(a), TOP + 0.95 + R * math.sin(a), zc))
+    pts.append((x - 2 * R, TOP + 0.80, zc))
+    g.tube('kd bridge faucet spout', pts, 0.03, b, col)
+    g.cyl('kd bridge faucet aerator', x - 2 * R, TOP + 0.76, TOP + 0.81, zc, 0.034, b, 20, col)
 
 
-def _faucet(g, x, z, col):
-    """Matte-black single-lever pull-down faucet behind the sink (spout reaches toward -x)."""
-    b = 'black_metal'
-    g.lathe('kd faucet base', [(0.0, 0.0), (0.075, 0.0), (0.075, 0.03), (0.06, 0.06), (0.0, 0.06)], x, z, b, 32, col, y_base=TOP)
-    R = 0.30
-    cx, cy = x - R, 4.18
-    pts = [(x, TOP + 0.05, z), (x, cy, z)]
-    for k in range(1, 17):
-        a = math.pi * k / 16
-        pts.append((cx + R * math.cos(a), cy + R * math.sin(a), z))
-    pts.append((x - 2 * R, 4.02, z))
-    g.tube('kd faucet spout', pts, 0.042, b, col)
-    g.cyl('kd faucet spray head', x - 2 * R, 3.86, 4.04, z, 0.05, b, 32, col)
-    g.cyl('kd faucet spray face', x - 2 * R, 3.855, 3.862, z, 0.038, 'paint_black', 24, col)
-    # side lever
-    g.cyl_axis('kd faucet lever hub', (x, 3.55, z + 0.02), (x, 3.55, z + 0.09), 0.045, b, 24, col)
-    g.cyl_axis('kd faucet lever', (x, 3.55, z + 0.09), (x - 0.02, 3.70, z + 0.12), 0.016, b, 12, col)
-
-
-def _island(g, M, col, lights):
+# ================================================================================ island
+def _island(g, M, col, hw):
+    """White-oak drawer island (three drawer stacks to the kitchen, panelled back toward the table,
+    furniture end panels) under a 2in honed quartzite top with an eased edge."""
     x0, x1, z0, z1 = 28.4, 34.4, 22.0, 25.0
-    t = 0.167                                  # 2in mitred waterfall slab
-    sec = [(x0, 0.0), (x0 + t, 0.0), (x0 + t, TOP - t), (x1 - t, TOP - t), (x1 - t, 0.0), (x1, 0.0), (x1, TOP), (x0, TOP)]
-    wf = g.section_prism_z('kd island waterfall', sec, z0, z1, 'quartz_calacatta', coll=col)
-    g.ctx.add_bevel(wf, 0.012, 2)
-    bx0, bx1 = x0 + t + 0.002, x1 - t - 0.002
-    bz0, bz1 = 23.0, 24.92                     # base 1.92 ft deep, front face at 24.92
-    g.box('kd island carcass', bx0, bx1, TOE_H, TOP - t - 0.001, bz0 + FT_T, bz1 - FT_T - 0.01, 'walnut_slab', coll=col)
-    g.box('kd island back panel', bx0, bx1, 0.0, TOP - t - 0.001, bz0, bz0 + FT_T, 'walnut_slab', 0.006, coll=col)
-    g.box('kd island plinth', bx0, bx1, 0.0, TOE_H, bz0 + FT_T, bz1 - TOE_D, 'paint_black', coll=col)
-    chz = bz1 - FT_T - 0.004
-    for (y0, y1, tag) in ((Y_CH0, Y_CH1, 'mid'), (Y_HI1, TOP - t - 0.001, 'top')):
-        g.box(f'kd island channel {tag}', bx0, bx1, y0, y1, chz - 0.03, chz, 'black_metal', coll=col)
+    t = 0.167
+    top = g.box('kd island top', x0, x1, TOP - t, TOP, z0, z1, M.quartzite, coll=col)
+    _soft_edge(g, top, 0.022, 3)
+    bx0, bx1 = 28.65, 34.15
+    bz0, bz1 = 23.0, 24.85                      # carcass back / front (fronts overlay outside these)
+    yt = TOP - t - 0.002
+    zf = bz1 + FT_T                             # drawer faces
+    zb = bz0 - FT_T                             # back panel faces
+    ends = C.Acc()
+    ends.shaker(C.Face('mx', bx0), zb, zf, 0.0, yt, sw=0.22, rw=0.24)
+    ends.shaker(C.Face('px', bx1), zb, zf, 0.0, yt, sw=0.22, rw=0.24)
+    ends.done(g, 'kd island end panel', M.oak, col)
+    g.box('kd island carcass', bx0 + FT_T, bx1 - FT_T, TOE_H, yt, bz0, bz1, M.oak, coll=col)
+    g.box('kd island plinth', bx0 + FT_T, bx1 - FT_T, 0.0, TOE_H, bz0 + 0.15, bz1 - 0.15, M.oak, coll=col)
+    Ff = C.Face('pz', zf)
+    Fb = C.Face('mz', zb)
+    fronts = C.Acc()
+    a0, a1 = bx0 + FT_T, bx1 - FT_T
     n = 3
-    w = (bx1 - bx0) / n
+    w = (a1 - a0) / n
+    cuts = [Y_B0, Y_B0 + 0.98, yt - 0.012 - 0.52, yt - 0.012]
     for i in range(n):
-        a, b = bx0 + i * w, bx0 + (i + 1) * w
-        g.box(f'kd island unit {i} lower', a + GAP / 2, b - GAP / 2, Y_LO0, Y_LO1, bz1 - FT_T, bz1, 'walnut_slab', 0.006, coll=col)
-        g.box(f'kd island unit {i} drawer', a + GAP / 2, b - GAP / 2, Y_HI0, Y_HI1, bz1 - FT_T, bz1, 'walnut_slab', 0.006, coll=col)
-    g.area_light('kd island toe led', (bx0 + bx1) / 2, TOE_H - 0.02, bz1 - 0.10, bx1 - bx0 - 0.1, 0.05, 0.7, 2900, lights,
-                 spread_deg=110)
-
-
-def _stools(g, M):
-    """Three saddle-tan leather swivel counter stools on black pedestal bases (seat 25in)."""
-    col = g.sub('kd stools')
-    seat_y = 2.08
-    # Build one stool at the origin, then instance.
-    parts = []
-    parts.append(g.lathe('kd stool base', [(0.0, 0.0), (0.66, 0.0), (0.68, 0.012), (0.665, 0.035), (0.50, 0.058),
-                                            (0.12, 0.085), (0.0, 0.09)], 0, 0, 'black_metal', 64, col, sharp_deg=70))
-    parts.append(g.cyl('kd stool column', 0, 0.08, 1.86, 0, 0.085, 'black_metal', 32, col))
-    parts.append(g.torus('kd stool footring', 0, 0.80, 0, 0.53, 0.032, 'black_metal', 64, 12, col))
-    for k in range(4):
-        a = k * math.pi / 2 + math.pi / 4
-        parts.append(g.cyl_axis('kd stool spoke', (0.08 * math.cos(a), 0.80, 0.08 * math.sin(a)),
-                                (0.51 * math.cos(a), 0.80, 0.51 * math.sin(a)), 0.022, 'black_metal', 12, col))
-    parts.append(g.lathe('kd stool plate', [(0.0, 0.0), (0.32, 0.0), (0.32, 0.04), (0.25, 0.07), (0.0, 0.07)], 0, 0,
-                         'black_metal', 48, col, y_base=1.84))
-    # seat cushion: soft rounded disc
-    prof = [(0.0, 0.0), (0.58, 0.0), (0.66, 0.015), (0.70, 0.06), (0.70, 0.11), (0.67, 0.155), (0.60, 0.175), (0.3, 0.18), (0.0, 0.18)]
-    parts.append(g.lathe('kd stool seat', prof, 0, 0, 'leather_tan', 64, col, y_base=1.905))
-    # low bucket back wrapping the rear of the seat
-    def ytop(a):
-        c = math.cos(a)
-        return seat_y + 0.10 + 0.40 * max(c, 0.0) ** 0.8
-    back = g.arc_wall('kd stool back', 0.57, 0.69, -2.05, 2.05, seat_y - 0.07, ytop, 'leather_tan', 48, col)
-    g.bevel_mod(back, 0.035, 3)
-    g.subsurf(back, 1)
-    parts.append(back)
-    # instance at the three centres (facing +z = the island)
-    import bpy
-    centres = [(29.4, 21.7), (31.4, 21.7), (33.4, 21.7)]
-    for i, (x, z) in enumerate(centres):
-        for p in parts:
-            if i == len(centres) - 1:
-                p.location = (x * 0.3048 + p.location.x, -z * 0.3048 + p.location.y, p.location.z)
-                p.name = f'{p.name} {i}'
-            else:
-                q = p.copy()
-                q.name = f'{p.name} {i}'
-                q.location = (x * 0.3048 + p.location.x, -z * 0.3048 + p.location.y, p.location.z)
-                g._link(q, col)
-
-
-def _pendant(g, M, lights):
-    """Linear LED pendant (matte black aluminium bar, opal diffuser down) over the island."""
-    from ..lighting import emitter
-    col = g.sub('kd pendant')
-    x0, x1, zc, yb = 29.15, 33.65, 23.5, 6.05
-    g.box('pendant bar', x0, x1, yb, yb + 0.12, zc - 0.065, zc + 0.065, 'black_metal', 0.012, coll=col)
-    dif = emitter('kd_pendant_diffuser', 3000, 45.0)
-    g.box('pendant diffuser', x0 + 0.04, x1 - 0.04, yb - 0.006, yb + 0.004, zc - 0.045, zc + 0.045, dif, coll=col)
-    for xx in (30.0, 32.8):
-        g.cyl('pendant cable', xx, yb + 0.12, CEIL - 0.05, zc, 0.006, 'black_metal', 8, col)
-        g.cyl('pendant canopy', xx, CEIL - 0.055, CEIL - 0.001, zc, 0.19, 'black_metal', 40, col, bevel=0.01)
-    g.area_light('pendant light', (x0 + x1) / 2, yb - 0.03, zc, x1 - x0 - 0.1, 0.09, 38.0, 3000, lights)
-    g.area_light('pendant uplight', (x0 + x1) / 2, yb + 0.14, zc, x1 - x0 - 0.3, 0.06, 6.0, 3000, lights, facing='up')
+        a, b = a0 + i * w + GAP / 2, a0 + (i + 1) * w - GAP / 2
+        for j in range(3):
+            v0 = cuts[j] + (GAP / 2 if j else 0.0)
+            v1 = cuts[j + 1] - (GAP / 2 if j < 2 else 0.0)
+            small = v1 - v0 < 0.6
+            fronts.shaker(Ff, a, b, v0, v1, sw=0.16 if small else 0.2, rw=0.12 if small else 0.2)
+            # knob on the recessed centre panel (seated on it, not floating at the frame plane)
+            C.knob(g, M.brass, Ff, (a + b) / 2, (v0 + v1) / 2 if small else v1 - 0.26, hw,
+                   name='kd island hardware panel', w=-RECESS)
+        fronts.shaker(Fb, a, b, Y_B0, yt - 0.012, sw=0.2, rw=0.22)
+    fronts.done(g, 'kd island drawer panel run', M.oak, col)

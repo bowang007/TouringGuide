@@ -21,12 +21,13 @@ CHANGES = [
     'Front bedroom bay (tour: Bedroom 3, plan: Bedroom #2): glazed down to the floor; window seat removed',
     'Foyer: two skylights on the entry roof\'s east slope (hall section and vaulted entry)',
     'Primary bedroom: the 7 ft rear window becomes a two-panel sliding door to the garden (landing outside)',
-    'Bedroom 2 (next to the primary): rear window runs floor to ceiling',
-    'Primary bathroom: west window runs floor to ceiling in clear glass, between vanity and shower '
+    'Bedroom 2 (next to the primary): rear window runs to the ceiling (sill 2\'-0" since the third round)',
+    'Primary bathroom: tall west window in clear glass, between vanity and shower, sill 2\'-0" since the third round '
     '(an evergreen screen in the fenced side yard outside)',
     'Kitchen skylight: 3\'-6" x 4\'-0" on the continuous east roof plane over the sink / dishwasher '
     '(the concept unit straddled the garage-gable ridge)',
-    'Dining: 6\'-6" x 3\'-2" walnut table in line with the island, four chairs, linear pendant; no island stools',
+    'Dining: 6\'-6" x 3\'-2" table in line with the island, four chairs, no island stools (warm oak under a brass '
+    'lantern since the third round)',
 ]
 CHANGES_2 = [
     'Primary bathroom: a 2\'-0" x 2\'-6" skylight over the shower',
@@ -34,6 +35,12 @@ CHANGES_2 = [
     'rooms and the closets between them are 1\'-2 3/4" wider; foyer and covered porch 5\'-9 1/4" wide; '
     'foyer 18\'-6" long as on the plan; the 3\'-0" front door stays centred',
     'Rear landing outside the living room sized as on the plan (3\'-0" deep, garden door to x 38\'-3")',
+]
+CHANGES_3 = [
+    'Bedroom 2 rear window and the primary bathroom window: a 2\'-0" sill instead of glass to the floor (heads stay '
+    'at the 8 ft ceiling)',
+    'Bedroom 4: the bed is turned across the room, headboard on the north wall, so the room\'s length stays open',
+    'Kitchen, primary bathroom, shared bathroom and garage door restyled from the owner\'s style images (styles/)',
 ]
 LIVING_W = 39.195 - 22.528      # relayout.X_REAR: living room clear width, the plan's 16'-8"
 GARAGE_W, GARAGE_D = 39.195 - 21.578, 52.335 - 31.418   # relayout.X_GARAGE / Z_RIGHT: the plan's 17'-7" x 20'-11"
@@ -81,14 +88,15 @@ def main():
              start=RV.SLIDER_X[0], end=RV.SLIDER_X[1], width=round(RV.SLIDER_X[1] - RV.SLIDER_X[0], 4),
              type='Two-panel sliding glass door to the garden (one fixed, one sliding); landing outside')
     w = win['W02']
-    w.update(sill=0, head=8.0, height=8.0, type='Floor-to-ceiling glazing, two panes')
+    w.update(sill=RV.TALL_SILL, head=8.0, height=round(8.0 - RV.TALL_SILL, 4),
+             type='Tall glazing, two panes, from a 2\'-0" sill to the ceiling')
     w = win['W09']
     w.update(sill=0, height=w.get('head', 7.5), type='Three-sided canted bay glazed to the floor; 8 ft wall opening; '
                                                    '2 ft projection')
     w = win['W13']
     z0, z1 = RV.BATH_WIN_Z
-    w.update(start=z0, end=z1, width=round(z1 - z0, 4), sill=0, head=8.0, height=8.0,
-             type='Floor-to-ceiling clear glazing with a transom at 6 ft')
+    w.update(start=z0, end=z1, width=round(z1 - z0, 4), sill=RV.TALL_SILL, head=8.0, height=round(8.0 - RV.TALL_SILL, 4),
+             type='Tall clear glazing from a 2\'-0" sill to the ceiling, with a transom at 6 ft')
     x0, x1, k0, k1 = RV.KITCHEN_SKY
     w = win['W16']
     w.update(start=x0, end=x1, width=round(x1 - x0, 4), height=round(k1 - k0, 4), c=9.4,
@@ -128,6 +136,7 @@ def main():
         vaults['bedroom_3'] = vaults.pop('bedrooms_3_4')
     dr['owner_changes'] = {'date': '2026-11-18', 'changes': CHANGES}
     dr['owner_changes_2'] = {'date': '2026-11-19', 'changes': CHANGES_2}
+    dr['owner_changes_3'] = {'date': '2026-11-19', 'changes': CHANGES_3}
     labels = size_labels(meas)
     for n in scene['tour']['nodes'] + scene.get('rooms', []):
         if n.get('id') in labels:

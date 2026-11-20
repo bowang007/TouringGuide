@@ -10,9 +10,10 @@ Design (1077 W McKinley language, three cohesive but distinct rooms):
                  W10, cream lacquer nightstands, built-in upholstered window seat in the canted
                  bay W09 with pillows and roller shades, white-oak desk + sculptural boucle barrel
                  chair, colour-field painting, LED ring pendant hung from the ridge, slope cans.
-  * Bedroom 4  - compact, vaulted: white-oak full bed with a sage linen pad under W12, compact
-                 oak nightstands, oak desk on black steel sled legs with an oak/steel chair, line
-                 print, opal globe pendant from the ridge (satin opal glass, lamp inside).
+  * Bedroom 4  - compact (flat 8 ft ceiling, revisions.bedroom4_flat): white-oak full bed with a sage
+                 linen pad turned across the room (headboard on the north wall, its side along the W12
+                 window wall) so the room's length stays open, one compact oak nightstand, oak desk on
+                 black steel sled legs with an oak/steel chair, line print, opal globe pendant.
   * Closets    - Bedroom 3 compact closet: white built-in (drawers, shelves, double hang with
                  real shirts / a jacket / folded trousers, see bedrooms_garments) + open shelf
                  tower + black-framed mirror + disk light; Bedroom 4 reach-in: shelf + rail.
@@ -341,20 +342,23 @@ def _shoes(kit, M, x, z, y):
 # ================================================================================== Bedroom 4
 def build_bed4(ctx, kit, M):
     kit.use('bed4')
-    wall_w = 0.225
-    zc = 33.55
-    fb = Frame(wall_w + 0.06, zc, WEST)
+    # Owner's change (2026-11-19, third round): the bed is turned across the room, headboard on the north wall and
+    # its side along the west (window) wall, so the room's length stays open from the bed to the desk and closet.
+    wall_w, wall_n = 0.225, 29.638
+    xc = wall_w + 0.25 + 2.585                 # duvet (5.17 ft for the 4.5 ft full bed) 3 in off the west wall
+    fb = Frame(xc, wall_n + 0.06, NORTH)
     info = F.bed(kit, M, fb, 'B4 bed', 'oak', 4.5, 6.25, upholstery=M['linen_sage'], bedding=dict(
         duvet=M['linen_white'], throw=M['knit_sage'], throw_len=1.5,
         pillows=[('std', M['linen_white'], 2, 66, 2.35, 1.65, 0.5),
                  ('accent', M['linen_oat'], 1, 62, 1.75, 1.75, 0.45),
                  ('lumbar', M['linen_sage'], 1, 55, 1.9, 0.95, 0.36)]))
-    for side, z in (('n', 30.3), ('s', 36.77)):
-        fr = Frame(wall_w + 0.06, z, WEST)
-        h = F.nightstand(kit, M, fr, f'B4 nightstand {side}', 'compact', 1.2, 1.72, 1.15)
-        F.table_lamp(kit, M, fr.sub(0.0, 0.55, 0, h), f'B4 lamp {side}', 'stoneware_dark' if side == 'n' else 'stoneware', 0.8, LIGHTS['B4']['lamp'], LIGHTS['B4']['bulb'])
-    # ivory heathered flat-weave with a woven warm-grey border so it reads as an area rug, not carpet
-    F.rug(kit, 'B4 rug', 3.35, 9.85, 30.75, 36.35, K.rug_material(
+    # one nightstand + lamp on the open (east) side of the headboard
+    fr = Frame(xc + 2.585 + 0.2 + 0.6, wall_n + 0.06, NORTH)
+    h = F.nightstand(kit, M, fr, 'B4 nightstand n', 'compact', 1.2, 1.72, 1.15)
+    F.table_lamp(kit, M, fr.sub(0.0, 0.55, 0, h), 'B4 lamp n', 'stoneware_dark', 0.8, LIGHTS['B4']['lamp'], LIGHTS['B4']['bulb'])
+    # ivory heathered flat-weave with a woven warm-grey border so it reads as an area rug, not carpet: under the
+    # lower part of the bed and out into the open floor
+    F.rug(kit, 'B4 rug', 1.6, 8.6, 31.7, 36.95, K.rug_material(
         'Z_bedrooms_rug_heather', ['#d3cdc2', '#e0dbd1', '#e9e5dc'], 60.0, 'heather',
         border=(3.25, 2.8, '#8a877e', ((0.3, 0.42), (0.52, 0.55)))))
     # desk on the north wall (original compact desk anchor x 9.25-11.75)

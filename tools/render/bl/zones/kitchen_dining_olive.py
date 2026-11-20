@@ -1,4 +1,4 @@
-"""Indoor olive tree in a large charcoal stone planter for the open strip under east window W07
+"""Indoor olive tree in a large cream stoneware crock planter for the open strip under east window W07
 (kitchen_dining zone). Replaces the earlier walnut sideboard: one calm, tall living element between the
 fireplace ledge and the kitchen run keeps the east wall from reading as a chain of walnut boxes.
 
@@ -31,7 +31,7 @@ def footprint():
 
 # ----------------------------------------------------------------------------- materials
 def _planter_material():
-    name = 'Z_kitchen_dining_planter_charcoal'
+    name = 'Z_kitchen_dining_planter_crock'
     m = bpy.data.materials.get(name)
     if m:
         return m
@@ -46,9 +46,9 @@ def _planter_material():
     nt.links.new(tc.outputs['Object'], nz.inputs['Vector'])
     ramp = nt.nodes.new('ShaderNodeValToRGB')
     ramp.color_ramp.elements[0].position = 0.35
-    ramp.color_ramp.elements[0].color = srgb('#36352f') + (1,)
+    ramp.color_ramp.elements[0].color = srgb('#d3c8b4') + (1,)
     ramp.color_ramp.elements[1].position = 0.7
-    ramp.color_ramp.elements[1].color = srgb('#4a4842') + (1,)
+    ramp.color_ramp.elements[1].color = srgb('#e2d9c8') + (1,)
     nt.links.new(nz.outputs['Fac'], ramp.inputs['Fac'])
     nt.links.new(ramp.outputs['Color'], b.inputs['Base Color'])
     fine = nt.nodes.new('ShaderNodeTexNoise')
@@ -60,8 +60,13 @@ def _planter_material():
     bump.inputs['Distance'].default_value = 0.0005
     nt.links.new(fine.outputs['Fac'], bump.inputs['Height'])
     nt.links.new(bump.outputs['Normal'], b.inputs['Normal'])
-    b.inputs['Roughness'].default_value = 0.72
-    m.diffuse_color = srgb('#3e3d38') + (1,)
+    b.inputs['Roughness'].default_value = 0.42
+    try:
+        b.inputs['Coat Weight'].default_value = 0.25
+        b.inputs['Coat Roughness'].default_value = 0.15
+    except KeyError:
+        pass
+    m.diffuse_color = srgb('#dad0bd') + (1,)
     return m
 
 
@@ -171,6 +176,8 @@ def _limit(p):
         x = WALL_LIMIT_X - (x - WALL_LIMIT_X) * 0.3
     if z > RUN_END_Z - 0.3 and y < 4.1:          # leaves stay well above the worktop
         z = RUN_END_Z - 0.3
+    if z > 21.95 and y > 5.6 and x > 39.4:       # clear of the brass sconce on the pier beside W08
+        z = 21.95
     return (x, y, z)
 
 

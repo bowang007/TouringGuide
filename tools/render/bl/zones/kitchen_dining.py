@@ -1,17 +1,17 @@
 """Zone: kitchen + dining/open area (kitchen x 22.5-40.61, z 20.8-31.41; open area x 23.28-40.61,
 z 14.5-20.8). Camera stops K0, D0, H2 (also seen from L2, H3).
 
-Modern 1077-W-McKinley language: walnut flat-slab cabinetry with finger-pull channels and
-toe-kick LED, Calacatta quartz worktops with full-height backsplash, integrated stainless
-column fridge + stacked wall ovens, induction cooktop under a white plaster hood, floating
-walnut shelves with LED, undermount sink with matte-black faucet, waterfall island with
-saddle-tan leather stools and a linear LED pendant, 4in recessed cans. The open strip north of
-the island stays open for circulation (layout_revision: no dining table on the island's north
-side; a set there cannot keep 36in to the stools). Its only styling is a tall indoor olive tree in a
-charcoal stone planter beside window W07, next to the kitchen run end (kitchen_dining_olive.py), so
-the east wall reads fireplace -> window -> tree -> kitchen instead of a chain of walnut boxes. The
-42in round walnut dining set (INCLUDE_DINING) and the older W07 sideboard (INCLUDE_CONSOLE) remain
-available but are off.
+Warm vintage-American kitchen from the owner's style images (styles/kitchen *.jpg): soft layered
+neutrals, no heavy dark masses. Cream painted shaker base and glass-front upper cabinets with
+unlacquered-brass cup pulls and knobs and crown moulding; the tall fridge/oven wall as a greige
+"pantry wall" (panelled fridge, long brass appliance pulls); a walnut open-shelf bay with brass
+gallery rails on whitewashed brick; honed grey-veined marble worktops and a scalloped marble slab
+with a brass pot filler behind the gas cooktop; a cream plaster hood with a dentil band; a fireclay
+apron sink and brass bridge faucet under the grid-glazed window W08 with a cream casing, brass
+gooseneck sconces and cafe curtains; a white-oak drawer island with a thick quartzite top under two
+brass-and-glass bell pendants; a madder-red Persian runner in the work aisle; the dining table in
+line with the island (architect's plan) in warm oak with striped-linen oak chairs and a brass
+lantern; the indoor olive tree by W07 in a cream crock.
 
 build(ctx) -> dict of counts / notes. Helpers live in kitchen_dining_*.py.
 """
@@ -25,7 +25,10 @@ from . import kitchen_dining_console as console
 from . import kitchen_dining_decor as decor
 from . import kitchen_dining_dining as dining
 from . import kitchen_dining_kitchen as kitchen
+from . import kitchen_dining_lights as kd_lights
+from . import kitchen_dining_mats as kd_mats
 from . import kitchen_dining_olive as olive
+from . import kitchen_dining_window as window
 from .kitchen_dining_geo import ZONE, Geo
 
 # Recessed 4in cans (x, z): tidy grid aligned to the room, clear of the skylight shaft
@@ -128,12 +131,32 @@ def _clearances(ctx):
     return out
 
 
+# Island pendants (x, z) over the island centre line, glass rim 3'-2" above the 36in worktop.
+PENDANTS = ((30.0, 23.5), (32.8, 23.5))
+PENDANT_BOTTOM = 6.15
+# Persian runner in the work aisle between the island and the cooktop run (8 ft x 2'-6").
+RUNNER = (28.5, 36.5, 25.85, 28.35)
+
+
+def _pendants_and_runner(ctx, g):
+    lc = g.sub('kd_lights')
+    col = g.sub('kd pendant')
+    for i, (x, z) in enumerate(PENDANTS):
+        kd_lights.bell_pendant(g, f'kd island pendant {i}', x, z, PENDANT_BOTTOM, col, lc)
+    x0, x1, z0, z1 = RUNNER
+    L, W = (x1 - x0) * 12, (z1 - z0) * 12
+    rug = g.box('kd aisle runner', x0, x1, 0.001, 0.034, z0, z1, kd_mats.rug_persian(L, W), coll=g.sub('kd decor'))
+    g.bevel_mod(rug, 0.01, 2)
+
+
 def build(ctx):
     t0 = time.time()
     g = Geo(ctx)
     res = {}
     kitchen.STOOLS = not DINING_RECT
     res['kitchen'] = kitchen.build(ctx, g)
+    res['window'] = window.build(ctx, g)
+    _pendants_and_runner(ctx, g)
     if DINING_RECT:
         res['dining'] = dining.build_rect(ctx, g)
     if INCLUDE_DINING:

@@ -59,6 +59,26 @@ Daylight is a late-morning sun from the south-east plus a physical sky, with the
 on (warm). The renders are white-balanced neutral with a slightly warm tilt, like a listing
 photographer's.
 
+## Owner's style images (third round, 2026-11-19)
+
+The owner's reference photos in `styles/` (reference only; never copied into the site) override the
+language above in four places:
+
+- **Kitchen** (`kitchen_dining_*.py`): warm vintage-American in soft layered neutrals. Cream shaker
+  cabinetry with unlacquered brass cup pulls and knobs, glass-front uppers and a greige pantry wall
+  with a panelled fridge. A cream plaster hood with a dentil band over a scalloped marble splash and
+  a brass pot filler; walnut open shelves on whitewashed brick. A fireclay farmhouse sink under a
+  black grid window with brass sconces and linen cafe curtains. A white-oak island with a honed
+  quartzite top, brass pendants, a Persian runner, and a warm oak dining set under a brass lantern.
+- **Primary bath** (`baths_primary.py`): a sage subway-tile shower with aged-brass fittings, a floating
+  solid-oak double vanity with carved basins, brass mirrors and sconces, a sage V-groove wainscot under
+  cream plaster, a stacked-stone wall and a blue-and-cream encaustic floor.
+- **Shared bath** (`baths_shared.py`): a rustic-oak wood-look tile wall with a lit niche behind the WC,
+  warm Spanish-cream stone-look porcelain, a light-oak vanity with a travertine trough basin and a
+  limestone-look floor.
+- **Garage door** (`exterior_garage.py`): a stained-cedar carriage-house door with a top row of glass
+  lites, flanked by black coach lanterns.
+
 ## How to build and review
 
 ```bash

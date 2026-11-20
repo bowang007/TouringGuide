@@ -16,24 +16,32 @@ All assets are from [Poly Haven](https://polyhaven.com) under CC0 1.0 (public do
 | texture | [Dry River Pebbles](https://polyhaven.com/a/dry_river_pebbles) | Amal Kumar | CC0 1.0 |
 | texture | [Fabric Leather 02](https://polyhaven.com/a/fabric_leather_02) | Rob Tuytel | CC0 1.0 |
 | texture | [Gravel Stones](https://polyhaven.com/a/gravel_stones) | Amal Kumar | CC0 1.0 |
+| texture | [Grey Oak Veneer 02](https://polyhaven.com/a/grey_oak_veneer_02) | Jenelle van Heerden | CC0 1.0 |
 | texture | [Grey Roof 01](https://polyhaven.com/a/grey_roof_01) | Rob Tuytel | CC0 1.0 |
 | texture | [Hessian 230](https://polyhaven.com/a/hessian_230) | colormass, Rico Cilliers | CC0 1.0 |
 | texture | [Knitted Fleece](https://polyhaven.com/a/knitted_fleece) | colormass, Rico Cilliers | CC0 1.0 |
 | texture | [Leafy Grass](https://polyhaven.com/a/leafy_grass) | Charlotte Baglioni | CC0 1.0 |
 | texture | [Natural Walnut Veneer](https://polyhaven.com/a/natural_walnut_veneer) | Jenelle van Heerden | CC0 1.0 |
+| texture | [Oak Veneer 01](https://polyhaven.com/a/oak_veneer_01) | Jenelle van Heerden | CC0 1.0 |
 | texture | [Oak Veneer 03](https://polyhaven.com/a/oak_veneer_03) | Jenelle van Heerden | CC0 1.0 |
 | texture | [Oak Veneer 04](https://polyhaven.com/a/oak_veneer_04) | Jenelle van Heerden | CC0 1.0 |
+| texture | [Oak Veneer 05](https://polyhaven.com/a/oak_veneer_05) | Jenelle van Heerden | CC0 1.0 |
+| texture | [Oak Wood Planks](https://polyhaven.com/a/oak_wood_planks) | Dimitrios Savva | CC0 1.0 |
 | texture | [Plastered Wall 04](https://polyhaven.com/a/plastered_wall_04) | Rob Tuytel | CC0 1.0 |
 | texture | [Poly Wool Herringbone](https://polyhaven.com/a/poly_wool_herringbone) | colormass, Rico Cilliers | CC0 1.0 |
 | texture | [Rough Linen](https://polyhaven.com/a/rough_linen) | colormass, Rico Cilliers | CC0 1.0 |
+| texture | [Rustic Stone Wall 02](https://polyhaven.com/a/rustic_stone_wall_02) | Amal Kumar | CC0 1.0 |
 | texture | [Sapele Veneer](https://polyhaven.com/a/sapele_veneer) | Jenelle van Heerden | CC0 1.0 |
 | texture | [Silver Oak Veneer 01](https://polyhaven.com/a/silver_oak_veneer_01) | Jenelle van Heerden | CC0 1.0 |
 | texture | [Teak Veneer](https://polyhaven.com/a/teak_veneer) | Jenelle van Heerden | CC0 1.0 |
 | texture | [Velour Velvet](https://polyhaven.com/a/velour_velvet) | colormass, Rico Cilliers | CC0 1.0 |
 | texture | [Walnut Veneer](https://polyhaven.com/a/walnut_veneer) | Jenelle van Heerden | CC0 1.0 |
+| texture | [Weathered Brown Planks](https://polyhaven.com/a/weathered_brown_planks) | Dimitrios Savva, Rico Cilliers | CC0 1.0 |
 | texture | [White Oak Veneer](https://polyhaven.com/a/white_oak_veneer) | Jenelle van Heerden | CC0 1.0 |
 | texture | [White Stucco](https://polyhaven.com/a/white_stucco) | Amal Kumar | CC0 1.0 |
+| texture | [Whitewashed Brick](https://polyhaven.com/a/whitewashed_brick) | Charlotte Baglioni | CC0 1.0 |
 | texture | [Wood Chips](https://polyhaven.com/a/wood_chips) | eye-candy.xyz | CC0 1.0 |
+| texture | [Wood Table Worn](https://polyhaven.com/a/wood_table_worn) | Dimitrios Savva, Rico Cilliers | CC0 1.0 |
 | texture | [Wool Boucle](https://polyhaven.com/a/wool_boucle) | colormass, Rico Cilliers | CC0 1.0 |
 | model | [Ceramic Vase 01](https://polyhaven.com/a/ceramic_vase_01) | James Ray Cock | CC0 1.0 |
 | model | [Ceramic Vase 02](https://polyhaven.com/a/ceramic_vase_02) | James Ray Cock | CC0 1.0 |
@@ -54,7 +62,10 @@ All assets are from [Poly Haven](https://polyhaven.com) under CC0 1.0 (public do
 | model | [Shrub 02](https://polyhaven.com/a/shrub_02) | Rico Cilliers | CC0 1.0 |
 | model | [Shrub 04](https://polyhaven.com/a/shrub_04) | Rico Cilliers | CC0 1.0 |
 | model | [Side Table 01](https://polyhaven.com/a/side_table_01) | James Ray Cock | CC0 1.0 |
+| model | [Standing Picture Frame 01](https://polyhaven.com/a/standing_picture_frame_01) | James Ray Cock | CC0 1.0 |
 | model | [Tree Small 02](https://polyhaven.com/a/tree_small_02) | Rico Cilliers | CC0 1.0 |
+| model | [Vintage Electric Kettle](https://polyhaven.com/a/vintage_electric_kettle) | SV Garip | CC0 1.0 |
+| model | [Wicker Basket 01](https://polyhaven.com/a/wicker_basket_01) | Kuutti Siitonen | CC0 1.0 |
 | hdri | [Kloofendal 38d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_38d_partly_cloudy_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |
 | hdri | [Kloofendal 43d Clear (Pure Sky)](https://polyhaven.com/a/kloofendal_43d_clear_puresky) | Greg Zaal | CC0 1.0 |
 | hdri | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |

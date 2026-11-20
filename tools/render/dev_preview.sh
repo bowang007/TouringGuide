@@ -3,12 +3,13 @@
 #   tools/render/dev_preview.sh <zones> <nodes> [width=1536] [samples=128]
 # e.g. tools/render/dev_preview.sh kitchen_dining K0,D0,H2
 # Output: tools/render/.cache/dev_<first-zone>/<NODE>.png (equirect), <NODE>_sheet.png (4 views)
-# Each zone gets its own .blend/output dir so several builds can run in parallel.
+# Each zone gets its own .blend/output dir so several builds can run in parallel; DEV_TAG=<name> gives
+# a separate dir to two jobs that build the same zone.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BLENDER="${BLENDER:-blender}"
 ZONES="$1"; NODES="$2"; WIDTH="${3:-1536}"; SAMPLES="${4:-128}"
-TAG="${ZONES%%,*}"
+TAG="${DEV_TAG:-${ZONES%%,*}}"
 OUT="$HERE/.cache/dev_$TAG"
 mkdir -p "$OUT"
 "$BLENDER" -b --factory-startup -noaudio --python "$HERE/build_scene.py" -- --zones "$ZONES" --out "$OUT/scene.blend" 2>&1 \

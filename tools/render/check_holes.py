@@ -7,6 +7,11 @@ Casts a grid of rays (every 0.2 ft over the house footprint) up from 7 ft and do
 upward ray must stop on a ceiling-like surface (or on a wall top at 8 ft); a downward ray must stop on
 a floor at grade. Prints one line per object hit instead, with the area it covers. Rays that start
 inside a wall's thickness report the wall's head at 7 ft: those lines are expected.
+
+Two finer checks follow: hairline floor seams (a 0.1 x 0.05 ft grid of downward rays that land on the
+foundation instead of a floor) and baseboards with no wall behind them (each run sampled every 0.1 ft,
+looking for a shell wall within 0.25 ft on either side). bl/revisions.py repairs both (floor_gaps,
+skirting_trim), so after a build both should print nothing.
 """
 import collections
 import json
@@ -78,7 +83,53 @@ def main():
 
     scan(7.0, 1, lambda n, y: y is None or not (CEILING.search(n) or abs(y - 8.0) < 0.05), 'ceiling')
     scan(1.0, -1, lambda n, y: y is None or y < -0.06, 'floor')
+    scan(1.0, -1, lambda n, y: y is not None and re.search(r'foundation', n, re.I) and y > -0.5, 'seam', step=0.07)
+    out.extend(baseboards())
     print('\n'.join(out) if out else 'no holes', flush=True)
+
+
+def baseboards():
+    """Baseboard runs (shell objects named skirting / baseboard) with stretches that have no wall behind them."""
+    skirt = re.compile(r'skirting|baseboard', re.I)
+    dg = bpy.context.evaluated_depsgraph_get()
+    verts, polys = [], []
+    runs = []
+    for ob in bpy.data.objects:
+        cols = {c.name for c in ob.users_collection}
+        if ob.type != 'MESH' or ob.hide_render or not cols & {'shell', 'exterior_shell'}:
+            continue
+        if skirt.search(ob.name):
+            runs.append(ob)
+            continue
+        if re.search(r'glass|glazing', ob.name, re.I):
+            continue
+        ev = ob.evaluated_get(dg)
+        me = ev.to_mesh()
+        mw, base = ob.matrix_world, len(verts)
+        verts += [mw @ v.co for v in me.vertices]
+        polys += [[base + i for i in p.vertices] for p in me.polygons]
+        ev.to_mesh_clear()
+    bvh = BVHTree.FromPolygons(verts, polys)
+    out = []
+    for ob in runs:
+        w = [ob.matrix_world @ v.co for v in ob.data.vertices]
+        xs = [p.x / FT for p in w]
+        zs = [-p.y / FT for p in w]
+        x0, x1, z0, z1 = min(xs), max(xs), min(zs), max(zs)
+        along_x = x1 - x0 >= z1 - z0
+        a0, a1 = (x0, x1) if along_x else (z0, z1)
+        bad, t = [], a0 + 0.1
+        while t < a1 - 0.1:
+            x, z = (t, (z0 + z1) / 2) if along_x else ((x0 + x1) / 2, t)
+            o = Vector((x * FT, -z * FT, 0.2 * FT))
+            dirs = ((0, -1, 0), (0, 1, 0)) if along_x else ((1, 0, 0), (-1, 0, 0))
+            if all(bvh.ray_cast(o, Vector(d), 0.25 * FT)[0] is None for d in dirs):
+                bad.append(t)
+            t += 0.1
+        if len(bad) > 1:
+            out.append(f'skirt   {ob.name[:48]:48s} {len(bad):5d} pts  {"x" if along_x else "z"} {min(bad):6.2f}-{max(bad):6.2f}'
+                       f'  (run {a0:.2f}-{a1:.2f})')
+    return out
 
 
 main()

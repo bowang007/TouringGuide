@@ -13,6 +13,11 @@ SLIDER_X = (2.45, 9.10)
 SLIDER_HEAD = 7.0
 # 6. primary bathroom window: between the vanity front (z 22.76) and the shower wet wall (z 25.23)
 BATH_WIN_Z = (22.85, 24.85)
+# owner's change 2026-11-19 (third round): Bedroom 2's rear window and the primary bath window no longer run to the
+# floor; both stop at a 2'-0" sill and keep their heads at the 8 ft ceiling
+TALL_SILL = 2.0
+# the concept bath window opening (warped to the new plan) that the bath's wall finish is built around
+BATH_OLD_HOLE_Y = (5.0, 7.0)
 # owner's change 2026-11-19: a skylight over the shower (x 0.36..4.97, z 25.27..28.30), clear of the rain
 # head (x <= 2.44) and on the single west roof plane, 2'-0" x 2'-6"
 PRIMARY_BATH_SKY = (2.7, 4.7, 25.55, 28.05)
