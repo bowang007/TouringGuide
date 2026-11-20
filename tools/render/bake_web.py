@@ -1,22 +1,34 @@
 """Bake the path-traced lighting of the built house into lightmap atlases and export a web GLB.
 
-The result is what the browser shows in Dollhouse / 3D Walk / Floor plan: every surface carries
-its Cycles global illumination, soft shadows and material colour, tone-mapped exactly like the
-panoramas, so the real-time model matches the 360 renders. three.js displays it unlit.
+The result is the dollhouse and floor-plan model of the tour and the surface the panoramas are projected
+on during a move: every surface carries its Cycles global illumination, soft shadows and material
+colour, tone-mapped exactly like the panoramas. three.js displays it unlit.
 
   blender -b tools/render/.cache/house.blend --python tools/render/bake_web.py -- \
-      --out assets/model/house.glb [--texel 45] [--samples 512] [--max-atlas 4096] [--keep-blend]
+      --out assets/model/house.glb [--texel 45] [--detail 2] [--tex-budget 320] [--samples 512]
+      [--max-atlas 4096] [--groups REGEX] [--only classes] [--prep-only] [--bake-dir DIR] [--keep-blend]
+
+  --detail F | base=F,furniture=G   extra texel density (linear) for floors/built-ins ('base') and furniture,
+                                    so the model holds up when it is the picture (dollhouse, floor plan)
+  --tex-budget MB                   GPU memory all atlases may take as RGBA8 with mipmaps; the boosted
+                                    groups are stepped down (x0.75 at a time) until the total fits
+  --groups REGEX                    bake only the groups whose name matches (e.g. 'furniture__2_0|decor_high'):
+                                    the fastest partial bake; everything else still lights and occludes
+
+Next to the GLB it writes collision.json, <name>.bake.json (per-group statistics) and <name>.summary.json
+(GLB size, texture memory, the house-wide exposure / white balance used; adapt_web.py reads it).
 
 Output GLB contract (consumed by index.html):
   * one mesh node per bake group; node.extras.tg_class in
-      'base'      floors, foundations, built-ins, kitchen base cabinets   (always visible)
-      'wall'      walls/trim/windows/doors/garage door/wall tile          (clipped at 2.1 ft in cutaway modes)
-      'furniture' furniture + low decor                                    (furniture toggle)
-      'decor_high' wall art, uppers, mirrors, sconces (centre > 4.8 ft)   (hidden in cutaway modes + furniture toggle)
-      'ceiling'   ceilings, ceiling lights, pendants                       (walk mode only)
-      'exterior'  roof, fascia, facade skins                               (exterior mode only)
-      'landscape' grounds, deck, fences, paths                             (garden toggle)
+      'base'      floors, foundations, built-ins, kitchen base cabinets, appliances (washer / dryer)
+      'wall'      walls/trim/windows/doors/the house's garage door/wall tile
+      'furniture' furniture + low decor
+      'decor_high' wall art, uppers, mirrors, sconces (centre > 4.8 ft)
+      'ceiling'   ceilings, ceiling lights, pendants
+      'exterior'  roof, fascia, facade skins
+      'landscape' grounds, deck, fences, paths, the street and the neighbours (incl. their garage doors)
       'glass'     all glazing (not baked; transparent material)            (treated like 'wall')
+    An object (or a parent) can force its class with a custom property tg_class = one of the names above.
   * node.extras.tg_region: coarse plan region (for debugging / future per-room streaming)
   * TEXCOORD_0 = lightmap UV; baseColorTexture = baked, display-referred sRGB colour (WebP).
   * metres, glTF Y-up (exporter converts Blender Z-up): same frame as SCENE x 0.3048.
@@ -42,6 +54,13 @@ VEG = re.compile(r'tree|shrub|grass|bush|fern|weed|plant_bed|hedge|leaf|leaves|f
                  r'(?<!porch )canopy', re.I)                # (not the covered porch's canopy)
 INDOOR_PLANT = re.compile(r'potted|pachira|calathea|anthurium|ficus|fiddle|olive|planter|pampas|vase', re.I)
 WALLISH_GROUPS = {'walls', 'trim', 'windows', 'glass', 'garageDoor', 'door'}
+CLASSES = ('base', 'wall', 'glass', 'furniture', 'decor_high', 'ceiling', 'exterior', 'landscape')
+# Laundry closet (bl/laundry.py, bl/revisions.laundry_closet): the stacked washer / dryer, hookups and vent are
+# appliances like the fridge ('base'); without this rule the dryer (centre above 4.8 ft) would be 'decor_high'.
+LAUNDRY = re.compile(r'laundry|\bwasher|\bdryer', re.I)      # (not the kitchen's dishwasher)
+WALL_PART = re.compile(r'\bwall\b|partition|jamb|header|head trim|casing|architrave|\bdoor\b|\bleaf\b|lever|hinge|'
+                       r'baseboard|skirting|plinth block|infill', re.I)
+HOUSE_PAD = (-1.5, 41.0, -1.5, 57.5)     # footprint + margin (ft): the house's own garage door lies inside it
 
 
 def parse():
@@ -49,6 +68,16 @@ def parse():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', required=True)
     ap.add_argument('--texel', type=float, default=45.0, help='lightmap texels per metre')
+    ap.add_argument('--detail', default='1',
+                    help="extra texel density (linear factor) for floors/built-ins and furniture: '2' or "
+                         "'base=2,furniture=1.5'")
+    ap.add_argument('--tex-budget', type=float, default=320.0,
+                    help='MB of GPU texture memory (RGBA8 + mipmaps) all atlases together may take')
+    ap.add_argument('--groups', default=None, help='regex: bake only the groups whose name (class__region) matches')
+    ap.add_argument('--prep-only', action='store_true', help='plan, unwrap and report; no bake, no export (no GPU)')
+    ap.add_argument('--bake-dir', default=None, help='scratch directory for the atlases (default <cache>/bake)')
+    ap.add_argument('--wb-int', default=None, help='interior white balance kelvin,tint; default = median of the panoramas')
+    ap.add_argument('--webp-quality', type=int, default=None, help='WebP quality of the atlases in the GLB (exporter default 75)')
     ap.add_argument('--samples', type=int, default=512)
     ap.add_argument('--max-atlas', type=int, default=4096)
     ap.add_argument('--min-atlas', type=int, default=256)
@@ -111,6 +140,29 @@ def is_emitter_only(ob):
     return bool(ms) and all(m.startswith('E_') for m in ms)
 
 
+def forced_class(ob):
+    """tg_class custom property of the object or of a parent (lets a builder decide the class itself)."""
+    p, k = ob, 0
+    while p is not None and k < 12:
+        v = p.get('tg_class')
+        if isinstance(v, str) and v in CLASSES:
+            return v
+        p, k = p.parent, k + 1
+    return None
+
+
+def in_collection(ob, name):
+    """True when ob is in collection `name` or in one nested below it."""
+    parents = _parent_map()
+    for c in ob.users_collection:
+        n, k = c.name, 0
+        while n is not None and k < 12:
+            if n == name:
+                return True
+            n, k = parents.get(n), k + 1
+    return False
+
+
 def classify(ob, scene_objs, world_bb):
     """(class, region) for a render object, or (None, reason) to skip."""
     name = ob.name
@@ -118,6 +170,9 @@ def classify(ob, scene_objs, world_bb):
     cy = (y0 + y1) / 2
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     region = f'{int(cx // 14)}_{int(cz // 14)}'
+    forced = forced_class(ob)
+    if forced:
+        return forced, region
     idx = legacy_group(ob)
     core = {c.name for c in ob.users_collection}
     zone = None if idx is not None or core & {'openings', 'exterior_shell', 'shell'} else zone_of(ob)
@@ -126,7 +181,12 @@ def classify(ob, scene_objs, world_bb):
     if outside:                                          # site, garden, fences, neighbours, garage door
         if VEG.search(name) or any(VEG.search(m) for m in mat_names(ob)):
             return None, 'vegetation'
-        if re.search(r'garage.?door', name, re.I):
+        # Only the house's own garage door is part of the house. The neighbours' doors (ext_context,
+        # 'ext nb ... garage door', up to 280 ft away) used to match the name too and became 18 stray
+        # 'wall__*' nodes that floated around the dollhouse: they are site context like their houses.
+        at_house = x0 > HOUSE_PAD[0] and x1 < HOUSE_PAD[1] and z0 > HOUSE_PAD[2] and z1 < HOUSE_PAD[3]
+        if re.search(r'garage.?door', name, re.I) and at_house and (
+                in_collection(ob, 'ext_garage_door') or not in_collection(ob, 'ext_context')):
             return ('glass' if is_glass(ob) else 'wall'), region
         if y0 > 7.0 and (x0 > -1 and x1 < 40.8 and z0 > -1 and z1 < 56.5):
             return 'exterior', region
@@ -134,7 +194,7 @@ def classify(ob, scene_objs, world_bb):
     if is_glass(ob):
         return 'glass', region
     if idx is not None:                                  # shell / openings / exterior shell
-        g = scene_objs[idx]['group']
+        g = scene_objs[idx]['group'] if idx < len(scene_objs) else 'walls'
         if g in ('roof', 'facade'):
             return 'exterior', region
         if g in ('ceiling', 'lighting', 'mirror'):
@@ -142,15 +202,22 @@ def classify(ob, scene_objs, world_bb):
         if g in WALLISH_GROUPS:
             return 'wall', region
         return 'base', region
-    if core & {'openings'}:                               # core-built opening parts (e.g. W08 window)
-        return 'wall', region
+    if core & {'openings'}:                               # core-built opening parts (e.g. W08 window, closet door)
+        # skylight frames and shaft linings start at the ceiling line: with the ceilings they are hidden in
+        # the dollhouse / floor plan (as 'wall' they hung over the rooms as dark boxes)
+        return ('ceiling' if y0 >= 7.9 else 'wall'), region
     if core & {'exterior_shell'}:
         return 'exterior', region
-    if core & {'shell'}:
-        return ('ceiling' if y0 >= 7.9 else 'base'), region
+    if core & {'shell'}:                                  # revision-built shell pieces without a SCENE object
+        if y0 >= 7.9:
+            return 'ceiling', region
+        tall_thin = (y1 - y0) >= 3.0 and min(x1 - x0, z1 - z0) <= 1.0
+        return ('wall' if WALL_PART.search(name) or tall_thin else 'base'), region
     # interior zone objects
     if y0 >= 7.0 or (is_emitter_only(ob) and y1 > 7.5):
         return 'ceiling', region
+    if LAUNDRY.search(name):                              # before the height rule: the dryer sits above 4.8 ft
+        return ('wall' if WALL_PART.search(name) else 'base'), region
     if re.search(r'tile|skin|wainscot|backsplash|splash', name, re.I) and (y1 - y0) > 3.0:
         return 'wall', region
     if cy > 4.8 and (y1 - y0) < 4.5:
@@ -283,29 +350,287 @@ def join(objs, name):
     return objs[0]
 
 
-def lightmap_uv(ob, margin_px, size):
+MARGINS = (3.0, 2.0, 1.5, 1.0, 0.5, 0.25)   # px between islands, tried in this order
+KEEP_COVER = 0.5                         # a margin is accepted when the layout keeps half of the UV area that a
+                                         # pack without any margin covers (i.e. loses at most 30 % of resolution)
+CRUMB_PARTS, CRUMB_TRIS = 60, 80         # an object of >= 60 loose parts averaging <= 80 triangles is "crumbly"
+
+
+def loose_parts(me):
+    """Number of connected pieces of a mesh (leaves of a plant, pebbles of a fire bed ...)."""
+    import numpy as np
+    nv, ne = len(me.vertices), len(me.edges)
+    if not nv or not ne:
+        return nv
+    ev = np.empty(ne * 2, dtype=np.int64)
+    me.edges.foreach_get('vertices', ev)
+    a, b = ev[0::2], ev[1::2]
+    label = np.arange(nv)
+    for _ in range(4000):
+        m = np.minimum(label[a], label[b])
+        new = label.copy()
+        np.minimum.at(new, a, m)
+        np.minimum.at(new, b, m)
+        new = new[new]                                   # pointer jumping
+        if np.array_equal(new, label):
+            break
+        label = new
+    used = np.zeros(nv, dtype=bool)
+    used[a] = True
+    used[b] = True
+    return int(len(np.unique(label[used])))
+
+
+def tag_crumbly(cp, pid):
+    """Mark a crumbly copy for a planar unwrap: face attribute tg_pid = pid and corner attribute tg_puv =
+    its vertices projected along the thinnest bounding-box axis, in metres from the box corner. See unwrap."""
+    import numpy as np
+    me = cp.data
+    nv = len(me.vertices)
+    co = np.empty(nv * 3, dtype=np.float32)
+    me.vertices.foreach_get('co', co)
+    co = co.reshape(-1, 3)
+    lo, ext = co.min(0), co.max(0) - co.min(0)
+    ax = [k for k in range(3) if k != int(np.argmin(ext))]
+    vi = np.empty(len(me.loops), dtype=np.int32)
+    me.loops.foreach_get('vertex_index', vi)
+    puv = (co[vi][:, ax] - lo[ax]).astype(np.float32)
+    at = me.attributes.new('tg_puv', 'FLOAT2', 'CORNER')
+    at.data.foreach_set('vector', puv.ravel())
+    at = me.attributes.new('tg_pid', 'INT', 'FACE')
+    at.data.foreach_set('value', np.full(len(me.polygons), pid, dtype=np.int32))
+
+
+def split_long_faces(ob, max_len):
+    """Cut every face longer than `max_len` metres with axis-aligned planes and separate the pieces.
+
+    The packer scales all islands of a group by one factor, so the longest island must fit the atlas
+    side. One 12 to 17 m strip (the foundation's edge, a floor seam patch, a ceiling slab across the house)
+    in a group of 12 to 30 m2 forced the whole group, floors included, down to a fraction of its atlas
+    (base__1_1 / base__1_2: 20 % and 6 % of the atlas used, the hall and foyer floors at 84 texels/m while
+    their neighbours had 210). Cut into pieces no longer than the atlas side at the nominal density, such
+    strips pack like everything else. Returns the number of cuts."""
+    import numpy as np
     me = ob.data
-    for uv in list(me.uv_layers):
-        if uv.name == 'lm':
-            me.uv_layers.remove(uv)
-    lm = me.uv_layers.new(name='lm')
-    me.uv_layers.active = lm               # bake target; keep the original active_render for textures
+    n = len(me.loops)
+    if not n:
+        return 0
+    co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+    me.vertices.foreach_get('co', co)
+    vi = np.empty(n, dtype=np.int64)
+    me.loops.foreach_get('vertex_index', vi)
+    ls = np.empty(len(me.polygons), dtype=np.int64)
+    me.polygons.foreach_get('loop_start', ls)
+    pc = co.reshape(-1, 3)[vi]
+    ext = np.maximum.reduceat(pc, ls) - np.minimum.reduceat(pc, ls)       # per-face extent along x, y, z
+    if not (ext > max_len).any():
+        return 0
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.faces.ensure_lookup_table()
+    cuts = 0
+    for axis in range(3):
+        faces = [bm.faces[i] for i in np.nonzero(ext[:, axis] > max_len)[0] if bm.faces[i].is_valid] if axis == 0 else \
+            [f for f in bm.faces if max(v.co[axis] for v in f.verts) - min(v.co[axis] for v in f.verts) > max_len]
+        if not faces:
+            continue
+        lo = min(v.co[axis] for f in faces for v in f.verts)
+        hi = max(v.co[axis] for f in faces for v in f.verts)
+        parts = int(math.ceil((hi - lo) / max_len))
+        normal = Vector([1.0 if k == axis else 0.0 for k in range(3)])
+        for k in range(1, parts):
+            geom = list({e for f in faces for e in f.edges} | {v for f in faces for v in f.verts}) + faces
+            res = bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-5, plane_co=normal * (lo + (hi - lo) * k / parts),
+                                         plane_no=normal, clear_inner=False, clear_outer=False)
+            edges = [e for e in res['geom_cut'] if isinstance(e, bmesh.types.BMEdge)]
+            if edges:
+                bmesh.ops.split_edges(bm, edges=edges)
+                cuts += 1
+            faces = [f for f in res['geom'] if isinstance(f, bmesh.types.BMFace) and f.is_valid]
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    return cuts
+
+
+def uv_layout(me, layer='lm'):
+    """(uv [loops, 2], per-face UV area, per-face loop start, per-face loop count) of a UV layer."""
+    import numpy as np
+    n = len(me.loops)
+    uv = np.empty(n * 2, dtype=np.float32)
+    me.uv_layers[layer].data.foreach_get('uv', uv)
+    uv = uv.reshape(-1, 2).astype(np.float64)
+    ls = np.empty(len(me.polygons), dtype=np.int64)
+    lt = np.empty(len(me.polygons), dtype=np.int64)
+    me.polygons.foreach_get('loop_start', ls)
+    me.polygons.foreach_get('loop_total', lt)
+    nxt = np.arange(n) + 1
+    nxt[ls + lt - 1] = ls
+    cross = uv[:, 0] * uv[nxt, 1] - uv[nxt, 0] * uv[:, 1]
+    area = np.abs(np.add.reduceat(cross, ls)) * 0.5 if n else np.zeros(0)
+    return uv, area, ls, lt
+
+
+def _planar(me):
+    """(per-face planar id, per-loop planar id, per-loop planar coordinates in metres, ids) or None."""
+    import numpy as np
+    pid_at, puv_at = me.attributes.get('tg_pid'), me.attributes.get('tg_puv')
+    if pid_at is None or puv_at is None:
+        return None
+    pid = np.empty(len(me.polygons), dtype=np.int32)
+    pid_at.data.foreach_get('value', pid)
+    if not pid.any():
+        return None
+    lt = np.empty(len(me.polygons), dtype=np.int64)
+    me.polygons.foreach_get('loop_total', lt)
+    puv = np.empty(len(me.loops) * 2, dtype=np.float32)
+    puv_at.data.foreach_get('vector', puv)
+    return pid, np.repeat(pid, lt), puv.reshape(-1, 2).astype(np.float64), [int(k) for k in np.unique(pid[pid > 0])]
+
+
+def _activate(ob):
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
     ob.select_set(True)
     bpy.context.view_layer.objects.active = ob
+
+
+def _edit_pack(margin):
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')              # (hidden faces stay out of the pack)
+    # AABB packing: our islands are near-rectangular and the default concave packer is ~1000x slower
+    try:
+        bpy.ops.uv.pack_islands(rotate=True, rotate_method='CARDINAL', shape_method='AABB',
+                                margin_method='FRACTION', margin=margin)
+    except TypeError:
+        bpy.ops.uv.pack_islands(rotate=False, margin=margin)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def _cover(me):
+    """(layout lies inside the unit square, UV area it covers) over the faces the packer sees."""
+    import numpy as np
+    uv, area, _, lt = uv_layout(me)
+    hide = np.zeros(len(me.polygons), dtype=bool)
+    me.polygons.foreach_get('hide', hide)
+    if hide.all():
+        return False, 0.0
+    u = uv[np.repeat(~hide, lt)]
+    return bool(u.min() >= -1e-4 and u.max() <= 1.0 + 1e-4), float(area[~hide].sum())
+
+
+def unwrap(ob):
+    """Lightmap unwrap of `ob` into UV layer 'lm' (not yet packed for an atlas size: see pack_layout).
+
+    smart_project cuts the mesh into islands. A crumbly object (tag_crumbly: the leaves of a plant, the
+    pebbles of the fire bed) would add thousands of islands of a few texels each, so it is not cut up:
+    it gets ONE planar projection. Its faces are hidden from the packer and a stand-in quad of the
+    projection's size is packed for it; finish_unwrap maps the object into the quad's final place.
+    The pieces of such an object share the texels where they overlap, which is what foliage needs."""
+    import numpy as np
+    me = ob.data
+    for uv in list(me.uv_layers):
+        if uv.name == 'lm':
+            me.uv_layers.remove(uv)
+    me.uv_layers.new(name='lm')
+    me.uv_layers.active = me.uv_layers['lm']   # bake target; keep the original active_render for textures
+    _activate(ob)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.0, area_weight=0.0,
                              correct_aspect=True, scale_to_bounds=False)
-    # AABB packing: our islands are near-rectangular and the default concave packer is ~1000x slower
-    try:
-        bpy.ops.uv.pack_islands(rotate=True, rotate_method='CARDINAL', shape_method='AABB',
-                                margin_method='FRACTION', margin=margin_px / size)
-    except TypeError:
-        bpy.ops.uv.pack_islands(rotate=False, margin=margin_px / size)
     bpy.ops.object.mode_set(mode='OBJECT')
-    return lm
+    pl = _planar(me)
+    if pl is None:
+        return 0
+    pid, loop_pid, puv, ids = pl
+    _, area, _, _ = uv_layout(me)
+    world = np.empty(len(me.polygons), dtype=np.float64)
+    me.polygons.foreach_get('area', world)
+    ok = (pid == 0) & (world > 1e-10) & (area > 0)
+    r = float(np.sqrt(area[ok].sum() / world[ok].sum())) if ok.any() else 0.05     # UV units per metre
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    layer = bm.loops.layers.uv['lm']
+    cursor = 2.0                                          # beside the smart-project layout (which is in 0..1)
+    for i, k in enumerate(ids):
+        w, h = (max(float(v), 1e-3) * r for v in puv[loop_pid == k].max(0))
+        z = -50.0 - i                                     # a 1 mm stand-in far below the house; removed again
+        f = bm.faces.new([bm.verts.new(c) for c in ((0, 0, z), (0.001, 0, z), (0.001, 0.001, z), (0, 0.001, z))])
+        for loop, (du, dv) in zip(f.loops, ((0, 0), (w, 0), (w, h), (0, h))):
+            loop[layer].uv = (cursor + du, 2.0 + dv)
+        cursor += w + 0.25
+    bm.to_mesh(me)
+    bm.free()
+    hide = np.zeros(len(me.polygons), dtype=bool)
+    hide[:len(pid)] = pid > 0
+    me.polygons.foreach_set('hide', hide)
+    me.update()
+    return len(ids)
+
+
+def pack_layout(ob, size):
+    """Pack the islands of `ob` for a size x size atlas. Returns {'margin_px', 'cover'}.
+
+    The packer is asked for a margin that is a fixed fraction of the atlas. When thousands of small
+    islands cannot have that margin at any scale, Blender's packer shrinks every island to almost
+    nothing (and may let the layout overflow the unit square): no texel centre lies inside any island,
+    the bake writes nothing and the atlas stays BLACK. That is what happened to furniture__2_0,
+    decor_high__2_1 and decor_high__0_1 with the fixed 3 px margin (1,800 to 15,000 islands in 256 /
+    512 px atlases). So the layout is measured after every pack: the margin steps down from 3 px until
+    the layout lies inside the unit square and still covers KEEP_COVER of what a pack without margin
+    covers; a bake can never run on an empty atlas."""
+    import numpy as np
+    me = ob.data
+    _activate(ob)
+    _edit_pack(0.0)
+    _, tight = _cover(me)
+    for m in MARGINS:
+        _edit_pack(m / size)
+        inside, cover = _cover(me)
+        if inside and cover >= KEEP_COVER * tight:
+            return {'margin_px': m, 'cover': round(cover, 3), 'tight': round(tight, 3)}
+    _edit_pack(0.0)
+    inside, cover = _cover(me)
+    if not inside:                                        # last resort: scale the tight pack into the square
+        uv, _, _, _ = uv_layout(me)
+        lo, hi = uv.min(0), uv.max(0)
+        k = 1.0 / max(1e-9, float((hi - lo).max()))
+        me.uv_layers['lm'].data.foreach_set('uv', ((uv - lo) * k * 0.998 + 0.001).astype(np.float32).ravel())
+        me.update()
+        cover *= k * k
+    print(f'[bake] WARNING {ob.name}: no margin fits a {size}px atlas, packed without one (cover {cover:.2f})', flush=True)
+    return {'margin_px': 0.0, 'cover': round(cover, 3), 'tight': round(tight, 3)}
+
+
+def finish_unwrap(ob):
+    """After the final pack_layout: move each crumbly object into its stand-in quad and drop the quads."""
+    import numpy as np
+    me = ob.data
+    pl = _planar(me)
+    if pl is not None:
+        pid, loop_pid, puv, ids = pl
+        uv, _, ls, _ = uv_layout(me)
+        first = len(me.polygons) - len(ids)               # the stand-ins are the last faces
+        for i, k in enumerate(ids):
+            c = uv[ls[first + i]:ls[first + i] + 4]       # corners (0,0) (w,0) (w,h) (0,h), wherever the packer put them
+            sel = loop_pid == k
+            s = puv[sel] / np.maximum(puv[sel].max(0), 1e-3)
+            uv[sel] = c[0] + s[:, :1] * (c[1] - c[0]) + s[:, 1:] * (c[3] - c[0])
+        me.uv_layers['lm'].data.foreach_set('uv', uv.astype(np.float32).ravel())
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bm.faces.ensure_lookup_table()
+        verts = {v for f in bm.faces[first:] for v in f.verts}
+        bmesh.ops.delete(bm, geom=list(verts), context='VERTS')
+        bm.to_mesh(me)
+        bm.free()
+        me.polygons.foreach_set('hide', np.zeros(len(me.polygons), dtype=bool))
+        me.update()
+    for name in ('tg_pid', 'tg_puv'):
+        at = me.attributes.get(name)
+        if at is not None:
+            me.attributes.remove(at)
 
 
 def set_bake_target(ob, img):
@@ -323,7 +648,7 @@ def set_bake_target(ob, img):
         nt.nodes.active = node
 
 
-def denoise(img, w, h):
+def denoise(img, w, h, bake_dir=None):
     """Denoise a baked float image in a throwaway compositor scene (OIDN)."""
     sc = bpy.data.scenes.new('tg_denoise')
     try:
@@ -360,7 +685,7 @@ def denoise(img, w, h):
         sc.view_settings.view_transform = 'Standard'
         sc.render.image_settings.file_format = 'OPEN_EXR'
         sc.render.image_settings.color_depth = '32'
-        tmp = os.path.join(CACHE_DIR, 'bake', f'_dn_{img.name}.exr')
+        tmp = os.path.join(bake_dir or os.path.join(CACHE_DIR, 'bake'), f'_dn_{img.name}.exr')
         sc.render.filepath = tmp
         # an empty scene renders instantly; the compositor does the work
         with bpy.context.temp_override(scene=sc):
@@ -456,22 +781,63 @@ def metal_proxies():
     print(f'[bake] metal proxies: {mats} materials')
 
 
+def parse_detail(text):
+    """'2' -> {'base': 2, 'furniture': 2}; 'base=2,furniture=1.5' -> per class (any class name works)."""
+    out = {}
+    if '=' in text:
+        for part in text.split(','):
+            k, v = part.split('=')
+            out[k.strip()] = float(v)
+    else:
+        out['base'] = out['furniture'] = float(text)
+    return {k: v for k, v in out.items() if abs(v - 1.0) > 1e-6}
+
+
+def tex_mb(size):
+    """GPU megabytes of a size x size RGBA8 texture with mipmaps (three.js uploads the WebP atlases uncompressed)."""
+    return size * size * 4 * (4.0 / 3.0) / 1e6
+
+
+def fit_budget(plan, budget_mb):
+    """Step the detail-boosted atlases down (x0.75, multiples of 64 px; WebGL2 mipmaps any size) until all
+    atlases fit `budget_mb`. The largest atlas goes first; none goes below its size without the boost."""
+    def total():
+        return sum(tex_mb(p['size']) for p in plan)
+    steps = 0
+    while total() > budget_mb:
+        cand = [p for p in plan if p['size'] > p['floor']]
+        if not cand:
+            print(f'[bake] WARNING textures need {total():.0f} MB even without --detail (budget {budget_mb:.0f} MB): '
+                  f'lower --texel or --max-atlas', flush=True)
+            break
+        q = max(cand, key=lambda p: (p['size'], p['side'] and p['size'] / p['side']))
+        q['size'] = max(q['floor'], int(round(q['size'] * 0.75 / 64.0)) * 64)
+        steps += 1
+    return steps, total()
+
+
 def main():
+    import numpy as np
+    import render_panos as rp
     a = parse()
     t0 = time.time()
     sc = bpy.context.scene
-    scene_objs = json.load(open(os.path.join(DATA_DIR, 'scene.json')))['objects']
-    bake_dir = os.path.join(CACHE_DIR, 'bake')
+    scene = json.load(open(os.path.join(DATA_DIR, 'scene.json')))
+    scene_objs = scene['objects']
+    bake_dir = a.bake_dir or os.path.join(CACHE_DIR, 'bake')
     os.makedirs(bake_dir, exist_ok=True)
+    detail = parse_detail(a.detail)
+    only_groups = re.compile(a.groups) if a.groups else None
 
     # render / bake settings (GPU)
     sc.render.engine = 'CYCLES'
-    prefs = bpy.context.preferences.addons['cycles'].preferences
-    prefs.compute_device_type = 'OPTIX'
-    prefs.get_devices()
-    for d in prefs.devices:
-        d.use = d.type == 'OPTIX'
-    sc.cycles.device = 'GPU'
+    if not a.prep_only:
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = 'OPTIX'
+        prefs.get_devices()
+        for d in prefs.devices:
+            d.use = d.type == 'OPTIX'
+        sc.cycles.device = 'GPU'
     sc.cycles.samples = a.samples
     sc.cycles.use_denoising = False
     sc.cycles.max_bounces = 12
@@ -500,18 +866,19 @@ def main():
         vs.look = 'AgX - Base Contrast'
     except TypeError:
         pass
-    # Same light balance as the panoramas; one house-wide white balance and interior exposure: the
-    # medians of the per-stop values the panorama renders chose (render_meta.json).
+    # Same light balance as the panoramas; ONE house-wide white balance and interior exposure (this is the
+    # dollhouse's exposure): the medians of the values the panoramas of the tour's sweeps were rendered with.
     from bl import lighting
     lighting.apply_balance()
     metal_proxies()
     meta = json.load(open(a.meta)) if os.path.exists(a.meta) else {}
-
-    def med(vals, default):
-        vals = sorted(vals)
-        return vals[len(vals) // 2] if vals else default
-    wb_t = med([v['wb'][0] for v in meta.values() if 'wb' in v], 6000.0)
-    wb_n = med([v['wb'][1] for v in meta.values() if 'wb' in v], 0.0)
+    sweep_ids = {n['id'] for n in scene.get('tour', {}).get('nodes', []) if not n.get('outdoor')}
+    exp_int, (wb_t, wb_n) = rp.house_look(meta, sweep_ids)
+    if a.exposure_int is not None:
+        exp_int = a.exposure_int
+    if a.wb_int:
+        v = [float(x) for x in a.wb_int.split(',')]
+        wb_t, wb_n = v[0], (v[1] if len(v) > 1 else wb_n)
     try:
         vs.use_white_balance = True
         vs.white_balance_temperature = wb_t
@@ -519,10 +886,8 @@ def main():
     except AttributeError:
         pass
     wb_ext = tuple(float(v) for v in a.wb_ext.split(','))
-    exp_int = a.exposure_int
-    if exp_int is None:
-        exp_int = med([v['exposure'] for v in meta.values()], 0.5)
-    print(f'[bake] exposure interior {exp_int:+.2f}, exterior {a.exposure_ext:+.2f}, wb {wb_t:.0f}K/{wb_n:+.1f}')
+    print(f'[bake] exposure interior {exp_int:+.2f}, exterior {a.exposure_ext:+.2f}, wb {wb_t:.0f}K/{wb_n:+.1f}'
+          + ('' if meta else f'  (no {a.meta}: defaults)'))
 
     # ---- collect + classify render objects
     depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -557,7 +922,6 @@ def main():
                 key = 'near'
         else:
             key = region if cls != 'exterior' else cls
-        groups.setdefault((cls, key), []).append(ob)
         # walk-mode collision footprints for new interior furniture / built-ins (SCENE feet)
         if cls in ('furniture', 'base') and legacy_group(ob) is None and zone_of(ob) not in (None, 'exterior'):
             x0, x1, y0, y1, z0, z1 = bb
@@ -565,59 +929,110 @@ def main():
             if y0 < 1.6 and (y1 - y0) > 1.0 and 0.25 < fp < 140:
                 collision.append({'name': ob.name[:40], 'x0': round(x0, 3), 'x1': round(x1, 3),
                                   'z0': round(z0, 3), 'z1': round(z1, 3), 'h': round(y1, 2)})
+        if only_groups and not only_groups.search(f'{cls}__{key}'):
+            continue
+        groups.setdefault((cls, key), []).append(ob)
     print('[bake] groups:', {f'{k[0]}/{k[1]}': len(v) for k, v in groups.items()}, 'skipped:', skipped)
+    stray = sorted(f'{c}__{k}' for (c, k), v in groups.items() if c in ('base', 'wall', 'glass', 'furniture', 'decor_high', 'ceiling')
+                   and not any(-3 < world_bbox_ft(o)[0] < 42.5 and -3 < world_bbox_ft(o)[4] < 59 for o in v))
+    if stray:
+        print(f'[bake] WARNING house-class groups far outside the footprint: {", ".join(stray)}', flush=True)
 
-    # hide everything not exported? No: the full scene stays visible so baking sees all
-    # occluders and bounce light (vegetation shadows included). Only copies are baked.
+    # ---- copies, one joined mesh per group, atlas plan
+    # (the full scene stays visible so baking sees all occluders and bounce light, vegetation
+    # shadows included; only the copies are baked)
     exports = []
     stats = {}
     origins = {}
+    plan = []
     for (cls, region), objs in sorted(groups.items()):
         tg = time.time()
         copies = []
         tris = 0
+        crumbly = 0
         for ob in objs:
             cp = evaluated_copy(ob, depsgraph, work)
             if not cp.data.polygons:
                 bpy.data.objects.remove(cp)
                 continue
             lawn_green(cp)
-            if legacy_group(ob) is None:
-                tris += decimate(cp, a.max_tris)
-            else:
-                tris += tri_count(cp.data)
+            n = decimate(cp, a.max_tris) if legacy_group(ob) is None else tri_count(cp.data)
+            tris += n
+            if cls in ('furniture', 'decor_high', 'base') and n >= 800:
+                parts = loose_parts(cp.data)
+                if parts >= CRUMB_PARTS and n / parts <= CRUMB_TRIS:
+                    crumbly += 1
+                    tag_crumbly(cp, crumbly)
             cp.hide_render = True                 # copies never occlude the bake
             copies.append(cp)
         if not copies:
             continue
         name = f'{cls}__{region}'
-        t_copy = time.time() - tg
         g = join(copies, name)
-        t_join = time.time() - tg - t_copy
         g['tg_class'] = cls
         g['tg_region'] = region
         origins[g.name] = objs
+        exports.append(g)
         if cls == 'glass':
             g.data.materials.clear()
             g.data.materials.append(glass_material())
             for uv in list(g.data.uv_layers):
                 g.data.uv_layers.remove(uv)
-            exports.append(g)
             stats[name] = {'tris': tris, 'atlas': 0}
             continue
         culled = cull_hidden_faces(g, cls)
         area = surface_area(g.data)
         scale = TEXEL_SCALE.get(cls, 1.0) * {'context': 0.4, 'ground': 0.0}.get(region, 1.0)
-        side = math.sqrt(area / 0.62) * a.texel * scale
-        size = int(2 ** math.ceil(math.log2(max(a.min_atlas, min(a.max_atlas, side)))))
+        side = math.sqrt(area / 0.62) * a.texel * scale            # px for the nominal texel density
+
+        def atlas(f):
+            return int(2 ** math.ceil(math.log2(max(a.min_atlas, min(a.max_atlas, side * f)))))
+        floor = atlas(1.0)
+        size = atlas(detail.get(cls, 1.0))
         if region == 'ground':
-            size = 512                            # flat lawn far from the house: lighting only
-        lightmap_uv(g, 3.0, size)
-        stats[name] = {'tris': tris, 'area_m2': round(area, 1), 'atlas': size, 'culled': culled}
-        print(f'[prep] {name}: copy {t_copy:.1f}s join {t_join:.1f}s uv {time.time() - tg - t_copy - t_join:.1f}s', flush=True)
-        exports.append(g)
+            floor = size = 512                    # flat lawn far from the house: lighting only
+        tu = time.time()
+        # no island may be longer than the atlas side at the nominal density (see split_long_faces)
+        cuts = split_long_faces(g, max(1.5, 0.8 * math.sqrt(area / 0.62))) if region != 'ground' else 0
+        planar = unwrap(g)
+        lay = pack_layout(g, floor)
+        bumped = False
+        if lay['margin_px'] < 1.5 and floor < a.max_atlas and cls not in ('landscape', 'exterior'):
+            # so many islands that not even 1.5 px fit between them: this group of the house needs a larger
+            # atlas (the site keeps its size: it is seen from far away and is the largest atlas already)
+            floor *= 2
+            size = max(size, floor)
+            bumped = True
+            lay = None
+        plan.append({'name': name, 'size': size, 'floor': min(floor, size), 'side': side, 'packed': floor if lay else 0,
+                     'lay': lay})
+        stats[name] = {'tris': tris, 'area_m2': round(area, 1), 'culled': culled, 'crumbly': crumbly, 'planar': planar,
+                       'cuts': cuts, 'bumped': bumped, 'prep_s': round(tu - tg, 1), 'uv_s': round(time.time() - tu, 1)}
+    steps, total_mb = fit_budget(plan, a.tex_budget)
+    if steps:
+        print(f'[bake] texture budget {a.tex_budget:.0f} MB: {steps} step(s) down on the detail-boosted atlases', flush=True)
+    for p in plan:
+        tg = time.time()
+        g = bpy.data.objects[p['name']]
+        st = stats[p['name']]
+        st['atlas'] = p['size']
+        st.update(p['lay'] if p['packed'] == p['size'] else pack_layout(g, p['size']))
+        finish_unwrap(g)
+        st['uv_s'] = round(st['uv_s'] + time.time() - tg, 1)
+        print(f"[prep] {p['name']}: {st['tris']} tris, {st['area_m2']} m2, atlas {p['size']}px"
+              + (f" (nominal {p['floor']})" if p['size'] != p['floor'] else '') + (' (raised: many islands)' if st['bumped'] else '')
+              + f", margin {st['margin_px']}px, cover {st['cover']}"
+              + (f", {st['planar']} planar" if st['planar'] else '') + (f", {st['cuts']} cuts" if st['cuts'] else '')
+              + f", prep {st['prep_s']}s uv {st['uv_s']}s", flush=True)
+    mp = sum(p['size'] ** 2 for p in plan) / 1e6
+    print(f'[bake] plan: {len(exports)} groups, {len(plan)} atlases, {mp:.1f} MP = {total_mb:.0f} MB of GPU texture memory '
+          f'(RGBA8 + mipmaps; budget {a.tex_budget:.0f} MB), detail {detail or "none"}', flush=True)
+    if a.prep_only:
+        print(f'[bake] prep only: nothing baked or exported ({time.time() - t0:.0f}s)')
+        return
 
     # ---- bake each group against the ORIGINAL scene (copies are hidden from render)
+    black = []
     for g in exports:
         if g['tg_class'] == 'glass':
             continue
@@ -638,8 +1053,16 @@ def main():
         g.hide_render = True
         for o in origins[g.name]:
             o.hide_render = False
+        # an atlas the bake left empty is a bug in the unwrap (see pack_layout), never a dark room
+        px = np.empty(size * size * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        lit = float((px.reshape(-1, 4)[:, :3].max(1) > 0).mean())
+        stats[g.name]['lit'] = round(lit, 3)
+        if lit < 0.02:
+            black.append(g.name)
+            print(f'[bake] WARNING {g.name}: the bake wrote only {lit * 100:.1f}% of the atlas', flush=True)
         try:
-            dn = denoise(img, size, size)
+            dn = denoise(img, size, size, bake_dir)
         except Exception as e:  # keep going with the raw bake
             print('[bake] denoise failed:', e)
             dn = img
@@ -657,7 +1080,7 @@ def main():
             if uv.name != 'lm':
                 g.data.uv_layers.remove(uv)
         stats[g.name]['bake_s'] = round(time.time() - tb, 1)
-        print(f'[bake] {g.name}: {size}px, {stats[g.name]["tris"]} tris, {stats[g.name]["bake_s"]}s', flush=True)
+        print(f'[bake] {g.name}: {size}px, {stats[g.name]["tris"]} tris, lit {lit:.2f}, {stats[g.name]["bake_s"]}s', flush=True)
 
     # ---- export
     for o in bpy.context.view_layer.objects:
@@ -672,21 +1095,39 @@ def main():
               export_image_format='WEBP', export_cameras=False, export_lights=False, export_apply=True,
               export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=7,
               export_draco_position_quantization=14, export_draco_texcoord_quantization=12)
+    if a.webp_quality is not None:
+        kw['export_image_quality'] = a.webp_quality
     try:
         bpy.ops.export_scene.gltf(**kw)
     except TypeError:
         kw.pop('export_image_format')
+        kw.pop('export_image_quality', None)
         bpy.ops.export_scene.gltf(**kw)
-    json.dump(stats, open(os.path.splitext(a.out)[0] + '.bake.json', 'w'), indent=1)
+    base = os.path.splitext(a.out)[0]
+    json.dump(stats, open(base + '.bake.json', 'w'), indent=1)
     collision = prune_collision(collision)
-    with open(os.path.join(os.path.dirname(os.path.abspath(a.out)), 'collision.json'), 'w') as f:
-        json.dump({'units': 'ft', 'boxes': collision}, f, separators=(',', ':'))
-    print(f'[bake] collision boxes: {len(collision)}')
+    if not only_groups and not a.only:            # a partial bake must not replace the full collision file
+        with open(os.path.join(os.path.dirname(os.path.abspath(a.out)), 'collision.json'), 'w') as f:
+            json.dump({'units': 'ft', 'boxes': collision}, f, separators=(',', ':'))
+        print(f'[bake] collision boxes: {len(collision)}')
     if a.keep_blend:
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(bake_dir, 'web_baked.blend'))
     total_tris = sum(v['tris'] for v in stats.values())
-    print(f'[bake] exported {a.out} ({os.path.getsize(a.out) / 1e6:.1f} MB), {len(exports)} groups, '
-          f'{total_tris} tris, {time.time() - t0:.0f}s')
+    glb_mb = os.path.getsize(a.out) / 1e6
+    summary = {'glb_mb': round(glb_mb, 2), 'texture_mb': round(total_mb, 1), 'megapixels': round(mp, 1),
+               'atlases': len(plan), 'groups': len(exports), 'tris': total_tris, 'seconds': round(time.time() - t0),
+               'texel': a.texel, 'detail': detail, 'tex_budget': a.tex_budget, 'samples': a.samples,
+               'exposure_int': round(exp_int, 4), 'wb_int': [round(wb_t), round(wb_n, 1)],
+               'exposure_ext': a.exposure_ext, 'wb_ext': list(wb_ext), 'black_atlases': black,
+               'partial': bool(only_groups or a.only), 'meta': os.path.abspath(a.meta)}
+    json.dump(summary, open(base + '.summary.json', 'w'), indent=1)
+    print(f'[bake] exported {a.out} ({glb_mb:.1f} MB), {len(exports)} groups, {total_tris} tris, '
+          f'{len(plan)} atlases {mp:.1f} MP = {total_mb:.0f} MB GPU texture memory, {time.time() - t0:.0f}s')
+    if glb_mb > 14.0:
+        print(f'[bake] WARNING the GLB is {glb_mb:.1f} MB (target: below about 14 MB): lower --detail or --webp-quality')
+    if black:
+        raise RuntimeError(f'black atlases: {", ".join(black)}')
 
 
-main()
+if __name__ == '__main__':
+    main()

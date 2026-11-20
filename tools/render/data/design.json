@@ -1,0 +1,103 @@
+{
+ "order": [
+  "front",
+  "roof",
+  "B3",
+  "B4",
+  "K0",
+  "LC",
+  "A0",
+  "A1"
+ ],
+ "views": {
+  "front": {
+   "label": "Front addition",
+   "title": "A modern warm-white front.",
+   "text": "Smooth warm-white stucco wraps the front walls, gables, bay base and corner returns, under a charcoal standing-seam roof with charcoal fascia. Slim matte-black frames hold large clear panes. Warm vertical wood cladding lines the recessed entry around the walnut front door, and a stained-cedar carriage-house garage door with a top row of glass lites, flanked by black coach lanterns, completes the front. Bedroom 3 keeps its tall bay window and a solid gable above it. The rectangular high window over the entrance, the vaulted front bedroom and the coordinated rooflines are retained. Roof forms are inferred from your aerial photo; dimensions remain proposed.",
+   "refs": [
+    "front.PNG",
+    "IMG_3202.PNG"
+   ],
+   "node": "E0",
+   "opening": "W17",
+   "image": "assets/design/front.webp"
+  },
+  "B3": {
+   "label": "Bedroom 3",
+   "title": "A canted bay glazed to the floor.",
+   "text": "Slim black frames with large clear panes run from the floor to the 7′6″ head, so the bay reads as part of the room and opens it to the front garden. The floor extends into the bay. The bed sits on the west wall to keep it open. Bay: 8′ wall opening, 2′ projection, glazed to the floor. Above the bay is a continuous plaster gable, and the vaulted ceiling rises to 11′6″ at the ridge, lit by a ring pendant. The bathroom and compact closet remain on the opposite wall, with the hall entrance at the side. The foyer wall lines up with the shared bathroom's wall, so the room is 14′10⅜″ wide.",
+   "refs": [
+    "bedroom3 window.PNG"
+   ],
+   "node": "B3",
+   "opening": "W09",
+   "image": "assets/design/B3.webp"
+  },
+  "B4": {
+   "label": "Bedroom 4",
+   "title": "Bedroom 4: a flat ceiling and the bed turned across the room.",
+   "text": "A calm flat ceiling replaces the vault, at the same 8 ft as the rest of the house. The full bed is turned across the room, with its headboard on the north wall and its side along the window wall, so the room's length stays open from the bed to the desk and the closet. The room (the architect's office), its separate reach-in closet and the west-facing window keep their positions; the room is 8′0″ deep as on the architect's plan and 14′10⅜″ wide, because its foyer wall now lines up with the shared bathroom's wall.",
+   "refs": [
+    "front.PNG"
+   ],
+   "node": "B4",
+   "opening": "W12",
+   "image": "assets/design/B4.webp"
+  },
+  "K0": {
+   "label": "Kitchen",
+   "title": "A warm vintage kitchen in cream, oak and brass.",
+   "text": "Cream shaker cabinets with unlacquered brass cup pulls and knobs, glass-front uppers and a greige pantry wall with a panelled fridge and stainless wall ovens. The pantry wall now starts at the new laundry closet in the kitchen's south-west corner: closet, fridge, ovens, a short counter under one glass-front upper, then the cooktop. A cream plaster hood with a dentil band rises over a scalloped marble backsplash and a brass pot filler, beside walnut open shelves on whitewashed brick. The fireclay farmhouse sink sits under the black grid window with brass sconces and linen café curtains. Amber-glass pendants hang over a white-oak island with a thick grey-veined quartzite top and a Persian runner, and a warm oak dining table for four continues the island under a brass lantern. A 3′6″ × 4′ skylight sits on the continuous east roof plane, over the sink and dishwasher. Proposed window: 6′ wide, 3′1¾″ sill, 7′9″ head. Styled after your kitchen style images.",
+   "refs": [],
+   "node": "K0",
+   "opening": "W08",
+   "image": "assets/design/K0.webp"
+  },
+  "A0": {
+   "label": "Primary bathroom",
+   "title": "Sage tile, solid oak and stone in the primary bath.",
+   "text": "A glossy sage-green subway-tiled shower sits behind frameless glass with an aged-brass rain shower and hand shower, under the 2′0″ × 2′6″ skylight. A floating solid-oak slab with two basins carved into the wood hangs under brass-framed mirrors and brass sconces, against sage V-groove panelling with warm cream plaster above. A stacked-stone wall frames the wall-hung toilet and a reclaimed-timber shelf, and the floor is blue-and-cream encaustic tile. The tall clear window between the vanity and the shower now starts at a 2′0″ sill, with a linen roman shade. Styled after your primary bathroom style images.",
+   "refs": [],
+   "node": "A0",
+   "opening": "W13",
+   "image": "assets/design/A0.webp"
+  },
+  "A1": {
+   "label": "Shared bathroom",
+   "title": "A wood-look wall and warm stone in the shared bath.",
+   "text": "A rustic oak wood-look tile wall rises behind the wall-hung toilet and around a softly lit, wood-lined niche, with warm Spanish-cream stone-look porcelain on the other walls. A floating light-oak vanity carries a honed travertine block with a carved trough basin, a wall-mounted brushed-nickel faucet and a backlit mirror. The floor is light limestone-look tile, and the alcove tub keeps its glass screen and lit niche. The existing tub, vanity, toilet orientation and room footprint remain. Styled after your shared bathroom style images.",
+   "refs": [],
+   "node": "A1",
+   "opening": "M04",
+   "image": "assets/design/A1.webp"
+  },
+  "roof": {
+   "label": "Roof connections",
+   "title": "Roof planes meet at defined ridges and sloped valleys.",
+   "text": "The broad main hip and front garage gable follow the forms visible in IMG_3202.PNG. The new 6:12 bedroom gable continues over Bedrooms 3 and 4. A small drainage cricket at the rear hip connection removes a level trough and directs water into sloped valleys. A lower entry gable has a slight fall toward the front so the side valleys are not level. The entry clerestory is coordinated to 3′ × 2′3″. Main and garage 4:12 pitches are provisional. The roof is shown in charcoal standing-seam metal. This is a concept roof model; field measurements, framing and drainage detailing remain to be resolved.",
+   "refs": [
+    "IMG_3202.PNG"
+   ],
+   "node": "E0",
+   "opening": "W17",
+   "image": "assets/design/roof.svg"
+  },
+  "LC": {
+   "label": "Laundry closet",
+   "title": "A stacked washer and dryer behind one door.",
+   "text": "The architect's plan draws a washer / dryer closet in the kitchen's south-west corner, across the foyer's north end from Bedroom 4, and it is built there as drawn. A front-load washer with the dryer stacked on top stands centred behind a 2′6″ × 6′8″ door, hinged on the east jamb and shown open toward the kitchen. The closet is 3′10″ × 3′5″ over its walls and 3′1⅜″ × 3′0⅝″ clear, under the 8 ft ceiling; the oak floor runs in, a recessed outlet box and the dryer vent are on the back wall, and a flush light sits in the ceiling. The refrigerator now stands directly east of it. The units are generic models of a typical stacked pair (27″ wide, 30¼″ deep, 39″ high each), not a selected product: connections, vent route and clearances need to be confirmed for the appliances you choose.",
+   "refs": [],
+   "node": "LC",
+   "opening": "M13",
+   "image": "assets/design/LC.webp"
+  }
+ },
+ "references": {
+  "bedroom3 window.PNG": "assets/references/bedroom3-window.webp",
+  "kitchen window.PNG": "assets/references/kitchen-window.webp",
+  "front.PNG": "assets/references/front.webp",
+  "kitchen island.PNG": "assets/references/kitchen-island.webp",
+  "shared bathroom.PNG": "assets/references/shared-bathroom.webp",
+  "IMG_3202.PNG": "assets/references/img-3202.webp"
+ }
+}

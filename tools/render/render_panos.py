@@ -7,8 +7,32 @@ In Blender: equirect camera at ft2bl(node.p) with rotation (90deg, 0, 0).
 
 Usage:
   blender -b tools/render/.cache/house.blend --python tools/render/render_panos.py -- \
-      --nodes all|L0,K0 --width 4096 --samples 768 --out tools/render/.cache/panos \
-      [--preview] [--preview-only] [--exposure auto|<stops>] [--fov 90]
+      --nodes all|L0,K0 --width 8192 --samples 192 --out tools/render/.cache/panos \
+      [--pins pins.json] [--skip-existing] [--png16] [--preview] [--preview-only | --probe-only] \
+      [--exposure auto|<stops>] [--wb auto|<kelvin>[,<tint>]] [--fov 90] \
+      [--adaptive-threshold 0.008] [--adaptive-min 64] [--no-adaptive] [--tile-size 2048]
+
+Two-pass production run (tools/render/final_run.sh):
+  1. probe pass   --preview-only (or --probe-only) into its own directory: per stop the white mask and the
+                  low-sample probe only; render_meta.json gets the automatic exposure / white balance;
+  2. smooth_exposure.py relaxes those values along the tour graph and writes a pins file;
+  3. final pass   --pins pins.json --skip-existing: the pinned values win over the automatic ones, over
+                  WB_NODE and over --exposure / --wb. --skip-existing makes a restart continue where it stopped.
+
+Output: <out>/<ID>.png, 8-bit RGB (16-bit RGB with --png16; nothing downstream needs it: the publisher
+converts to 8-bit RGB, bake_web.py and adapt_web.py read render_meta.json only). The image is rendered to
+<out>/_part_<ID>.png and renamed when complete, so an existing <ID>.png is always a finished render.
+
+render_meta.json, one entry per stop (read by smooth_exposure.py, bake_web.py, adapt_web.py):
+  exposure (stops), wb [kelvin, tint]   the values the image was rendered with
+  auto {exposure, wb | null}            what the probe chose (wb null: not enough white paint in view)
+  wb_source                             'pin' | 'fixed' (--wb) | 'node' (WB_NODE) | 'probe' | 'default'
+  pinned                                true when --pins supplied exposure and/or white balance
+  probe {median, white_px, white_rgb}   probe measurements (adapt_web.py uses white_rgb)
+  image                                 false for a probe / preview-only pass
+  seconds, probe_s, render_s, width, samples, bits, adaptive [on, threshold, min samples]
+  blend [file, mtime]                   the scene file the stop was rendered from (--skip-existing redoes a
+                                        stop whose scene was rebuilt since)
 """
 import argparse
 import json
@@ -60,10 +84,24 @@ def parse():
     ap.add_argument('--sky-gain', type=float, default=None)
     ap.add_argument('--sun-gain', type=float, default=None)
     ap.add_argument('--emission-gain', type=float, default=None)
+    ap.add_argument('--pins', default=None,
+                    help='JSON {id: {ev, kelvin, tint}} (smooth_exposure.py): per-stop exposure / white balance; '
+                         'wins over the automatic values, WB_NODE, --exposure and --wb')
+    ap.add_argument('--skip-existing', '--resume', dest='skip_existing', action='store_true',
+                    help='skip stops whose image and metadata already exist with the same width, samples and pins')
+    ap.add_argument('--png16', action='store_true', help='write 16-bit RGB PNG (default 8-bit RGB)')
+    ap.add_argument('--png-compression', type=int, default=15, help='PNG compression 0-100 (Blender default 15)')
+    ap.add_argument('--probe-only', action='store_true',
+                    help='mask + probe only: write render_meta.json, render no image at all')
+    ap.add_argument('--adaptive-threshold', type=float, default=0.008)
+    ap.add_argument('--adaptive-min', type=int, default=64)
+    ap.add_argument('--no-adaptive', action='store_true')
+    ap.add_argument('--tile-size', type=int, default=None,
+                    help='Cycles tile size in px (default: Cycles auto tiling, 2048); 0 = render the frame as one tile')
     return ap.parse_args(argv)
 
 
-def setup_cycles(samples):
+def setup_cycles(samples, adaptive_threshold=0.008, adaptive_min=64, adaptive=True, tile_size=None):
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
     prefs = bpy.context.preferences.addons['cycles'].preferences
@@ -74,9 +112,15 @@ def setup_cycles(samples):
     cy = sc.cycles
     cy.device = 'GPU'
     cy.samples = samples
-    cy.use_adaptive_sampling = True
-    cy.adaptive_threshold = 0.008
-    cy.adaptive_min_samples = 64
+    cy.use_adaptive_sampling = bool(adaptive)
+    cy.adaptive_threshold = adaptive_threshold
+    cy.adaptive_min_samples = adaptive_min
+    # Large frames (8192x4096) render in tiles that are cached to disk and denoised as one frame at the
+    # end, which keeps GPU memory flat (measured: see README). tile_size None keeps Cycles' default.
+    if tile_size is not None:
+        cy.use_auto_tile = tile_size > 0
+        if tile_size > 0:
+            cy.tile_size = int(tile_size)
     cy.use_denoising = True
     for den in ('OPENIMAGEDENOISE', 'OPTIX'):
         try:
@@ -180,6 +224,76 @@ def set_wb(temperature, tint):
     vs.use_white_balance = True
     vs.white_balance_temperature = float(temperature)
     vs.white_balance_tint = float(tint)
+
+
+def png_output(bits16=False, compression=15):
+    """Final images: PNG, RGB, 8-bit unless asked. Must be called right before the final render: the mask and
+    the probe switch the file format to EXR, and switching back to PNG alone leaves the depth at 16 bit
+    (and the colour mode at RGBA), which is how the panoramas used to come out as 16-bit RGBA."""
+    st = bpy.context.scene.render.image_settings
+    st.file_format = 'PNG'
+    st.color_mode = 'RGB'
+    st.color_depth = '16' if bits16 else '8'
+    st.compression = max(0, min(100, int(compression)))
+
+
+def png_info(path):
+    """(width, height, bit depth, colour type) from a PNG header, or None if `path` is not a readable PNG."""
+    import struct
+    try:
+        with open(path, 'rb') as f:
+            head = f.read(26)
+    except OSError:
+        return None
+    if len(head) < 26 or head[:8] != b'\x89PNG\r\n\x1a\n' or head[12:16] != b'IHDR':
+        return None
+    w, h, depth, ctype = struct.unpack('>IIBB', head[16:26])
+    return w, h, depth, ctype
+
+
+def load_pins(path):
+    """{id: {'ev': stops | None, 'wb': (kelvin, tint | None) | None}} from a pins file
+    {id: {ev, kelvin, tint}} (every key optional; 'exposure' / 'wb': [K, tint] are accepted too)."""
+    if not path:
+        return {}
+    raw = json.load(open(path))
+    raw = raw.get('pins', raw) if isinstance(raw.get('pins', None), dict) else raw
+    pins = {}
+    for nid, v in raw.items():
+        if not isinstance(v, dict):
+            continue
+        ev = v.get('ev', v.get('exposure'))
+        kelvin, tint = v.get('kelvin'), v.get('tint')
+        if kelvin is None and isinstance(v.get('wb'), (list, tuple)) and v['wb']:
+            kelvin = v['wb'][0]
+            tint = v['wb'][1] if len(v['wb']) > 1 else tint
+        if ev is None and kelvin is None:
+            continue
+        pins[nid] = {'ev': None if ev is None else float(ev),
+                     'wb': None if kelvin is None else (float(kelvin), None if tint is None else float(tint))}
+    return pins
+
+
+def house_look(meta, ids=None):
+    """(exposure, (kelvin, tint)) for the whole house: the upper medians of the per-stop values in a
+    render_meta.json. `ids` (the tour's sweep ids) keeps stale entries of removed stops out of it.
+    Shared by bake_web.py and adapt_web.py so the bake and its adaptation can never disagree."""
+    rows = [v for k, v in meta.items() if isinstance(v, dict) and 'exposure' in v and (not ids or k in ids)]
+    if not rows:
+        rows = [v for v in meta.values() if isinstance(v, dict) and 'exposure' in v]
+
+    def med(vals, default):
+        vals = sorted(vals)
+        return vals[len(vals) // 2] if vals else default
+    return (med([v['exposure'] for v in rows], 0.5),
+            (med([v['wb'][0] for v in rows if v.get('wb')], 6000.0), med([v['wb'][1] for v in rows if v.get('wb')], 0.0)))
+
+
+def _write_json(path, data):
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(data, f, indent=1)
+    os.replace(tmp, path)
 
 
 def _read_exr(path):
@@ -373,6 +487,47 @@ def auto_exposure(cam, node_id, tmpdir):
     return probe(cam, node_id, tmpdir)[0]
 
 
+def scene_stamp():
+    """[file name, modification time] of the open .blend: a render of an older build is never taken for done."""
+    path = bpy.data.filepath
+    return [os.path.basename(path), int(os.path.getmtime(path))] if path and os.path.exists(path) else None
+
+
+def _done(n, a, meta, pin):
+    """(True, '') when stop `n` needs no work under --skip-existing, else (False, reason)."""
+    nid = n['id']
+    e = meta.get(nid)
+    if not isinstance(e, dict) or 'exposure' not in e:
+        return False, 'no metadata'
+    if e.get('blend') != scene_stamp():
+        return False, 'the scene file changed since it was rendered'
+    if a.probe_only:
+        return True, ''
+    if a.preview_only:
+        return (True, '') if png_info(os.path.join(a.out, f'{nid}_view.png')) else (False, 'no preview image')
+    info = png_info(os.path.join(a.out, f'{nid}.png'))
+    if info is None:
+        return False, 'no image'
+    if e.get('image') is False:
+        return False, 'metadata is from a probe pass'
+    if info[0] != a.width or info[1] != a.width // 2 or e.get('width') != a.width:
+        return False, f'image is {info[0]}x{info[1]}'
+    if e.get('samples') != a.samples:
+        return False, f"rendered with {e.get('samples')} samples"
+    if info[2] != (16 if a.png16 else 8):
+        return False, f'image is {info[2]}-bit'
+    if pin:
+        if pin['ev'] is not None and abs(e['exposure'] - pin['ev']) > 0.004:
+            return False, 'pinned exposure changed'
+        if pin['wb'] is not None:
+            wb = e.get('wb') or (0, 0)
+            if abs(wb[0] - pin['wb'][0]) > 1.0 or (pin['wb'][1] is not None and abs(wb[1] - pin['wb'][1]) > 0.06):
+                return False, 'pinned white balance changed'
+    elif e.get('pinned'):
+        return False, 'was rendered with pins'
+    return True, ''
+
+
 def main():
     a = parse()
     os.makedirs(a.out, exist_ok=True)
@@ -380,8 +535,33 @@ def main():
     nodes = scene['tour']['nodes']
     if a.nodes != 'all':
         want = a.nodes.split(',')
+        missing = [w for w in want if w not in {n['id'] for n in nodes}]
+        if missing:
+            print(f'[render] WARNING unknown stop ids: {", ".join(missing)}', flush=True)
         nodes = [n for n in nodes if n['id'] in want]
-    setup_cycles(a.samples)
+    pins = load_pins(a.pins)
+    if a.pins:
+        unpinned = [n['id'] for n in nodes if n['id'] not in pins]
+        print(f'[render] pins: {len(pins)} stops from {a.pins}'
+              + (f'; NOT pinned (automatic values): {", ".join(unpinned)}' if unpinned else ''), flush=True)
+    meta_path = os.path.join(a.out, 'render_meta.json')
+    meta = json.load(open(meta_path)) if os.path.exists(meta_path) else {}
+    if a.skip_existing:
+        todo = []
+        for n in nodes:
+            ok, why = _done(n, a, meta, pins.get(n['id']))
+            if ok:
+                print(f'[render] {n["id"]} skipped (exists)', flush=True)
+            else:
+                if why not in ('no metadata', 'no image', 'no preview image'):
+                    print(f'[render] {n["id"]} redo: {why}', flush=True)
+                todo.append(n)
+        print(f'[render] resume: {len(nodes) - len(todo)} of {len(nodes)} stops already done', flush=True)
+        nodes = todo
+    if not nodes:
+        print('[render] nothing to do', flush=True)
+        return
+    setup_cycles(a.samples, a.adaptive_threshold, a.adaptive_min, not a.no_adaptive, a.tile_size)
     set_look(a.look)
     from bl import lighting
     lighting.apply_balance(a.interior_gain, a.sky_gain, a.sun_gain, a.emission_gain)
@@ -391,33 +571,63 @@ def main():
         fixed_wb = (v[0], v[1] if len(v) > 1 else WB_DEFAULT[1])
     cam = make_camera()
     sc = bpy.context.scene
-    masks = white_masks(cam, {n['id']: ft2bl(*n['p']) for n in nodes}, a.out) if fixed_wb is None else {}
-    meta_path = os.path.join(a.out, 'render_meta.json')
-    meta = json.load(open(meta_path)) if os.path.exists(meta_path) else {}
-    for n in nodes:
+    # the white mask feeds the probe's white balance; it is skipped only when no stop can use it
+    need_mask = [n for n in nodes if fixed_wb is None or n['id'] in pins]
+    masks = white_masks(cam, {n['id']: ft2bl(*n['p']) for n in need_mask}, a.out) if need_mask else {}
+    t_all = time.time()
+    for k, n in enumerate(nodes):
         t0 = time.time()
+        nid = n['id']
         x, y, z = n['p']
         cam.location = ft2bl(x, y, z)
         as_pano(cam)
         sc.render.image_settings.file_format = 'PNG'
-        ev, wb, info = probe(cam, n['id'], a.out, masks.get(n['id']))
-        if a.exposure != 'auto':
-            ev = float(a.exposure)
-        wb = fixed_wb or WB_NODE.get(n['id']) or wb or WB_DEFAULT
+        ev_auto, wb_auto, info = probe(cam, nid, a.out, masks.get(nid))
+        pin = pins.get(nid) or {'ev': None, 'wb': None}
+        ev = ev_auto if a.exposure == 'auto' else float(a.exposure)
+        if fixed_wb:
+            wb, src = fixed_wb, 'fixed'
+        elif nid in WB_NODE:
+            wb, src = WB_NODE[nid], 'node'
+        elif wb_auto:
+            wb, src = wb_auto, 'probe'
+        else:
+            wb, src = WB_DEFAULT, 'default'
+        if pin['ev'] is not None:
+            ev = pin['ev']
+        if pin['wb'] is not None:
+            wb, src = (pin['wb'][0], pin['wb'][1] if pin['wb'][1] is not None else wb[1]), 'pin'
         set_wb(*wb)
         sc.view_settings.exposure = ev
-        sc.render.image_settings.file_format = 'PNG'
-        if not a.preview_only:
-            render_to(os.path.join(a.out, f'{n["id"]}.png'), a.width, a.width // 2)
-        if a.preview or a.preview_only:
-            yaw = a.yaw if a.yaw is not None else n['yaw']
+        t_probe = time.time() - t0
+        t1 = time.time()
+        image = not (a.preview_only or a.probe_only)
+        if image:
+            png_output(a.png16, a.png_compression)
+            part = os.path.join(a.out, f'_part_{nid}.png')
+            render_to(part, a.width, a.width // 2)
+            os.replace(part, os.path.join(a.out, f'{nid}.png'))     # an <ID>.png is always a complete render
+        if (a.preview or a.preview_only) and not a.probe_only:
+            yaw = a.yaw if a.yaw is not None else n.get('yaw', 0.0)
             as_persp(cam, yaw, n.get('pitch', 0.0), a.fov)
-            render_to(os.path.join(a.out, f'{n["id"]}_view.png'), a.preview_width, int(a.preview_width * 0.625))
+            png_output(False, a.png_compression)
+            render_to(os.path.join(a.out, f'{nid}_view.png'), a.preview_width, int(a.preview_width * 0.625))
             as_pano(cam)
-        meta[n['id']] = {'exposure': ev, 'wb': [round(wb[0]), round(wb[1], 1)], 'probe': info,
-                         'seconds': round(time.time() - t0, 1), 'width': a.width, 'samples': a.samples}
-        json.dump(meta, open(meta_path, 'w'), indent=1)
-        print(f'[render] {n["id"]} ev={ev:+.2f} wb={wb[0]:.0f}K/{wb[1]:+.1f} {time.time() - t0:.1f}s', flush=True)
+        meta[nid] = {'exposure': ev, 'wb': [round(wb[0]), round(wb[1], 1)], 'probe': info,
+                     'auto': {'exposure': round(ev_auto, 4),
+                              'wb': [round(wb_auto[0]), round(wb_auto[1], 1)] if wb_auto else None},
+                     'wb_source': src, 'pinned': pin['ev'] is not None or pin['wb'] is not None, 'image': image,
+                     'seconds': round(time.time() - t0, 1), 'probe_s': round(t_probe, 1),
+                     'render_s': round(time.time() - t1, 1), 'width': a.width, 'samples': a.samples,
+                     'bits': 16 if a.png16 else 8, 'blend': scene_stamp(),
+                     'adaptive': [bool(sc.cycles.use_adaptive_sampling), round(sc.cycles.adaptive_threshold, 5),
+                                  sc.cycles.adaptive_min_samples]}
+        _write_json(meta_path, meta)
+        left = (time.time() - t_all) / (k + 1) * (len(nodes) - k - 1)
+        print(f'[render] {nid} ev={ev:+.2f} wb={wb[0]:.0f}K/{wb[1]:+.1f}'
+              + (f' (pinned; auto ev={ev_auto:+.2f}' + (f' wb={wb_auto[0]:.0f}K/{wb_auto[1]:+.1f})' if wb_auto else ')')
+                 if meta[nid]['pinned'] else '')
+              + f' {time.time() - t0:.1f}s  [{k + 1}/{len(nodes)}, about {left / 60:.0f} min left]', flush=True)
 
 
 if __name__ == '__main__':

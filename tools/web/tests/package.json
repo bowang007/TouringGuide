@@ -1,0 +1,17 @@
+{
+  "name": "touringguide-web-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser tests of the 1095 W McKinley tour page (headless Chrome through puppeteer-core, node:test).",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=18.19" },
+  "scripts": {
+    "serve": "python3 -m http.server 8765 --bind 127.0.0.1 --directory ../../..",
+    "test": "node --test --test-concurrency=1 lib.test.js data.test.js smoke.test.js loading.test.js rest.test.js nav.test.js transition.test.js modes.test.js ui.test.js exterior.test.js mobile.test.js budget.test.js",
+    "test:quick": "node --test --test-concurrency=1 lib.test.js data.test.js smoke.test.js rest.test.js",
+    "test:igpu": "TOUR_CHROME_ARGS=--use-angle=gl-egl npm test"
+  },
+  "devDependencies": {
+    "puppeteer-core": "22.15.0"
+  }
+}

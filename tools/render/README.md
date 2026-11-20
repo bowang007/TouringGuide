@@ -1,61 +1,319 @@
-# Render pipeline: path-traced tour and baked real-time model
+# 1095 W McKinley tour: render pipeline and site
 
-This folder turns the tour's measured model (`data/scene.json`, frozen from `index.html`) into:
+A Matterport-style tour of the proposed remodel, served as a static site (`index.html` + `assets/`).
+The visitor stands on **sweeps**: fixed points where a 360° panorama was path-traced in Blender/Cycles.
+At rest the screen shows that panorama itself. A move glides to the next sweep while both
+panoramas are projected onto a baked model of the house. The same model, seen from outside, is the
+dollhouse and the floor plan; the exterior view orbits the house through path-traced frames.
 
-| Output | Script | Used by the site as |
+This folder builds everything the site shows from the measured model of the house:
+
+| Output | Script | Published as |
 |---|---|---|
-| 27 path-traced 360° panoramas (4096×2048) | `render_panos.py` | Styled Tour (`assets/panos/`, via `tools/web/publish_panos.py`) |
-| Perspective hero stills | `render_heroes.py` | Front page and Design window images (`assets/design/`) |
-| 32 path-traced exterior orbit frames (3000×2000) | `render_exterior.py` | Photoreal Exterior view (`assets/exterior/`, via `tools/web/publish_exterior.py`) |
-| Lightmapped web model (GLB + walk collision) | `bake_web.py` | Dollhouse / 3D Walk / Floor plan / Exterior (`assets/model/`, drawn by `assets/js/house3d.js`) |
-| Walk eye adaptation (`adapt.json`) | `adapt_web.py` | Per-stop exposure / white balance for the 3D walk |
+| 43 panoramas, 8192×4096 (41 indoor sweeps, the front porch, the rear deck) | `render_panos.py` | `assets/panos/{8k,4k,2k}/<ID>.webp`, `assets/thumbs/`, by `tools/web/publish_panos.py` |
+| 10 hero stills (7 used by the page) | `render_heroes.py` | `assets/design/<key>.webp` (landing page, Design sheet), by `tools/web/publish_design.py` |
+| 32 exterior orbit frames, 3000×2000 | `render_exterior.py` | `assets/exterior/`, by `tools/web/publish_exterior.py` |
+| Baked model (GLB with lightmap atlases) | `bake_web.py` | `assets/model/house.glb`: dollhouse, floor plan, and the surface the panoramas are projected on during a move |
+| Tour graph, rooms, dimension schedule, design text, plan drawing | the data tools below | `assets/data/*.json`, `assets/plans/dimension-plan.svg` |
 
-The architecture and every dimension come 1:1 from the original model. Only the design changes:
-finishes, fixtures, furniture, lighting and landscape follow the modern language of the neighbouring
-new build at 1077 W McKinley Ave. `DESIGN.md` is the design brief and the code contract;
-`bl/MATERIALS.md` documents the material library.
+The architecture and every dimension follow the architect's plan (`sizes/sizes.pdf`, sheet SKA002) plus
+the owner's changes. The design (finishes, fixtures, furniture, lighting, landscape) is ours.
+
+Other documents: `DESIGN.md` (design brief, code contract for `bl/`, the decisions of each round),
+`bl/MATERIALS.md` (material library), `ASSETS.md` (third-party assets), `tools/web/README.md` (site
+data formats, publishers, tests), `tools/web/tests/README.md` (the browser test suite).
+
+## Repository layout
+
+```
+index.html                  markup only; loads assets/css/tour.css and assets/js/tour/main.js. No data.
+assets/
+  js/tour/                  the page: main, viewer, engine, inside, dollhouse, exterior, ui, dimensions,
+                            design, testapi (see "The page")
+  css/tour.css
+  data/                     tour.json, measurements.json, design.json   (generated: build_site_data.py)
+  plans/dimension-plan.svg  Dimensions sheet drawing                    (generated: dimension_plan.py)
+  panos/{8k,4k,2k}/, panos/manifest.json, thumbs/                       (publish_panos.py)
+  model/house.glb                                                       (bake_web.py)
+  exterior/                 orbit frames, half-size copies, manifest    (publish_exterior.py)
+  design/, references/      Design sheet images
+  vendor/three/             three.js r170
+tools/render/               this folder: Blender build, renders, bake, data tools
+  data/                     source data: scene, sweeps, measurements, design, hero cameras
+  data/concept/             the frozen concept plan the Blender build is written against
+  bl/                       Blender modules: shell, zones, warp, revisions, laundry, lighting, materials
+  .cache/                   everything generated (git-ignored): house.blend, panos/, heroes/, web/,
+                            exterior/, logs/, polyhaven/, venv/
+tools/web/                  site data helper, publishers, dev harness, tests/
+sizes/sizes.pdf             the architect's plan
+styles/                     the owner's style images (reference only; never copied into the site)
+1095-mckinley-walkthrough-v2.html   an older single-file walkthrough; no tool touches it
+```
 
 ## Requirements
 
-* **Blender 5.2 LTS.** Cycles uses an NVIDIA GPU through OptiX; the CPU works but is slow. Set `BLENDER=/path/to/blender`.
+* **Blender 5.2 LTS.** Cycles uses an NVIDIA GPU through OptiX; the CPU works but is slow. Set
+  `BLENDER=/path/to/blender`.
 * **Internet on the first build.** CC0 textures, models and the sky HDRI are fetched from Poly Haven
-  into `.cache/polyhaven/`; `ASSETS.md` lists them.
-* **Python 3 with numpy and Pillow** for review sheets and publishing. One way to get it:
-  `python3 -m venv .cache/venv && .cache/venv/bin/pip install numpy pillow`.
+  into `.cache/polyhaven/`.
+* **Python 3.** The data tools need only the standard library. Review sheets and the publishers need
+  numpy and Pillow: `python3 -m venv tools/render/.cache/venv &&
+  tools/render/.cache/venv/bin/pip install numpy pillow`.
+* **Node 18.19+ and Google Chrome** for the browser tests.
 
-Everything generated goes to `tools/render/.cache/` (git-ignored).
+Commands below are run from the repository root, with `PY=tools/render/.cache/venv/bin/python`.
 
-## Full run
+## Data flow
+
+```
+tools/render/data/concept/{scene,measurements,scene_classification}.json     frozen concept plan
+  │  apply_relayout.py          maps it onto the architect's plan (relayout.py)
+  ▼
+tools/render/data/{scene,measurements,scene_classification}.json
+  │  apply_revisions_web.py     the owner's changes (numbers from bl/revision_spec.py); also data/design.json
+  │  apply_sweeps.py            installs data/sweeps.json as the tour (scene.tour.nodes / edges)
+  │  extract_scene.py           consistency check; writes nothing
+  ▼
+tools/web/dimension_plan.py     ->  assets/plans/dimension-plan.svg
+tools/web/build_site_data.py    ->  assets/data/{tour,measurements,design}.json
+```
+
+```bash
+python3 tools/render/apply_relayout.py
+python3 tools/render/apply_revisions_web.py
+python3 tools/render/apply_sweeps.py
+python3 tools/render/extract_scene.py            # expect "site data check: ok"
+python3 tools/web/dimension_plan.py
+python3 tools/web/build_site_data.py --version <label>      # after publishing, see "Publish"
+```
+
+* Every step is idempotent and writes only when the bytes change; the whole sequence run twice leaves
+  the files as they were. All of them read and write through `tools/web/sitedata.py`.
+* `apply_relayout.py` **replaces** `scene.json` and `measurements.json` from the concept data, so the
+  next two steps must follow it every time. Between them the scene lacks the owner's changes and the
+  sweeps: do not run the sequence while a render, a bake or `place_sweeps.py` is reading
+  `tools/render/data/`.
+  To try it without touching the working files, set `SITEDATA_ROOT=<dir>` (see `tools/web/README.md`).
+* `data/scene.json` is the full scene: objects, the tour, the audit rows, the revision notes. Object
+  indices are stable (`scene_index` in the built model, which `bake_web.py` relies on): tools append
+  objects, they never insert. `extract_scene.py` fails when an index shifted.
+* `data/sweeps.json` is the source of truth for the tour graph. `place_sweeps.py` writes it from the
+  built model (see "Add or move sweeps"); `apply_sweeps.py` only installs it. When the model or a seed stop
+  changed, `place_sweeps.py` runs between `apply_revisions_web.py` and `apply_sweeps.py`: it reads
+  the seed stops and the door schedule from the data files.
+* `data/design.json` is hand-edited (Design sheet text). `apply_relayout.py` does not rebuild it.
+* The Blender build does not read `data/scene.json`: it builds on `data/concept/` and carries the
+  house onto the architect's plan itself (see "Architect's plan and the owner's changes"). The renders,
+  the bake and the publishers read the sweeps from `data/scene.json`.
+
+## Production run
 
 ```bash
 export BLENDER=/path/to/blender
-cd tools/render
-# 1. build the scene (~25 s; downloads assets the first time)
-$BLENDER -b --factory-startup --python build_scene.py -- --zones all --strict --out .cache/house.blend
-# 2. path-trace the 27 stops (4096x2048, adaptive up to 768 spp, OptiX denoised)
-$BLENDER -b .cache/house.blend --python render_panos.py -- --nodes all --width 4096 --samples 768 --out .cache/panos
-# 3. publish into the site (full WebP + 2k rung + thumbnails + manifest with offset 0)
-.cache/venv/bin/python ../web/publish_panos.py .cache/panos
-# 4. hero stills for the design window
-$BLENDER -b .cache/house.blend --python render_heroes.py -- --width 2400 --samples 1024 --out .cache/heroes
-# 5. bake the real-time model (reads .cache/panos/render_meta.json for the house-wide exposure/white balance)
-$BLENDER -b .cache/house.blend --python bake_web.py -- --out ../../assets/model/house.glb
-# 6. per-stop eye adaptation for the 3D walk (a few seconds)
-$BLENDER -b .cache/house.blend --python adapt_web.py -- --out ../../assets/model/adapt.json
-# 7. exterior orbit frames (~30 s each), then publish them
-$BLENDER -b .cache/house.blend --python render_exterior.py -- --width 3000 --samples 512 --out .cache/exterior
-.cache/venv/bin/python ../web/publish_exterior.py .cache/exterior
+tools/render/final_run.sh                 # 8192 px panoramas, 192 samples
+SKIP="build probe smooth" tools/render/final_run.sh        # resume a run that stopped in the panoramas
 ```
 
-`final_run.sh [width] [samples]` runs steps 1, 2, 4–6 and the exterior frames of step 7 into `.cache/` (about two hours at 4096 px /
-768 spp on one RTX-class GPU); publish with the commands at the top of the script.
+`final_run.sh [width=8192] [samples=192]` runs the stages in order and stops at the first one that
+fails (exit code, a Python traceback, or `FAILED` in the build log). It does not publish.
 
-Bump `HOUSE_VERSION` in `index.html` when you publish a new model, so browsers don't serve a cached copy.
+| Stage | What it does | Output in `.cache/` | Time on an RTX 5090 |
+|---|---|---|---|
+| `build` | `build_scene.py --zones all --strict` | `house.blend` | about 1 min |
+| `probe` | automatic exposure and white balance of every sweep, no panorama | `panos_probe/render_meta.json` | 106 s for 43 sweeps |
+| `smooth` | `smooth_exposure.py` relaxes those values along the tour graph | `panos/pins.json` | 1 s |
+| `panos` | `render_panos.py --pins --skip-existing` | `panos/<ID>.png`, `panos/render_meta.json` | about 3.2 min per sweep (2.6 to 3.9), 2 h 18 min for 43 |
+| `heroes` | `render_heroes.py`, 2400 px, 1024 samples | `heroes/<key>.png` | about 16 min |
+| `bake` | `bake_web.py --detail 2` | `web/house.glb`, `web/house.summary.json` | about 13 min |
+| `adapt` | `adapt_web.py` | `web/adapt.json` | seconds |
+| `exterior` | `render_exterior.py`, 3000 px, 512 samples | `exterior/` | about 18 min |
+
+(Panorama, probe and smooth times: the 43-sweep run of 2026-11-19. Heroes and exterior: the
+third-round run. Bake: a full test bake at `--detail 2`.) A panorama PNG is 8-bit RGB, about 33 MB.
+While one renders, the card shows about 13.5 GB in use.
+
+* **Environment:** `SKIP` (stage names to skip), `NODES` (comma list of sweeps for the probe and
+  panorama stages; default all), `PANO_ARGS`, `SMOOTH_ARGS`, `BAKE_DETAIL` (default 2), `BAKE_ARGS`,
+  `TG_CACHE` (output directory instead of `.cache/`).
+* **Logs:** `.cache/logs/final_run.log` (timestamps, one line per sweep) and `.cache/logs/<stage>.log`
+  (full output of a stage).
+* **Resume:** the panorama stage skips a sweep whose PNG exists with the same width, samples, pins and
+  scene file. An image is rendered to `_part_<ID>.png` and renamed when complete, so an `<ID>.png` is
+  always a finished render. The scene file is compared by name and modification time: after a rebuild
+  (or a `cp` onto `house.blend`) every panorama counts as stale.
+* **Which build:** the sweeps in `data/sweeps.json` were placed on one particular build. If the build
+  stage changes the model, re-run `place_sweeps.py` before rendering. To render a build you already
+  have, copy it to `.cache/house.blend` and add `build` to `SKIP`.
+* **GPU jobs** go through `tools/render/gpu.sh`, a machine-wide lock, so two jobs never share the card.
+* **Alignment:** `render_panos.py` places each equirectangular camera at the sweep's `p` (eye height
+  included) with yaw 0 = −z, which is what the page's projection assumes.
+* `web/adapt.json` (the `adapt` stage) and `web/collision.json` (the bake) are leftovers of the
+  earlier free-walk page. The page reads neither and they are not published.
+
+## Publish
+
+```bash
+PY=tools/render/.cache/venv/bin/python
+$PY tools/web/publish_panos.py tools/render/.cache/panos --prune    # assets/panos/{8k,4k,2k}, thumbs, manifest
+$PY tools/web/publish_design.py tools/render/.cache/heroes          # assets/design/<key>.webp
+cp tools/render/.cache/web/house.glb assets/model/                  # the baked model
+$PY tools/web/publish_exterior.py tools/render/.cache/exterior      # assets/exterior/
+python3 tools/web/build_site_data.py --version <YYYY-MM-DDx>        # assets/data/*.json, ?v= in index.html
+```
+
+* `build_site_data.py` comes last: it publishes the tour graph, and the page expects a panorama for
+  every sweep it names.
+* Use a new `--version` label for every publish. The model, the data files, the Design images and the
+  modules are fetched with `?v=<label>`; panoramas and exterior frames carry the content hash of their
+  own manifest.
+* `--prune` deletes the files of sweeps that left the tour and every other `.webp` in
+  `assets/panos/{8k,4k,2k}` and `assets/thumbs` that the manifest does not list.
+* What each publisher writes, its options and exit codes: `tools/web/README.md`.
+* Never commit third-party images (listing photos, the `styles/` images) into the site.
+
+## Verify
+
+1. **Build log.** No `FAILED` on the `revisions:` line; `warp:` reports one known `overflow` entry
+   (`front bath + closets`).
+2. **Shell.** `$BLENDER -b tools/render/.cache/house.blend --python tools/render/check_holes.py`
+   ray-casts ceilings, floors and floor seams and checks every baseboard for a wall behind it. Only
+   the entry rear gable's known line should print (`ceiling 5307 Coordinated entry rear gable ...`).
+   Its grid is 0.2 ft: a thinner gap passes (the fourth round found a 0.03 ft one along a ceiling
+   edge only by a finer scan), so also look at renders of every new wall and ceiling joint.
+3. **Renders.** Look at them: `review.sh` contact sheets before a long run, the panoramas after it
+   (`pano_views.py` cuts ordinary views out of one).
+4. **Data.** `python3 tools/render/extract_scene.py`, `python3 tools/web/dimension_plan.py --check`
+   and `python3 tools/web/build_site_data.py --check` (exit 1 = `assets/data` is out of date).
+5. **The site.** Serve the repository root and run the browser suite:
+
+   ```bash
+   python3 -m http.server 8765 --bind 127.0.0.1          # in another terminal, from the repository root
+   cd tools/web/tests && npm install && npm test         # 132 tests, about 10 minutes
+   ```
+
+   It drives the page in headless Chrome like a visitor and holds it to its contract: at rest the
+   frame equals the published panorama (PSNR ≥ 40 dB), a hop takes at most 1.2 s, every sweep is
+   reached by ring clicks, no console errors, texture memory within budget, phone layout.
+   `data.test.js` (no browser) checks the published data, panoramas and plan against each other: run
+   it after every data or publish step. It fails while `assets/data`, the plan drawing and
+   `tools/render/data` are out of step, which is the normal state between a data change and the
+   publish.
+
+   Chrome's GPU flags come from `TOUR_CHROME_ARGS`. The default
+   (`--use-angle=vulkan --enable-gpu --ignore-gpu-blocklist --enable-features=Vulkan`) uses the
+   discrete GPU. While a render owns it, run `npm run test:igpu` (`--use-angle=gl-egl`, the
+   integrated GPU). Details and the other variables: `tools/web/tests/README.md`.
+
+## Common jobs
+
+### Change a room's design
+
+1. Edit the zone module(s), `bl/zones/<zone>*.py` (rules in `DESIGN.md`). Zone code is written in
+   **concept-plan** feet; `bl/warp.py` carries it onto the architect's plan.
+2. Preview: `tools/render/dev_preview.sh kitchen_dining K0,D0,H2` builds only that zone and writes
+   `.cache/dev_kitchen_dining/K0_sheet.png` (four 90° views) for each sweep named.
+3. Full build (about a minute), then steps 1 and 2 of "Verify":
+
+   ```bash
+   $BLENDER -b --factory-startup -noaudio --python tools/render/build_scene.py -- \
+       --zones all --strict --out tools/render/.cache/house.blend
+   ```
+4. If furniture moved or the walkable floor changed, place the sweeps again (next job).
+5. Re-render what sees the room ("Re-render a subset"), publish, run the tests.
+6. Update the room's text in `tools/render/data/design.json` if it describes what changed.
+
+### Add or move sweeps
+
+`place_sweeps.py` ray-casts the built model (CPU only) and decides where the camera may rest. It keeps
+the 20 seed stops, keeps an old approach stop only where it joins the graph, puts a sweep in every
+doorway that has none within 3 ft, fills the remaining reachable floor (≥ 1.2 ft clearance, ≥ 4 ft
+between sweeps that see each other, at most 4 in the garage), and adds `LC` facing the laundry closet
+and the outdoor sweeps `OP` (porch) and `OD` (deck) when their doors stand open. It writes `links`
+(straight lines a person can walk) and `visible` (line of sight, through clear glass). The result is
+deterministic and ids are stable; the rules are in `DESIGN.md`. On the fourth-round model: 43 sweeps,
+52 links, one component, 13 hops across, links 3.2 to 10.6 ft; the old ids T1 T3 T4 T6 P1 are gone.
+
+```bash
+$BLENDER -b tools/render/.cache/house.blend -noaudio --python tools/render/place_sweeps.py -- \
+    --out tools/render/data/sweeps.json --overlay tools/render/.cache/sweeps_overlay.png      # CPU, about 80 s
+python3 tools/render/apply_sweeps.py --check        # validate only
+python3 tools/render/apply_sweeps.py                # install into data/scene.json
+python3 tools/render/extract_scene.py && python3 tools/web/dimension_plan.py
+```
+
+* Look at `sweeps_overlay.png` and the `[sweeps] note:` lines before installing. Exit status 2 means
+  the graph is not connected and nothing was written.
+* **More or fewer sweeps:** `--min-sep` (default 4.0 ft between sweeps that see each other; on the
+  fourth-round model 3.75 gives 45 sweeps and 3.5 gives 50), `--garage-max`, `--max-sweeps`,
+  `--outdoor both|each|off`, `--laundry auto|on|off`.
+* **Move one of the 20 seed stops:** add it to `NODE_MOVES` in `apply_revisions_web.py`, run
+  `apply_relayout.py` and `apply_revisions_web.py`, then `place_sweeps.py`, then the sequence from
+  `apply_sweeps.py` on. The placement keeps a seed where the scene has it (and nudges it only when it
+  has less than 1.2 ft of clearance), so the old `sweeps.json` must not be installed in between.
+* **By hand:** `data/sweeps.json` can be edited (degrees; links must be listed on both ends) and
+  `apply_sweeps.py` refuses a broken graph, but the next `place_sweeps.py` run regenerates the file.
+  A lasting rule belongs in `place_sweeps.py`.
+* A sweep that moved needs a new panorama; a removed one is dropped from the site by
+  `publish_panos.py --prune`. Ids named by `measurements.json`, `design.json` or the highlight reel
+  must survive: `apply_sweeps.py` and `extract_scene.py` warn when one is gone.
+
+### Add an owner's revision
+
+A plan change has three records that must agree:
+
+1. `bl/revision_spec.py`: the numbers (pure Python, no `bpy`), on the architect's plan.
+2. `bl/revisions.py`: the Blender geometry. Add a function and put it in the list in `apply()` before
+   `floor_gaps` and `skirting_trim`. Copy an existing wall for a new wall (`_like`), so it keeps a
+   `scene_index` and bakes as a wall. A zone that must make room reads the same spec (the kitchen
+   converts the closet's edge back to concept feet with the inverse of `relayout.X_HALL`).
+3. `apply_revisions_web.py`: the web data. A new `CHANGES_<n>` list (it becomes
+   `design_revision.owner_changes_<n>` and shows in the Design sheet by itself), rooms / doors /
+   windows in the measurements, wall boxes **appended** to `scene.objects` by name, a `scene.audit`
+   row, and the Design view if the change gets one.
+
+For a design still: a camera in `data/hero_cameras.json`, its key in `KEYS` of
+`tools/web/publish_design.py`, and `views.<key>` in `data/design.json`.
+
+Then, in this order: build and verify; `apply_relayout.py` and `apply_revisions_web.py`;
+`place_sweeps.py` on the new build (look at the overlay); the sequence from `apply_sweeps.py` on;
+render; publish; tests. Add the round to `DESIGN.md`.
+
+### Re-render a subset
+
+* **A few sweeps, same build:** delete their PNGs in `.cache/panos/` (a sweep whose pin changed is
+  redone without that), then
+  `NODES=K0,LC SKIP="build probe smooth heroes bake adapt exterior" tools/render/final_run.sh`.
+* **After a rebuild that changed one room:**
+  `NODES=<ids> SKIP="probe smooth heroes exterior" tools/render/final_run.sh` (build, those
+  panoramas, bake). Which sweeps: the room's own and every sweep that sees one of them:
+
+  ```bash
+  python3 - <<'E'
+  import json
+  sweeps = json.load(open('tools/render/data/sweeps.json'))['sweeps']
+  room = {'K0', 'K1', 'K2', 'K3', 'LC'}                 # the sweeps standing in the changed room
+  print(','.join(s['id'] for s in sweeps if s['id'] in room or room & set(s['visible'])))
+  E
+  ```
+
+* With `NODES`, always skip `probe` and `smooth`: the probe stage starts a fresh metadata file and
+  `smooth` would write a `pins.json` that holds only those sweeps. If the change alters how bright a
+  room is, probe and smooth all sweeps first (`SKIP="build panos heroes bake adapt exterior"`, 2
+  minutes) and add the sweeps whose pins moved to `NODES`.
+* **Publish only those:** `$PY tools/web/publish_panos.py tools/render/.cache/panos --only K0,LC`
+  (the other manifest entries are kept).
+* **One hero still:** `tools/render/gpu.sh -b tools/render/.cache/house.blend -noaudio --python
+  tools/render/render_heroes.py -- --only LC`, then `publish_design.py`.
+* **Review renders, not for publishing:** `tools/render/review.sh tools/render/.cache/house.blend
+  K0,D0,H2 /tmp/x 1536 128 --pins tools/render/.cache/panos/pins.json`.
+* **The model:** always a full bake for the site. `bake_web.py --groups REGEX --out <scratch>.glb`
+  bakes and exports only the matching groups (a test); `--prep-only` prints the atlas plan without
+  the GPU.
 
 ## Architect's plan and the owner's changes
 
-The tour now follows the architect's floor plan (`sizes/sizes.pdf`, sheet SKA002, Option A). It has
-the same rooms in the same arrangement as the earlier concept model, but different sizes.
+The tour follows the architect's floor plan (`sizes/sizes.pdf`, sheet SKA002, Option A). It has the
+same rooms in the same arrangement as the earlier concept model, but different sizes.
 
 * **`relayout.py`:** maps every concept-plan coordinate onto the plan's clear dimensions, region
   by region. Its breakpoints are the wall faces.
@@ -69,32 +327,24 @@ the same rooms in the same arrangement as the earlier concept model, but differe
     columns, and the bedroom-wing ridge keeps one line over the primary bath and the office
     (`remap_xz(..., roof=True)`), so the roof planes meet without folding.
   * `REGION_BY_NAME` pins pieces whose centre falls on the wrong side of a region edge.
-* **`apply_relayout.py`:** converts the web tour's `SCENE` and `MEASUREMENTS`, together with
-  `data/`. It always starts from the frozen concept data, so it can be re-run. The full sequence:
-  `python3 tools/render/apply_relayout.py && python3 tools/render/apply_revisions_web.py &&
-  python3 tools/render/extract_scene.py && python3 tools/web/dimension_plan.py`.
-* **Blender build:** it still reads the concept data (`data/concept/`), because the room modules
-  are written against it. After the zones are built, `bl/warp.py` carries the house onto the new
-  plan with the same map:
+* **Blender build:** it reads the concept data (`data/concept/`), because the room modules are
+  written against it. After the zones are built, `bl/warp.py` carries the house onto the new plan
+  with the same map:
   * architecture and fitted pieces are reshaped;
   * loose furniture moves in clusters and keeps its size (a cluster stays within one room; the
     build prints any cluster that would run into a wall as `overflow`);
   * flat slabs follow the rooms on each side. Each corner takes the map of the room it borders,
     so two slabs that met on one concept line can part where that line crosses into a room with a
-    different map. `bl/revisions.py` closes the two known cases first (`ceiling_seam`: the wedge in
-    the ceiling over Bedroom 2, the bedroom hall and the shared bath; `floor_seam`: the strip
-    across the foyer floor). Two general repairs run last: `floor_gaps` patches thinner floor seams
-    and the bare strips under door openings (exposed foundation), and `skirting_trim` cuts every
-    baseboard back to the stretches with a wall behind it (runs that outlived a shortened wall or
-    crossed a new opening).
-  * After a change to `relayout.py` or `bl/revisions.py`, run `check_holes.py` on the built blend
-    (`$BLENDER -b .cache/house.blend --python check_holes.py`). It ray-casts the ceilings, floors
-    and floor seams, and checks every baseboard for a wall behind it; only the entry rear gable's
-    known line should print.
+    different map. `bl/revisions.py` closes the known cases first: `ceiling_seam` (the wedge in the
+    ceiling over Bedroom 2, the bedroom hall and the shared bath; and the front edge of the central
+    ceiling panel, squared onto the kitchen / garage wall line) and `floor_seam` (the strip across
+    the foyer floor). Two general repairs run last: `floor_gaps` patches thinner floor seams and the
+    bare strips under door openings, and `skirting_trim` cuts every baseboard back to the stretches
+    with a wall behind it.
 
   The exterior zone is built directly on the new site plan and is not warped.
-* **`bl/revisions.py`:** applies the owner's changes on the new plan. The positions live in
-  `bl/revision_spec.py`. `apply_revisions_web.py` records the same changes in the web data.
+* **`bl/revisions.py`:** applies the owner's changes on the new plan, after the warp. The positions
+  live in `bl/revision_spec.py`. `apply_revisions_web.py` records the same changes in the web data.
   * Bedroom 4: flat ceiling.
   * Front bedroom: bay glazed to the floor.
   * Foyer: two skylights.
@@ -106,94 +356,154 @@ the same rooms in the same arrangement as the earlier concept model, but differe
   * Kitchen: skylight on the east roof plane.
   * Primary bath: skylight over the shower (second round).
   * Garage: the north cabinet run is fitted into the plan's narrower garage (`relayout.X_GARAGE_RUN`).
+  * **Laundry closet** (fourth round, `laundry_closet`): the walls, baseboards, door and outlet-box
+    recess of the architect's "W / D" closet in the kitchen's south-west corner; `bl/laundry.py`
+    builds the stacked washer and dryer, hookups, vent and ceiling light in collection `kd_laundry`.
+    The kitchen zone starts its pantry wall at the closet's east face. Numbers and naming rules:
+    `DESIGN.md`, "Fourth round".
 
   The dining table in line with the island is built by the kitchen zone. Third-round changes made in
   the zones themselves: Bedroom 4's bed is turned across the room (`bedrooms.build_bed4`), and the
   kitchen, the primary bath (`baths_primary.py`), the shared bath (`baths_shared.py`) and the garage
-  door follow the owner's style images in `styles/` (reference only; never copied into the site).
-* **`tools/web/dimension_plan.py`:** redraws the Dimensions sheet from `SCENE` and `MEASUREMENTS`.
+  door follow the owner's style images in `styles/`.
+* **Web data:** `apply_revisions_web.py` writes the opening list and room notes, the change lists
+  (`design_revision.owner_changes[_N]`), and for the fourth round room M13, door D17, the closet's
+  wall boxes and open door leaf (objects 5361 to 5367), the highlight reel order and the Design view
+  `LC`. It also moves the kitchen stop K0 one foot east, clear of the closet's open door.
+  `tools/web/dimension_plan.py` redraws the Dimensions sheet from the scene and the measurements.
 
 ## How the look is controlled
 
 * **Daylight.** A Poly Haven sky HDRI with its own sun clamped out, plus a sun lamp (late-morning,
   south-east). Window portals help interiors converge. Constants are in `bl/lighting.py`.
 * **Light balance.** `lighting.apply_balance()` runs in every render script and scales the built
-  scene at render time:
-  * fixture lamps ×0.12;
-  * emission shaders ×0.4;
-  * sky ×2 and sun ×2.
-
-  The result is daylight-led, with the lights visibly on (a listing-photo look). Override per run with
+  scene at render time: fixture lamps ×0.12, emission shaders ×0.4, sky ×2 and sun ×2. The result is
+  daylight-led, with the lights visibly on (a listing-photo look). Override per run with
   `--interior-gain / --emission-gain / --sky-gain / --sun-gain`.
-* **Exposure and white balance per stop.** A 512×256 probe sets the exposure: the median luminance of the
-  horizon band maps to `TARGET_MEDIAN`. White painted surfaces (walls, ceilings, trim, white doors, stucco)
-  are masked with a one-off emission-swap render. Their median chromaticity (counted per pixel, so hot
-  pools under downlights don't dominate) is brought to `WB_TARGET`, a slightly warm white, as a
-  photographer would. The values are written to `render_meta.json`.
-  `--wb 6000,-10` forces a fixed balance.
-* **Colour pipeline.** AgX with the Base Contrast look. The web bake reuses the median exposure and white
-  balance of the panoramas, so the 3D model matches the 360s.
+* **Exposure and white balance per sweep.** A 512×256 probe (24 samples) sets the exposure: the median
+  luminance of the horizon band maps to `TARGET_MEDIAN`. White painted surfaces (walls, ceilings,
+  trim, white doors, stucco) are masked with a one-off emission-swap render; their median
+  chromaticity (counted per pixel, so hot pools under downlights don't dominate) is brought to
+  `WB_TARGET`, a slightly warm white, as a photographer would. `WB_NODE` fixes the balance of a sweep
+  whose only white paint is lit by the room's own warm materials (the shared bath).
+* **Smoothing along the graph.** The viewer cross-fades between linked sweeps, so the production run
+  works in two passes. The probe pass writes the automatic values; `smooth_exposure.py` relaxes them
+  so linked sweeps differ by at most 0.3 stop, 300 K and 6 tint (rooms keep one look, the change
+  happens at doorways, no sweep moves more than 0.7 stop / 1200 K from its probe, and links between
+  an indoor and an outdoor sweep are left alone); the final pass renders with those values pinned
+  (`--pins`). On the 43-sweep run the largest step between linked sweeps went from 1.36 to 0.30
+  stops and from 1912 to 300 K. `render_meta.json` records both the values used and the automatic
+  ones. `SMOOTH_ARGS="--move-kelvin 900"` limits how far a sweep's white balance may be pulled, if a
+  room turns too warm (its links then stay further apart).
+* **Colour pipeline.** AgX with the Base Contrast look. The web bake uses one house-wide exposure and
+  white balance, the upper medians of the sweeps' values (`render_panos.house_look`).
 
 ## Web model contract (`bake_web.py`)
 
-The model is grouped by visibility class and plan region, one GLB node per group, with
-`extras.tg_class` set to one of:
+`bake_web.py --out house.glb --detail 2` groups the model by visibility class and plan region, one GLB
+node per group, with `extras.tg_class`:
 
-| `tg_class` | Contents | Visibility |
-|---|---|---|
-| `base` | Floors and built-ins | Always visible |
-| `wall` | Walls, trim, windows, doors | Clipped at 2.1 ft in cutaway |
-| `glass` | Glazing | Clipped at 2.1 ft in cutaway |
-| `furniture` | Furniture | Furniture toggle |
-| `decor_high` | High decor | Hidden in cutaway; furniture toggle |
-| `ceiling` | Ceilings | Walk mode only |
-| `exterior` | Roof and facade | Exterior mode only |
-| `landscape` | Garden and site | Garden toggle |
+| `tg_class` | Contents | Inside | Dollhouse / floor plan | Exterior |
+|---|---|---|---|---|
+| `base` | Floors, foundations, built-ins, base cabinets, appliances (washer / dryer) | shown | shown, cut at the footprint | shown |
+| `wall`, `glass` | Walls, trim, windows, doors, the house's garage door, wall tile; glazing | shown | cut at 7.45 ft (`DOLL_CUT` in `main.js`) and capped; the viewer's side culled | shown |
+| `furniture` | Furniture and low decor | shown | shown | shown |
+| `decor_high` | Wall art, uppers, mirrors, sconces (centre above 4.8 ft) | shown | shown | shown |
+| `ceiling` | Ceilings, ceiling lights, pendants, skylight frames and shaft linings | shown | hidden (fades during a flight) | hidden |
+| `exterior` | Roof, fascia, facade skins | hidden | hidden | shown |
+| `landscape` | Grounds, deck, fences, paths, the street and the neighbours | shown (through windows) | hidden | shown; "Hide garden" |
 
-* **Lighting** is the full Cycles result (GI, soft shadows, materials), baked into per-group
-  atlases. It is saved display-referred and shown unlit by three.js.
+An object or a parent can force its class with a custom property `tg_class`. Name rules worth
+knowing: anything named "door", "leaf", "jamb", "baseboard" ... is filed under walls (`WALL_PART`),
+so the washer's round door is called "hatch"; objects named `laundry closet ...` are `base`; a
+material named "glass" is exported as a transparent pane.
+
+* **Lighting** is the full Cycles result (GI, soft shadows, materials), baked into per-group atlases,
+  saved display-referred and shown unlit by three.js. A full bake at `--detail 2` gives 66 atlases
+  (58 MP, about 311 MB of GPU texture memory as RGBA8 with mipmaps) in a GLB of about 7 MB.
+* **`--detail`** raises the texel density of floors / built-ins and furniture, because in the
+  dollhouse and the floor plan the bake is the picture. `--tex-budget` (default 320 MB) caps the total;
+  boosted atlases step down until it fits, so atlas sizes are not always powers of two.
 * **Compression:** Draco geometry and WebP textures.
-* **Collision:** `collision.json` holds furniture footprints for walking. Boxes that would block a
-  tour stop or edge are dropped and reported.
-* **Metals:** a bake records diffuse light only, so for the bake each metal gets its diffuse
-  equivalent (base colour, metallic 0). Mirrors and polished chrome get a mid silver-grey, so they
-  don't come out black.
-* **Eye adaptation:** the bake uses one interior exposure and white balance (the median of the stops).
-  `adapt_web.py` stores, per stop, the per-channel gain `k` of the highlight-preserving curve
-  `k·x / (1 + (k−1)·x)` that maps the bake's look to that stop's panorama look. In walk mode the page
-  eases towards the nearest visible stop's `k`, like a camera's auto exposure, so dim bedrooms and
-  baths match their panoramas.
-  * Outdoor groups (roof, facades, site) are baked at the exterior exposure, so each stop also gets
-    `ko`, which maps the exterior look to the stop's look. Seen through a window from inside, where
-    the walk falls back to the bake, the garden then reads as bright and pale as in the panorama;
-    `house3d.js` also lets those highlights go to white.
-* **Not baked:** vegetation, which is skipped. Lawn surfaces are baked in the grass blades' green
-  (`lawn_green`), not the olive thatch under the blades.
+* **Metals:** a bake records diffuse light only, so each metal gets its diffuse equivalent (base
+  colour, metallic 0). Mirrors and polished chrome get a mid silver-grey, so they don't come out black.
+* **Black atlases:** an atlas comes out black when its UV islands cannot have the requested pixel
+  margin (thousands of leaf-sized islands in a small atlas). The script measures every layout, steps
+  the margin down, gives leafy objects one planar projection, and exits non-zero if a bake still
+  wrote less than 2 % of an atlas.
+* **Not baked:** vegetation. Lawn surfaces are baked in the grass blades' green (`lawn_green`), not
+  the olive thatch under the blades.
+* Next to the GLB: `<name>.summary.json` (size, texture memory, the exposure and white balance used),
+  `<name>.bake.json` (per-group statistics) and, from a full bake, `collision.json` (unused).
 
-## Photoreal 3D walk (page side)
+## The page (`index.html` + `assets/js/tour/`)
 
-In walk mode the page projects the path-traced panoramas themselves onto this model
-(`assets/js/house3d.js`: `setPanorama`, `setProjection`), the way Matterport-style tours do:
+`index.html` is markup only. The modules do not import each other: each exports one `create*`
+function and `main.js` loads them with the release label, so a deploy never mixes old code with new
+data. Each file starts with a comment that documents its interface.
 
-* **On a stop** the view is that stop's 4K panorama, pixel for pixel, lined up with the geometry.
-  It matches the 360° viewer to within texture filtering.
-* **Between stops** the two nearest stops in view are blended on the geometry, weighted by
-  inverse squared distance. A depth cube rendered from each stop (from this GLB) rejects surfaces
-  that stop cannot see. Those fall back to the other stop's panorama, then to the bake with eye
-  adaptation. Only occluders inside the house footprint count, because planting and fences
-  outside are simplified in the model. The sky and anything without geometry show the panoramas
-  at infinity.
-* **Loading:** 2k panoramas while moving, the 4K file once you stand on a stop, and neighbours
-  prefetched. Panorama textures and depth cubes are cached (six of each). Depth cubes are
-  1024² on desktops and 512² on touch and low-memory devices.
-* **Opt-out:** `?walk=model` shows the baked model alone. Hiding furniture also turns the
-  projection off, because the panoramas contain the furniture.
-* **Exterior frames:** the same engine takes perspective frames (`setPanorama(..., frame)` with the
-  frame camera's projection × view matrix); see "Photoreal exterior" above.
+| Module | Role |
+|---|---|
+| `main.js` | Boot, data loading, URL parameters, the link in the address bar, GPU budgets, the look of the dollhouse (`DOLL_CUT`, `DOLL_CAP`, `DOLL_TONE`) |
+| `viewer.js` | Mode machine, the one animation loop, input routing, events, the sweep graph, panorama URLs. A mode is a controller (`enter`, `leave`, `depart`, `frame`, pointer / wheel / key handlers, `state`) |
+| `engine.js` | three.js r170 on WebGL 2: draws the baked model unlit and projects panoramas and exterior frames onto it |
+| `inside.js` | Sweep navigation: look, zoom, rings, cursor ring, hops, flights, panorama loading |
+| `dollhouse.js` | Dollhouse and floor plan (one camera), and the flights between the views |
+| `exterior.js` | Photoreal exterior orbit |
+| `ui.js` | Toolbar, highlight reel, room chip, floor-plan names, landing page, sheets, menu, first-run hint, fallback |
+| `dimensions.js`, `design.js` | Dimensions and Design sheets |
+| `testapi.js` | `window.TOUR`, the contract with the tests |
 
-The projection needs the stops to match the render cameras exactly. `render_panos.py` places
-each equirectangular camera at the stop's `p` (eye height included), with yaw 0 = −z, so a
-re-render keeps them aligned.
+* **Inside.** The camera rests only on sweeps, where the frame is the published panorama (one
+  full-screen lookup, no geometry). Drag looks (inertia), wheel / pinch / `+` `-` zoom 35 to 80°.
+  White rings on the floor mark the sweeps in view; a ring under the mouse lies on the surface it is
+  over. A click on a ring, or toward a place, glides there in 0.55 to 1.1 s (350 ms + 55 ms per foot)
+  while both panoramas are projected on the model and cross-faded; the look direction is kept. A
+  double click is one move. Arrow keys / WASD step, left / right turn 45°. A destination out of view is
+  flown through the sweeps between without stopping; more than five hops, or reduced motion, fade.
+* **Panorama levels.** 2k on arrival if nothing better is loaded, 4k after 80 ms at rest, 8k after
+  700 ms. The 2k level of the sweeps in view is loaded ahead and the nearest get their depth cube, so a
+  hop starts at once; a move never waits more than 300 ms for a download. A missing level falls back
+  to another one; the picture is never black and never the bare bake.
+* **Budgets.** Desktop: one 8k, two 4k, twelve 2k panoramas and six 1024² depth cubes. Touch or
+  low-memory devices: no 8k, one 4k, six 2k, four 512² cubes.
+* **Dollhouse.** The baked model alone on a dark background; drag orbits, wheel / pinch zooms at the
+  cursor, right-drag / Shift-drag / two fingers slide, `0` frames the house again. Dots mark the
+  sweeps; a click flies in. **Floor plan:** the same model in orthographic projection, north up, with
+  the room names of `tour.json`.
+* **Flights.** Inside ↔ dollhouse / floor plan is one camera move of 1.2 s: the ceilings fade, the
+  sweep's panorama stays projected on the model and fades into the baked textures on the way out, and
+  back in before the landing. Dollhouse ↔ floor plan takes 0.9 s. Exterior ↔ these views cross-fade.
+* **Drawn on demand.** A view that stands still draws nothing, in every mode.
+* **Links.** The address bar names the place the visitor is at, rewritten in place:
+  `?sweep=ID&yaw=&pitch=` (degrees; `&fov=` when zoomed) inside, `?mode=dollhouse|floorplan|exterior`
+  (`&view=front|left|rear|right|roof`) otherwise. Also `?pano=2k|4k|8k` (pin the level),
+  `?exterior=model`, `?webgl=off` (show the fallback).
+* **Chrome.** Title top left, round dark buttons bottom left (Rooms, Dollhouse, Floor plan, Inside) and
+  bottom right (Exterior, Dimensions, Design, fullscreen, menu); a highlight reel of room thumbnails;
+  a room-name chip on arrival; a one-line hint on the first visit. Sheets are modal for the keyboard.
+  With `prefers-reduced-motion` nothing flies: moves fade, changes of view cross-fade.
+* **No WebGL 2, or the model fails to load:** a static page with the design stills; Dimensions and
+  Design still work. There is no second renderer. The page needs http(s); it does not run from `file://`.
+
+**Engine in brief** (`createEngine(canvas, opts)`; SCENE feet, radians; it never fetches and never
+runs a loop):
+
+* `load(url)`, `setMode('inside'|'dollhouse'|'floorplan'|'exterior')`, `setBackground`,
+  `setFootprint`, `render(view)` with `view = {eye, aim, fovY, ...}` or `{ortho: {halfHeight}, ...}`,
+  `dirty()` / `invalidate()`.
+* Sweeps: `setSweeps`, `setPanorama(id, image, level)`, `prepare(id)` (texture upload and depth cube
+  ahead of a move), `setSweepBlend(a, b, t)` (deterministic; `setSweepBlend(id)` at rest is the pure
+  panorama), `hasPanorama`, `setWanted`.
+* `pick(ndcX, ndcY)` gives the surface point, normal and class under a pixel: from the resting
+  sweep's depth cube inside, by ray cast in the dollhouse and floor plan.
+* `overlay`: a `THREE.Group` in feet for rings and the reticle, depth-tested against the model, or
+  against the depth cube at rest.
+* Fly controls: `setProjectionFade`, `setClassOpacity('ceiling', a)`, `setAdaptation(k, ko, instant)`.
+* The exterior orbit uses the older calls (`setPanorama(..., frame)`, `setProjection`,
+  `applyVisibility`, `render(eye, aim, ...)`), which are kept.
+
+Development harness: `tools/web/dev/` (see `tools/web/README.md`).
 
 ## Photoreal exterior (orbit frames)
 
@@ -205,10 +515,10 @@ positions the page can reach exactly:
   of the frame.
 * **Look:** one shared exposure and white balance, so neighbouring frames blend without a step.
 
-The page projects them onto the baked model, like the walk (below), with these differences:
+The page (`assets/js/tour/exterior.js`) projects them onto the baked model:
 
 * **Settling:** the camera settles on the nearest frame when you let go; a short drag moves one frame
-  that way.
+  that way. On a frame the picture is that render.
 * **Zoom:** zoom narrows the field of view from the frame position, so the view stays exact.
 * **Occluders:** every occluder counts outside, and the depth cubes reach 700 ft.
 * **Double-sided neighbourhood:** the neighbours' houses in the web model are partly inside out.
@@ -235,28 +545,38 @@ The neighbouring houses' roof colours follow the aerial photo (`NEIGHBOUR_ROOFS`
 
 | Tool | Purpose |
 |---|---|
-| `review.sh <blend> <nodes\|all> <out> [width] [samples] [render args]` | Renders panoramas and 4-view contact sheets (`<ID>_sheet.png`) |
-| `dev_preview.sh <zones> <nodes>` | Builds only some zones, then review renders |
-| `top_view.py -- --rect=x0,x1,z0,z1 --out top.png` | Orthographic plan check (ceilings/roof hidden) |
+| `review.sh <blend> <sweeps\|all> <out> [width] [samples] [render args]` | Renders panoramas and 4-view contact sheets (`<ID>_sheet.png`); non-zero exit when one is missing |
+| `dev_preview.sh <zones> <sweeps>` | Builds only some zones, then review renders |
+| `top_view.py -- --rect=x0,x1,z0,z1 --out top.png` | Orthographic plan check (ceilings / roof hidden) |
 | `whatis.py -- --node K0 --at y=90,p=-10` | Names the object, material and owning zone at a view direction |
 | `pano_views.py PANO --base-yaw R --yaws 0,90` | Cuts rectilinear views out of an equirect |
+| `check_holes.py` | Holes in ceilings and floors, floor seams, baseboards without a wall |
+| `place_sweeps.py ... --overlay sweeps.png` | Top-down picture of clearance, furniture, walls, links and sweeps |
 | `check_glb.py <glb> <out.png> [hide] [view]` | Quick unlit render of a baked GLB |
-| `gpu.sh <blender args>` | Runs a Blender GPU job under a machine-wide lock (parallel agents/scripts) |
+| `gpu.sh <blender args>` | Runs a Blender GPU job under a machine-wide lock |
 
 ## Files
 
 * **`bl/` modules:**
   * `common.py`: scene context and geometry helpers.
   * `shell.py`: exact architecture with modern finishes.
+  * `warp.py`: concept plan to architect's plan, inside Blender.
+  * `revision_spec.py`, `revisions.py`, `laundry.py`: the owner's changes.
   * `lighting.py`: sky, sun, portals, fixtures and balance.
   * `materials.py` + `materials_pbr.py`: material library (`KEYS` contract).
   * `assets.py`: Poly Haven fetch, cache and attribution.
   * `zones/<zone>*.py`: one module family per area (kitchen_dining, living, primary_suite, bedrooms, baths,
     hall_entry_garage, exterior).
-* **`data/`:**
-  * `scene.json`: the frozen tour model.
-  * `measurements.json`, `primitives.json`.
+* **`data/`** (read and written through `tools/web/sitedata.py`):
+  * `scene.json`: the tour's full scene. `sweeps.json`: the sweeps (`place_sweeps.py`).
+  * `measurements.json`: the dimension schedule. `design.json`: Design sheet views, text, image paths.
+  * `primitives.json`: unit primitives; static; the Blender build (`bl/common.py`) reads it.
   * `scene_classification.json` + `room_inventory.json`: room regions and roles.
-  * `hero_cameras.json`.
-* **`extract_scene.py` / `classify_scene.py`:** regenerate `data/` from `index.html`.
-* **`final_run.sh`:** the full production run (build, panoramas, hero stills, bake, adaptation).
+  * `hero_cameras.json`: cameras of the hero stills.
+  * `concept/`: the frozen concept plan (scene, measurements, classification).
+* **Data tools:** `relayout.py` (the map), `apply_relayout.py`, `apply_revisions_web.py`,
+  `apply_sweeps.py`, `extract_scene.py` (check). `classify_scene.py` is the original scene audit
+  that assigned rooms and roles; it overwrites the classification files and is not part of the
+  sequence.
+* **Render tools:** `build_scene.py`, `place_sweeps.py`, `render_panos.py`, `smooth_exposure.py`,
+  `render_heroes.py`, `render_exterior.py`, `bake_web.py`, `adapt_web.py`, `final_run.sh`.

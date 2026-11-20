@@ -1,248 +1,440 @@
 {
- "version": "73791d59cfe9",
- "convention": "Equirectangular 2:1, top row = up (+y). Centre column = world yaw `offset` (yaw 0 = SCENE -z, plan north); u increases clockwise seen from above. Paths are relative to this file.",
+ "version": "c94a47d16c1a",
+ "convention": "Equirectangular 2:1, top row = up (+y). Centre column = world yaw `offset` (yaw 0 = SCENE -z, plan north); u increases clockwise seen from above. Paths are relative to this file. Each node lists the resolution levels that exist; widths are in `widths`.",
+ "widths": {
+  "8k": 8192,
+  "4k": 4096,
+  "2k": 2048
+ },
  "nodes": {
   "E0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "E0.webp",
-   "half": "2k/E0.webp",
+   "levels": {
+    "8k": "8k/E0.webp",
+    "4k": "4k/E0.webp",
+    "2k": "2k/E0.webp"
+   },
    "thumb": "../thumbs/E0.webp",
    "source": "render"
   },
   "H1": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "H1.webp",
-   "half": "2k/H1.webp",
+   "levels": {
+    "8k": "8k/H1.webp",
+    "4k": "4k/H1.webp",
+    "2k": "2k/H1.webp"
+   },
    "thumb": "../thumbs/H1.webp",
    "source": "render"
   },
   "H2": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "H2.webp",
-   "half": "2k/H2.webp",
+   "levels": {
+    "8k": "8k/H2.webp",
+    "4k": "4k/H2.webp",
+    "2k": "2k/H2.webp"
+   },
    "thumb": "../thumbs/H2.webp",
    "source": "render"
   },
   "H3": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "H3.webp",
-   "half": "2k/H3.webp",
+   "levels": {
+    "8k": "8k/H3.webp",
+    "4k": "4k/H3.webp",
+    "2k": "2k/H3.webp"
+   },
    "thumb": "../thumbs/H3.webp",
    "source": "render"
   },
   "B3": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "B3.webp",
-   "half": "2k/B3.webp",
+   "levels": {
+    "8k": "8k/B3.webp",
+    "4k": "4k/B3.webp",
+    "2k": "2k/B3.webp"
+   },
    "thumb": "../thumbs/B3.webp",
    "source": "render"
   },
   "B4": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "B4.webp",
-   "half": "2k/B4.webp",
+   "levels": {
+    "8k": "8k/B4.webp",
+    "4k": "4k/B4.webp",
+    "2k": "2k/B4.webp"
+   },
    "thumb": "../thumbs/B4.webp",
    "source": "render"
   },
   "K0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "K0.webp",
-   "half": "2k/K0.webp",
+   "levels": {
+    "8k": "8k/K0.webp",
+    "4k": "4k/K0.webp",
+    "2k": "2k/K0.webp"
+   },
    "thumb": "../thumbs/K0.webp",
    "source": "render"
   },
   "D0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "D0.webp",
-   "half": "2k/D0.webp",
+   "levels": {
+    "8k": "8k/D0.webp",
+    "4k": "4k/D0.webp",
+    "2k": "2k/D0.webp"
+   },
    "thumb": "../thumbs/D0.webp",
    "source": "render"
   },
   "L2": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "L2.webp",
-   "half": "2k/L2.webp",
+   "levels": {
+    "8k": "8k/L2.webp",
+    "4k": "4k/L2.webp",
+    "2k": "2k/L2.webp"
+   },
    "thumb": "../thumbs/L2.webp",
    "source": "render"
   },
   "L0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "L0.webp",
-   "half": "2k/L0.webp",
+   "levels": {
+    "8k": "8k/L0.webp",
+    "4k": "4k/L0.webp",
+    "2k": "2k/L0.webp"
+   },
    "thumb": "../thumbs/L0.webp",
    "source": "render"
   },
   "L1": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "L1.webp",
-   "half": "2k/L1.webp",
+   "levels": {
+    "8k": "8k/L1.webp",
+    "4k": "4k/L1.webp",
+    "2k": "2k/L1.webp"
+   },
    "thumb": "../thumbs/L1.webp",
-   "source": "render"
-  },
-  "T1": {
-   "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "T1.webp",
-   "half": "2k/T1.webp",
-   "thumb": "../thumbs/T1.webp",
    "source": "render"
   },
   "P0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "P0.webp",
-   "half": "2k/P0.webp",
+   "levels": {
+    "8k": "8k/P0.webp",
+    "4k": "4k/P0.webp",
+    "2k": "2k/P0.webp"
+   },
    "thumb": "../thumbs/P0.webp",
-   "source": "render"
-  },
-  "P1": {
-   "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "P1.webp",
-   "half": "2k/P1.webp",
-   "thumb": "../thumbs/P1.webp",
    "source": "render"
   },
   "S0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "S0.webp",
-   "half": "2k/S0.webp",
+   "levels": {
+    "8k": "8k/S0.webp",
+    "4k": "4k/S0.webp",
+    "2k": "2k/S0.webp"
+   },
    "thumb": "../thumbs/S0.webp",
    "source": "render"
   },
   "C0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "C0.webp",
-   "half": "2k/C0.webp",
+   "levels": {
+    "8k": "8k/C0.webp",
+    "4k": "4k/C0.webp",
+    "2k": "2k/C0.webp"
+   },
    "thumb": "../thumbs/C0.webp",
    "source": "render"
   },
   "A0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "A0.webp",
-   "half": "2k/A0.webp",
+   "levels": {
+    "8k": "8k/A0.webp",
+    "4k": "4k/A0.webp",
+    "2k": "2k/A0.webp"
+   },
    "thumb": "../thumbs/A0.webp",
    "source": "render"
   },
   "T2": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "T2.webp",
-   "half": "2k/T2.webp",
+   "levels": {
+    "8k": "8k/T2.webp",
+    "4k": "4k/T2.webp",
+    "2k": "2k/T2.webp"
+   },
    "thumb": "../thumbs/T2.webp",
    "source": "render"
   },
   "B2": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "B2.webp",
-   "half": "2k/B2.webp",
+   "levels": {
+    "8k": "8k/B2.webp",
+    "4k": "4k/B2.webp",
+    "2k": "2k/B2.webp"
+   },
    "thumb": "../thumbs/B2.webp",
-   "source": "render"
-  },
-  "T3": {
-   "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "T3.webp",
-   "half": "2k/T3.webp",
-   "thumb": "../thumbs/T3.webp",
    "source": "render"
   },
   "A1": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "A1.webp",
-   "half": "2k/A1.webp",
+   "levels": {
+    "8k": "8k/A1.webp",
+    "4k": "4k/A1.webp",
+    "2k": "2k/A1.webp"
+   },
    "thumb": "../thumbs/A1.webp",
    "source": "render"
   },
   "G0": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "G0.webp",
-   "half": "2k/G0.webp",
+   "levels": {
+    "8k": "8k/G0.webp",
+    "4k": "4k/G0.webp",
+    "2k": "2k/G0.webp"
+   },
    "thumb": "../thumbs/G0.webp",
-   "source": "render"
-  },
-  "T4": {
-   "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "T4.webp",
-   "half": "2k/T4.webp",
-   "thumb": "../thumbs/T4.webp",
    "source": "render"
   },
   "A3": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "A3.webp",
-   "half": "2k/A3.webp",
+   "levels": {
+    "8k": "8k/A3.webp",
+    "4k": "4k/A3.webp",
+    "2k": "2k/A3.webp"
+   },
    "thumb": "../thumbs/A3.webp",
-   "source": "render"
-  },
-  "T6": {
-   "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "T6.webp",
-   "half": "2k/T6.webp",
-   "thumb": "../thumbs/T6.webp",
    "source": "render"
   },
   "C3": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "C3.webp",
-   "half": "2k/C3.webp",
+   "levels": {
+    "8k": "8k/C3.webp",
+    "4k": "4k/C3.webp",
+    "2k": "2k/C3.webp"
+   },
    "thumb": "../thumbs/C3.webp",
    "source": "render"
   },
   "GA": {
    "offset": 0,
-   "width": 4096,
-   "height": 2048,
-   "full": "GA.webp",
-   "half": "2k/GA.webp",
+   "levels": {
+    "8k": "8k/GA.webp",
+    "4k": "4k/GA.webp",
+    "2k": "2k/GA.webp"
+   },
    "thumb": "../thumbs/GA.webp",
+   "source": "render"
+  },
+  "G1": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/G1.webp",
+    "4k": "4k/G1.webp",
+    "2k": "2k/G1.webp"
+   },
+   "thumb": "../thumbs/G1.webp",
+   "source": "render"
+  },
+  "G2": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/G2.webp",
+    "4k": "4k/G2.webp",
+    "2k": "2k/G2.webp"
+   },
+   "thumb": "../thumbs/G2.webp",
+   "source": "render"
+  },
+  "G3": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/G3.webp",
+    "4k": "4k/G3.webp",
+    "2k": "2k/G3.webp"
+   },
+   "thumb": "../thumbs/G3.webp",
+   "source": "render"
+  },
+  "H0": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/H0.webp",
+    "4k": "4k/H0.webp",
+    "2k": "2k/H0.webp"
+   },
+   "thumb": "../thumbs/H0.webp",
+   "source": "render"
+  },
+  "H4": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/H4.webp",
+    "4k": "4k/H4.webp",
+    "2k": "2k/H4.webp"
+   },
+   "thumb": "../thumbs/H4.webp",
+   "source": "render"
+  },
+  "K1": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/K1.webp",
+    "4k": "4k/K1.webp",
+    "2k": "2k/K1.webp"
+   },
+   "thumb": "../thumbs/K1.webp",
+   "source": "render"
+  },
+  "K2": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/K2.webp",
+    "4k": "4k/K2.webp",
+    "2k": "2k/K2.webp"
+   },
+   "thumb": "../thumbs/K2.webp",
+   "source": "render"
+  },
+  "K3": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/K3.webp",
+    "4k": "4k/K3.webp",
+    "2k": "2k/K3.webp"
+   },
+   "thumb": "../thumbs/K3.webp",
+   "source": "render"
+  },
+  "L3": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/L3.webp",
+    "4k": "4k/L3.webp",
+    "2k": "2k/L3.webp"
+   },
+   "thumb": "../thumbs/L3.webp",
+   "source": "render"
+  },
+  "L4": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/L4.webp",
+    "4k": "4k/L4.webp",
+    "2k": "2k/L4.webp"
+   },
+   "thumb": "../thumbs/L4.webp",
+   "source": "render"
+  },
+  "L5": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/L5.webp",
+    "4k": "4k/L5.webp",
+    "2k": "2k/L5.webp"
+   },
+   "thumb": "../thumbs/L5.webp",
+   "source": "render"
+  },
+  "LC": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/LC.webp",
+    "4k": "4k/LC.webp",
+    "2k": "2k/LC.webp"
+   },
+   "thumb": "../thumbs/LC.webp",
+   "source": "render"
+  },
+  "S1": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/S1.webp",
+    "4k": "4k/S1.webp",
+    "2k": "2k/S1.webp"
+   },
+   "thumb": "../thumbs/S1.webp",
+   "source": "render"
+  },
+  "X0": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/X0.webp",
+    "4k": "4k/X0.webp",
+    "2k": "2k/X0.webp"
+   },
+   "thumb": "../thumbs/X0.webp",
+   "source": "render"
+  },
+  "Y0": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/Y0.webp",
+    "4k": "4k/Y0.webp",
+    "2k": "2k/Y0.webp"
+   },
+   "thumb": "../thumbs/Y0.webp",
+   "source": "render"
+  },
+  "Y1": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/Y1.webp",
+    "4k": "4k/Y1.webp",
+    "2k": "2k/Y1.webp"
+   },
+   "thumb": "../thumbs/Y1.webp",
+   "source": "render"
+  },
+  "Y2": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/Y2.webp",
+    "4k": "4k/Y2.webp",
+    "2k": "2k/Y2.webp"
+   },
+   "thumb": "../thumbs/Y2.webp",
+   "source": "render"
+  },
+  "Y3": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/Y3.webp",
+    "4k": "4k/Y3.webp",
+    "2k": "2k/Y3.webp"
+   },
+   "thumb": "../thumbs/Y3.webp",
+   "source": "render"
+  },
+  "Z0": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/Z0.webp",
+    "4k": "4k/Z0.webp",
+    "2k": "2k/Z0.webp"
+   },
+   "thumb": "../thumbs/Z0.webp",
+   "source": "render"
+  },
+  "OD": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/OD.webp",
+    "4k": "4k/OD.webp",
+    "2k": "2k/OD.webp"
+   },
+   "thumb": "../thumbs/OD.webp",
+   "source": "render"
+  },
+  "OP": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/OP.webp",
+    "4k": "4k/OP.webp",
+    "2k": "2k/OP.webp"
+   },
+   "thumb": "../thumbs/OP.webp",
    "source": "render"
   }
  }

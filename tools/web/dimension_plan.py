@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Regenerate the Dimensions plan drawing (the SVG inside <div id="dimensionPlan"> in index.html).
+"""Regenerate the Dimensions plan drawing, assets/plans/dimension-plan.svg.
 
-The drawing is built only from the data already in index.html:
-  * `const SCENE=`        walls (objects with group 'walls', shape 'box', standing on the floor),
-                          door leaves (group 'door'), the foundation footprint (group 'base'),
-                          tour stops (SCENE.tour.nodes) for the living / kitchen / garage labels and
+The page fetches that file and puts the <svg> into <div id="dimensionPlan"> (it is no longer inlined in
+index.html, which this tool never touches). The drawing is built only from the site data files
+(tools/web/sitedata.py):
+  * tools/render/data/scene.json         walls (objects with group 'walls', shape 'box', standing on the
+                          floor), door leaves (group 'door'), the foundation footprint (group 'base'),
+                          tour stops (tour.nodes) for the living / kitchen / garage labels and
                           for deciding which side of a wall is "inside" for a window tag;
-  * `const MEASUREMENTS=` rooms (id, name, bounds_ft [x0,x1,z0,z1], width_ft, depth_ft, area_sqft,
-                          basis), windows and doors (axis 'x' = along x on the wall z=c, 'z' = along
-                          z on the wall x=c, start/end in feet) and the skylight (axis 'roof', p).
+  * tools/render/data/measurements.json  rooms (id, name, bounds_ft [x0,x1,z0,z1], width_ft, depth_ft,
+                          area_sqft, basis), windows and doors (axis 'x' = along x on the wall z=c,
+                          'z' = along z on the wall x=c, start/end in feet) and the skylights
+                          (axis 'roof', p).
 
 Coordinates are feet: x runs west -> east, z rear (north, garden) -> street (south).
 
@@ -22,23 +25,26 @@ window, skylight and door:
 click handlers use to select an item.
 
 Usage (python3, standard library only), from anywhere:
-    python3 tools/web/dimension_plan.py            # rewrite index.html + assets/plans/dimension-plan.svg
-    python3 tools/web/dimension_plan.py --check    # exit 1 if either file is out of date (no writes)
+    python3 tools/web/dimension_plan.py            # rewrite assets/plans/dimension-plan.svg
+    python3 tools/web/dimension_plan.py --check    # exit 1 if the file is out of date (no writes)
     python3 tools/web/dimension_plan.py --stdout   # print the SVG only
-    python3 tools/web/dimension_plan.py --html other.html
+    python3 tools/web/dimension_plan.py --svg-out other.svg
 
-Idempotent: the output depends only on SCENE and MEASUREMENTS, so re-running it after the data
+The file is the bare <svg>...</svg> preceded by an XML declaration line; a page that inserts the text
+with innerHTML should drop that first line (or parse the file with DOMParser).
+
+Idempotent: the output depends only on the scene and the measurements, so re-running it after the data
 changes replaces the old drawing and re-running it without changes rewrites nothing.
 """
 import argparse
-import json
 import math
 import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-REPO = Path(__file__).resolve().parents[2]
-PLAN_OPEN = '<div id="dimensionPlan">'
+sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sitedata  # noqa: E402
 
 # Drawing scale and palette (the page's dimension-sheet language).
 S = 26.0                      # px per foot
@@ -57,13 +63,6 @@ SOURCE_LINE = "Architect's plan Â· sizes/sizes.pdf, sheet SKA002 (Nov 13 2026) Â
 
 
 # ---------------------------------------------------------------------------------------------
-def grab(text, name):
-    key = 'const %s=' % name
-    i = text.index(key) + len(key)
-    value, _ = json.JSONDecoder().raw_decode(text, i)
-    return value
-
-
 def ft(v):
     """Feet-inches to the nearest 1/8 inch; same output as the page's ft()."""
     n = round(v * 96)
@@ -414,35 +413,27 @@ def build(scene, meas):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('--html', default=str(REPO / 'index.html'))
-    ap.add_argument('--svg-out', default=str(REPO / 'assets' / 'plans' / 'dimension-plan.svg'))
-    ap.add_argument('--check', action='store_true', help='report whether the files are up to date; write nothing')
+    ap.add_argument('--html', help=argparse.SUPPRESS)
+    ap.add_argument('--svg-out', default=str(sitedata.path('plan')))
+    ap.add_argument('--check', action='store_true', help='report whether the file is up to date; write nothing')
     ap.add_argument('--stdout', action='store_true', help='print the SVG and exit')
     a = ap.parse_args()
-    html_path = Path(a.html)
-    text = html_path.read_text(encoding='utf-8')
-    svg = build(grab(text, 'SCENE'), grab(text, 'MEASUREMENTS'))
+    if a.html:
+        ap.error('--html is gone: the drawing is built from tools/render/data/*.json and written to '
+                 'assets/plans/dimension-plan.svg only (see tools/web/sitedata.py)')
+    svg = build(sitedata.load_scene(), sitedata.load_measurements())
     if a.stdout:
         sys.stdout.write(svg + '\n')
         return 0
-    i = text.index(PLAN_OPEN) + len(PLAN_OPEN)
-    if not text.startswith('<svg', i):
-        sys.exit('expected <svg right after %s' % PLAN_OPEN)
-    j = text.index('</svg>', i) + len('</svg>')
-    new_text = text[:i] + svg + text[j:]
     svg_path = Path(a.svg_out)
-    svg_file = '<?xml version="1.0" encoding="UTF-8"?>\n' + svg + '\n'
-    stale = [p for p, new in ((html_path, new_text), (svg_path, svg_file))
-             if not p.exists() or p.read_text(encoding='utf-8') != new]
+    stale = not svg_path.exists() or svg_path.read_text(encoding='utf-8') != sitedata.plan_svg_file(svg)
     if a.check:
-        for p in stale:
-            print('out of date:', p)
+        if stale:
+            print('out of date:', svg_path)
         return 1 if stale else 0
-    for p, new in ((html_path, new_text), (svg_path, svg_file)):
-        if p in stale:
-            p.write_text(new, encoding='utf-8')
-            print('wrote', p, '(%d bytes of SVG)' % len(svg))
-    if not stale:
+    if sitedata.save_plan_svg(svg, out=svg_path):
+        print('wrote', svg_path, '(%d bytes of SVG)' % len(svg))
+    else:
         print('up to date')
     return 0
 

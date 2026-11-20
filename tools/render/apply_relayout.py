@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Apply relayout.py (old concept plan -> architect's plan) to the tour's frozen data.
 
-  python3 tools/render/apply_relayout.py [--html index.html] [--dry-run]
+  python3 tools/render/apply_relayout.py [--dry-run] [--no-cls]
 
-Reads SCENE and MEASUREMENTS from index.html and the room regions from
-tools/render/data/scene_classification.json, maps every coordinate, and writes them back (index.html
-constants, then tools/render/data/ via extract_scene.py). Architecture (walls, floors, ceilings,
-openings, roof, facade) is mapped corner by corner, so rooms take their new sizes; movable things
-(furniture, decor, lights, landscape) are translated, keeping their size. It always starts from the frozen
-concept data in tools/render/data/concept/, so it can be re-run after relayout.py changes; then run
-apply_revisions_web.py, extract_scene.py and tools/web/dimension_plan.py.
+Reads the frozen concept data in tools/render/data/concept/ (scene.json, scene_classification.json,
+measurements.json), maps every coordinate, and writes the site data files through tools/web/sitedata.py:
+tools/render/data/scene.json (the full scene), measurements.json and scene_classification.json. No tool
+reads or writes index.html any more. Architecture (walls, floors, ceilings, openings, roof, facade) is
+mapped corner by corner, so rooms take their new sizes; movable things (furniture, decor, lights,
+landscape) are translated, keeping their size. It always starts from the concept data, so it can be re-run
+after relayout.py changes, and it REPLACES scene.json and measurements.json: everything later tools add
+(owner's changes, new sweeps, the laundry closet) must be re-applied afterwards. The sequence is
+apply_relayout.py, apply_revisions_web.py, extract_scene.py (a check), tools/web/dimension_plan.py,
+tools/web/build_site_data.py.
 """
 import argparse
 import json
@@ -18,19 +21,14 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
 sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, '..', 'web'))
 import relayout as R  # noqa: E402
+import sitedata  # noqa: E402
 
 DATA = os.path.join(HERE, 'data')
 MOVABLE = {'furniture', 'decor', 'landscape'}
-
-
-def _grab(src, marker):
-    i = src.find(marker)
-    if i < 0:
-        raise SystemExit(f'{marker!r} not found')
-    obj, end = json.JSONDecoder().raw_decode(src, i + len(marker))
-    return obj, i + len(marker), end
 
 
 def _rot_quarter(rot):
@@ -160,15 +158,14 @@ def remap_measurements(m):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--html', default=os.path.join(HERE, '..', '..', 'index.html'))
+    ap.add_argument('--html', help=argparse.SUPPRESS)
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--no-cls', action='store_true', help='do not rewrite data/scene_classification.json')
     a = ap.parse_args()
-    src = open(a.html, encoding='utf-8').read()
-    _, s0, s1 = _grab(src, 'const SCENE=')
+    if a.html:
+        ap.error('--html is gone: the data lives in tools/render/data/*.json (see tools/web/sitedata.py)')
     # always start from the frozen concept-plan data, so the conversion can be re-run
     scene = json.load(open(os.path.join(DATA, 'concept', 'scene.json')))
-    cls_path = os.path.join(DATA, 'scene_classification.json')
     cls = json.load(open(os.path.join(DATA, 'concept', 'scene_classification.json')))
     if len(cls['objects']) != len(scene['objects']):
         raise SystemExit('classification does not match SCENE.objects')
@@ -218,7 +215,6 @@ def main():
         'method': 'tools/render/relayout.py: old wall faces mapped to the plan\'s clear dimensions',
         'outer_width_ft': 39.87,
     }
-    _, m0, m1 = _grab(src, 'const MEASUREMENTS=')
     meas = json.load(open(os.path.join(DATA, 'concept', 'measurements.json')))
     remap_measurements(meas)
     for k, v in cls['meta']['rooms'].items():
@@ -228,16 +224,11 @@ def main():
     print('objects:', counts, 'extent', scene['extent'])
     if a.dry_run:
         return
-    sj = json.dumps(scene, separators=(',', ':'), ensure_ascii=False)
-    mj = json.dumps(meas, separators=(',', ':'), ensure_ascii=False)
-    if m0 > s0:
-        src = src[:s0] + sj + src[s1:m0 - len('const MEASUREMENTS=')] + 'const MEASUREMENTS=' + mj + src[m1:]
-    else:
-        src = src[:m0] + mj + src[m1:s0 - len('const SCENE=')] + 'const SCENE=' + sj + src[s1:]
-    open(a.html, 'w', encoding='utf-8').write(src)
+    done = [('scene', sitedata.save_scene(scene)), ('measurements', sitedata.save_measurements(meas))]
     if not a.no_cls:
-        json.dump(cls, open(cls_path, 'w'), separators=(',', ':'))
-    print('wrote', a.html, cls_path)
+        done.append(('classification', sitedata.save_classification(cls)))
+    for name, changed in done:
+        print('wrote' if changed else 'unchanged', sitedata.rel(sitedata.path(name)))
 
 
 if __name__ == '__main__':

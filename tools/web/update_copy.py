@@ -1,56 +1,33 @@
 #!/usr/bin/env python3
-"""One-off copy update for the modern, path-traced version of the tour (idempotent).
+"""One-off copy update for the modern, path-traced version of the tour (historical; idempotent).
 
-Rewrites the on-page text that described the earlier AI concept images and the traditional
-styling (title, badges, hints, Info/Welcome/Design windows, DESIGN_DATA, SCENE.styling) so it
-matches the path-traced renders of the modern design. Geometry facts (sizes, sills, heads, ridge
-heights) are kept verbatim.
+On 2026-11-17 this script replaced the text that described the earlier AI concept images and the
+traditional styling by text matching the path-traced renders of the modern design. Geometry facts
+(sizes, sills, heads, ridge heights) were kept verbatim.
 
-  python3 tools/web/update_copy.py [--check]
+Since v3 it edits the site data files through tools/web/sitedata.py and never index.html:
+  * tools/render/data/design.json   `title` and `text` of the design views listed in DESIGN, and the
+                                    roof text's standing-seam sentence
+  * tools/render/data/scene.json    `styling` (palette, visualization, outdoor)
+then run tools/web/build_site_data.py to refresh assets/data/. The page chrome it also patched in the
+single-file page (title, badges, hints, the Info / Welcome / Design windows: the old PLAIN list, see
+git history) is ordinary markup in index.html and module code in assets/js/tour/ now and is edited there.
+
+CAUTION: the texts below are those of the FIRST modern restyle. The owner's second and third rounds
+rewrote most of them (design.json holds the current copy), and apply_relayout.py resets `styling`
+from the concept data on every run. Today the script therefore reports pending changes, and applying
+them would put the older copy back. So it only reports unless --force is given.
+
+  python3 tools/web/update_copy.py            # report what would change; write nothing (exit 0)
+  python3 tools/web/update_copy.py --check    # the same, one line
+  python3 tools/web/update_copy.py --force    # write the texts below into design.json and scene.json
 """
-import json
-import re
 import sys
 from pathlib import Path
 
-INDEX = Path(__file__).resolve().parents[1].parent / 'index.html'
-
-PLAIN = [
-    ('<title>1095 W McKinley — White stucco front · home tour</title>',
-     '<title>1095 W McKinley — Modern remodel · home tour</title>'),
-    ('<span class="concept" id="modeBadge">CONCEPT · STYLED TOUR</span>',
-     '<span class="concept" id="modeBadge">RENDERED · STYLED TOUR</span>'),
-    ("mode==='photo'?'CONCEPT · STYLED TOUR'", "mode==='photo'?'RENDERED · STYLED TOUR'"),
-    ("'Drag to look · AI concept view'", "'Drag to look · path-traced 360° render'"),
-    ('<small>AI concept views · Drag to look', '<small>Path-traced 360° renders · Drag to look'),
-    ('photorealistic concept viewpoints guided by the corrected model.',
-     'path-traced 360° viewpoints, rendered from the same measured model as the 3D walk.'),
-    ('<p>Explore 27 photorealistic 360° concept views with natural daylight, textured oak, soft fabrics and garden '
-     'outlooks. Select Play tour to follow the connected route, or Browse scenes to jump to a room. The images are AI '
-     'interpretations guided by the corrected model; use Dimensions and 3D Walk for geometry and measurements. '
-     'Materials, furnishings, reflections and landscaping are illustrative.',
-     '<p>Explore 27 path-traced 360° views of the modern design: late-morning daylight, white oak floors, walnut '
-     'and Calacatta quartz, soft fabrics and garden outlooks. Select Play tour to follow the connected route, or '
-     'Browse scenes to jump to a room. Every view is rendered from the measured model, and the 3D Walk, Dollhouse and '
-     'Floor plan show the same model with its lighting baked in; use Dimensions for exact measurements. Furnishings, '
-     'decor and landscaping are illustrative staging.'),
-    ('The revised design features vaulted front bedrooms, a tall canted bay, a high entry window, an arched kitchen '
-     'window, cream traditional cabinetry and oak-look porcelain in the shared bathroom.',
-     'The revised design features vaulted front bedrooms, a tall canted bay, a high entry window, a black-framed '
-     'kitchen window over walnut and quartz cabinetry, and a black fluted feature wall in the shared bathroom.'),
-    ('<p>A warm-white stucco exterior, a warm wood entrance door and a solid gable above Bedroom 3’s bay. Explore '
-     'the simpler front finish alongside your vaulted bedrooms and approved interior design.',
-     '<p>Smooth warm-white stucco, a wood-clad entry, slim black windows and a charcoal standing-seam roof, with '
-     'white oak, walnut and Calacatta quartz inside. Explore the modern finishes alongside your vaulted bedrooms '
-     'and approved layout.'),
-    ('id="designCaption">Updated concept view</span>', 'id="designCaption">Path-traced render</span>'),
-    ("id==='front'?'Front elevation · concept':'Revised room · concept'",
-     "id==='front'?'Front elevation · render':'Revised room · render'"),
-    ("The concept images are illustrative.", "The renders show illustrative furnishings."),
-    ("'-styled-360.'", "'-360.'"),
-    ('White stucco front, solid bedroom gable and coordinated entry glazing',
-     'Modern warm-white stucco front, solid bedroom gable and coordinated entry glazing'),
-]
+sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sitedata  # noqa: E402
 
 DESIGN = {
     'front': ('A modern warm-white front.',
@@ -97,37 +74,43 @@ STYLING = {
 
 
 def main():
-    check = '--check' in sys.argv
-    s = INDEX.read_text(encoding='utf-8')
-    orig = s
-    for old, new in PLAIN:
-        if new in s and old not in s:
-            continue
-        n = s.count(old)
-        if n == 0:
-            print('not found:', old[:70])
-            continue
-        s = s.replace(old, new)
-    m = re.search(r'const DESIGN_DATA=(\{.*?\});', s)
-    data = json.loads(m.group(1))
+    check, force = '--check' in sys.argv, '--force' in sys.argv
+    design = sitedata.load_design()
+    scene = sitedata.load_scene()
+    pending = []
+    views = design['views']
     for k, (title, text) in DESIGN.items():
-        data[k]['title'], data[k]['text'] = title, text
-    if 'standing-seam' not in data['roof']['text']:
-        data['roof']['text'] = data['roof']['text'].replace(
+        if k not in views:
+            print('design view not found:', k)
+            continue
+        for field, value in (('title', title), ('text', text)):
+            if views[k].get(field) != value:
+                pending.append('design.json views.%s.%s' % (k, field))
+                views[k][field] = value
+    roof = views.get('roof')
+    if roof and 'standing-seam' not in roof['text'] and 'This is a concept roof model;' in roof['text']:
+        roof['text'] = roof['text'].replace(
             'This is a concept roof model;', 'The roof is shown in charcoal standing-seam metal. This is a concept roof model;')
-    s = s[:m.start(1)] + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + s[m.end(1):]
-    m = re.search(r'"styling":(\{[^{}]*\})', s)
-    st = json.loads(m.group(1))
-    st.update(STYLING)
-    s = s[:m.start(1)] + json.dumps(st, ensure_ascii=False, separators=(',', ':')) + s[m.end(1):]
+        pending.append('design.json views.roof.text')
+    st = scene.setdefault('styling', {})
+    for k, v in STYLING.items():
+        if st.get(k) != v:
+            pending.append('scene.json styling.%s' % k)
+            st[k] = v
     if check:
-        print('changes pending' if s != orig else 'up to date')
+        print('changes pending' if pending else 'up to date')
         return
-    if s != orig:
-        INDEX.write_text(s, encoding='utf-8')
-        print('updated', INDEX)
-    else:
+    if not pending:
         print('up to date')
+        return
+    if not force:
+        print('would change %d fields (nothing written; these texts predate the current copy, see the docstring; '
+              '--force writes them):' % len(pending))
+        for line in pending:
+            print('  ' + line)
+        return
+    for name, changed in (('design', sitedata.save_design(design)), ('scene', sitedata.save_scene(scene))):
+        print('updated' if changed else 'unchanged', sitedata.rel(sitedata.path(name)))
 
 
 if __name__ == '__main__':

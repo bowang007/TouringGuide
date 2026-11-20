@@ -154,10 +154,11 @@ def build(ctx, g: Geo, dining=True, herb=True):
     _leaf_bouquet(g, 'kd island branch', (vx, TOP + ch - 0.08, vz), 9, 1.8, 0.95, 11, col, leaf_r=0.085, droop=0.32,
                   leaf_mat=leaf)
 
-    # --------------------------------------- south counter under the glass uppers
-    _cutting_board(g, 29.15, col, KM.oak_island())
-    _cutting_board(g, 29.55, col, 'walnut_slab', scale=0.78, out=0.082)
-    ux, uz = 31.25, 30.9
+    # ---------------- south counter under the glass upper (one 20in base since the laundry closet): an oak board
+    # and the cream vase; the utensil crock moved to the corner right of the cooktop
+    cb = K.BASE_X0 + 0.60
+    _cutting_board(g, cb, col, KM.oak_island())
+    ux, uz = 38.75, 30.85
     g.lathe('kd decor utensil crock', [(0.0, 0.0), (0.2, 0.0), (0.215, 0.02), (0.22, 0.5), (0.205, 0.52), (0.19, 0.5),
                                        (0.19, 0.05), (0.0, 0.05)], ux, uz, crock, 48, col, y_base=TOP, sharp_deg=60)
     for k, (dx, dz, tilt, h) in enumerate(((-0.06, 0.03, 0.10, 1.05), (0.06, -0.04, -0.12, 1.0), (0.02, 0.07, 0.05, 0.95),
@@ -167,7 +168,7 @@ def build(ctx, g: Geo, dining=True, herb=True):
         g.cyl_axis('kd decor spoon stem', a, b, 0.017, KM.oak_island(), 8, col)
         g.lathe('kd decor spoon head', [(0.0, 0.0), (0.04, 0.02), (0.055, 0.08), (0.045, 0.15), (0.0, 0.17)],
                 b[0], b[2], KM.oak_island(), 16, col, y_base=b[1] - 0.02)
-    _import(g, 'ceramic_vase_04', 0.62, (32.6, TOP, 30.95), 2.4, col)
+    _import(g, 'ceramic_vase_04', 0.62, (K.HOOD[0] - 0.33, TOP, 30.9), 2.4, col)
 
     # ----------------------------------------- right of the cooktop: brass lamp, salt, cruet
     lx, lz = 37.15, 30.95
@@ -195,9 +196,10 @@ def build(ctx, g: Geo, dining=True, herb=True):
         print('[kitchen_dining] kettle skipped:', e)
 
     # ----------------------------------------------------- glass uppers: dishes
-    xs = [K.BASE_X0 + i * (K.HOOD[0] - K.BASE_X0) / 3 for i in range(4)]
+    nu = K.UPPER_N
+    xs = [K.BASE_X0 + i * (K.HOOD[0] - K.BASE_X0) / nu for i in range(nu + 1)]
     zc = 30.86
-    for i in range(3):
+    for i in range(nu):
         cx = (xs[i] + xs[i + 1]) / 2
         if i != 1:
             for k in range(6):

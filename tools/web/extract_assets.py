@@ -1,31 +1,40 @@
 #!/usr/bin/env python3
-"""Move the tour's embedded (base64) assets out of index.html into assets/ and patch the page
-to load them by URL.
+"""Move the embedded (base64) assets of a LEGACY single-file tour page into assets/.
+
+History: the tour used to be one HTML file with every image, panorama and model embedded. This tool
+externalised them once (2026-11-17) and patched that page to load them by URL. Since v3 `index.html`
+is a slim shell without data, so the tool never reads or writes it: the legacy page must be named
+(--source FILE, or --from-head [--rev REV] for `git show REV:index.html`; the last embedded page is
+commit ce0b1f9), and a patched copy of the legacy page is written only on request (--out FILE).
 
 What it does
-  * Decodes every embedded asset and writes it under assets/:
-      assets/panos/<ID>.webp           27 equirect panoramas (placeholders until renders land)
-      assets/panos/manifest.json       pano metadata: {version, nodes: {ID: {offset, width, height,
-                                       full, half, thumb, source}}}; paths are relative to the manifest
-      assets/thumbs/<ID>.webp          scene-strip thumbnails
-      assets/plans/dimensioned-layout.png, layout-refinements.png, dimension-plan.svg
+  * Decodes every embedded asset of the legacy page and writes it under <repo>/assets/:
+      assets/panos/<ID>.webp           equirect panoramas (the old AI placeholders)       } only while
+      assets/panos/manifest.json       old-format pano metadata {version, nodes: {ID:     } the manifest
+                                       {offset, width, height, full, half, thumb, source}}} } is NOT in the
+      assets/thumbs/<ID>.webp          scene-strip thumbnails                              } v3 format
+      assets/plans/dimensioned-layout.png, layout-refinements.png
       assets/references/<slug>.webp    the user's own reference photos (DESIGN_REFERENCES)
       assets/design/<key>.webp|svg     design-modal hero images (DESIGN_VIEWS)
       assets/model/house-editable.glb  the "Download 3D model" file
-  * Rewrites the constants in index.html to relative URLs (SCENE, PRIMITIVES and MEASUREMENTS
-    stay inline) and applies the JS patches for URL loading: pano manifest, resolution ladder,
-    MAX_TEXTURE_SIZE downscale, mipmaps + anisotropy with a seam-safe shader, neighbour
-    preloading, no stale-pano flash, fetch-based downloads.
+  * Records the reference / design image URLs in tools/render/data/design.json (views[key].image,
+    references) through tools/web/sitedata.py, where the page's runtime data comes from.
+  * With --out FILE: writes the legacy page with its constants rewritten to relative URLs and the
+    old inline-script patches for URL loading applied (never to <repo>/index.html).
+
+Left to their owners in v3: assets/panos/manifest.json in the `levels` format, the panoramas and the
+thumbnails (tools/web/publish_panos.py; a v3 manifest is never rewritten here and
+--force-placeholders refuses to run against it), and assets/plans/dimension-plan.svg
+(tools/web/dimension_plan.py; the legacy page's embedded drawing is no longer exported).
 
 Idempotent: every write happens only when the bytes change, and each JS patch is skipped when
-it is already applied. Panoramas/thumbnails that publish_panos.py marked as rendered
-(manifest "source": "render") are never overwritten unless --force-placeholders is given.
+it is already applied. With an old-format manifest, panoramas/thumbnails marked as rendered
+("source": "render") are never overwritten unless --force-placeholders is given.
 
 Usage (system python3 is enough; it only needs Pillow for image sizes):
-  python3 tools/web/extract_assets.py                 # from the current index.html
-  python3 tools/web/extract_assets.py --from-head     # regenerate from `git show HEAD:index.html`
-  python3 tools/web/extract_assets.py --from-head --force-placeholders   # reset panos to placeholders
-  python3 tools/web/extract_assets.py --source old.html --dry-run
+  python3 tools/web/extract_assets.py --source legacy.html --dry-run
+  python3 tools/web/extract_assets.py --from-head --rev ce0b1f9
+  python3 tools/web/extract_assets.py --source legacy.html --out legacy-urls.html
 """
 import argparse
 import base64
@@ -41,6 +50,10 @@ try:
     from PIL import Image
 except ImportError:  # sizes are optional; the manifest then omits nothing but width/height
     Image = None
+
+sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sitedata  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 ASSETS = 'assets'
@@ -202,24 +215,30 @@ def dump_manifest(nodes, root):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--repo', default=str(REPO))
-    ap.add_argument('--source', help='HTML to read (default: <repo>/index.html)')
-    ap.add_argument('--from-head', action='store_true', help='read `git show HEAD:index.html`')
-    ap.add_argument('--out', help='HTML to write (default: <repo>/index.html)')
+    ap.add_argument('--source', help='legacy single-file HTML to read')
+    ap.add_argument('--from-head', action='store_true', help='read `git show REV:index.html` (see --rev)')
+    ap.add_argument('--rev', default='HEAD', help='revision for --from-head (default HEAD; the last page with '
+                                                  'embedded assets is ce0b1f9)')
+    ap.add_argument('--out', help='write the patched legacy page here (default: no page is written)')
     ap.add_argument('--force-placeholders', action='store_true',
-                    help='overwrite rendered panos/thumbs with the embedded placeholders')
+                    help='overwrite rendered panos/thumbs with the embedded placeholders (old-format manifest only)')
     ap.add_argument('--dry-run', action='store_true')
     a = ap.parse_args()
 
     root = Path(a.repo).resolve()
-    out = Path(a.out) if a.out else root / 'index.html'
+    out = Path(a.out).resolve() if a.out else None
+    if out is not None and out == root / 'index.html':
+        ap.error('--out must not be index.html: the v3 page holds no data and is not patched by tools')
     if a.from_head:
-        text = subprocess.run(['git', '-C', str(root), 'show', 'HEAD:index.html'], check=True,
+        text = subprocess.run(['git', '-C', str(root), 'show', a.rev + ':index.html'], check=True,
                               capture_output=True).stdout.decode('utf-8')
-        src_label = 'HEAD:index.html'
+        src_label = a.rev + ':index.html'
+    elif a.source:
+        text = Path(a.source).read_text(encoding='utf-8')
+        src_label = str(a.source)
     else:
-        src = Path(a.source) if a.source else root / 'index.html'
-        text = src.read_text(encoding='utf-8')
-        src_label = str(src)
+        ap.error('name the legacy page: --source FILE, or --from-head [--rev REV] '
+                 '(index.html holds no data since v3)')
     size_before = len(text.encode('utf-8'))
     w = Writer(root, a.dry_run)
     replacements = []  # (start, end, new_literal)
@@ -227,17 +246,22 @@ def main():
     manifest_path = root / ASSETS / 'panos' / 'manifest.json'
     old_manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {'nodes': {}}
     old_nodes = old_manifest.get('nodes', {})
+    # the v3 manifest ({widths, nodes: {ID: {levels: {...}}}}) belongs to publish_panos.py: hands off
+    v3_manifest = 'widths' in old_manifest or any('levels' in e for e in old_nodes.values())
+    if v3_manifest and a.force_placeholders:
+        sys.exit(f'{manifest_path} is in the v3 `levels` format (tools/web/publish_panos.py); the embedded '
+                 'placeholders cannot be restored into it')
     pv = find_value(text, 'PHOTO_VIEWS')
     photo_views = pv[2] if pv else {}
 
     # --- panoramas -------------------------------------------------------------------------
     panos = find_value(text, 'PANOS')
     if not panos:
-        sys.exit('PANOS not found in ' + src_label)
+        sys.exit('PANOS not found in ' + src_label + ' (not a legacy single-file page?)')
     ids = list(panos[2].keys())
     nodes = {}
     embedded_panos = any(is_embedded(v) for v in panos[2].values())
-    for nid, b64 in panos[2].items():
+    for nid, b64 in ([] if v3_manifest else panos[2].items()):
         prev = old_nodes.get(nid)
         rendered = prev and prev.get('source') == 'render' and not a.force_placeholders
         if rendered:
@@ -271,7 +295,7 @@ def main():
     # --- thumbnails ------------------------------------------------------------------------
     thumbs = find_value(text, 'PHOTO_THUMBS')
     if thumbs and any(is_embedded(v) for v in thumbs[2].values()):
-        for nid, b64 in thumbs[2].items():
+        for nid, b64 in ([] if v3_manifest else thumbs[2].items()):
             if nodes.get(nid, {}).get('source') == 'render':
                 continue
             w.write(f'{ASSETS}/thumbs/{nid}.webp', base64.b64decode(b64))
@@ -294,6 +318,7 @@ def main():
             replacements.append((v[0], v[1], json.dumps(f'{ASSETS}/{rel}')))
 
     # --- design references and hero views ---------------------------------------------------
+    design_urls = {}
     for name, folder, keyfn in (('DESIGN_REFERENCES', 'references', slug), ('DESIGN_VIEWS', 'design', lambda k: k)):
         v = find_value(text, name)
         if not v or not any(is_embedded(x) for x in v[2].values()):
@@ -304,57 +329,82 @@ def main():
             rel = f'{folder}/{keyfn(key)}.{EXT[mime]}'
             w.write(f'{ASSETS}/{rel}', data)
             urls[key] = f'{ASSETS}/{rel}'
+        design_urls[name] = urls
         replacements.append((v[0], v[1], json.dumps(urls, ensure_ascii=False, separators=(',', ':'))))
 
-    # --- interactive dimension plan: stays inline (hit targets), exported as a file too ------
-    m = re.search(r'<div id="dimensionPlan">(<svg\b.*?</svg>)', text, re.S)
-    if m:
-        w.write(f'{ASSETS}/plans/dimension-plan.svg',
-                ('<?xml version="1.0" encoding="UTF-8"?>\n' + m.group(1) + '\n').encode('utf-8'))
+    # --- site data: the image URLs of the Design window live in design.json ---------------------
+    design_note = 'no embedded design images in the source'
+    if design_urls:
+        dpath = sitedata.path('design', root)
+        design = sitedata.read_json(dpath) if dpath.exists() else sitedata.parse_page(text).get('design')
+        if design is None:
+            design_note = 'design.json missing and the source has no DESIGN_DATA: URLs not recorded'
+        else:
+            before = sitedata.dumps(design, pretty=True)
+            for key, url in design_urls.get('DESIGN_VIEWS', {}).items():
+                if key in design['views']:
+                    design['views'][key]['image'] = url
+            for key, v in design['views'].items():            # a seeded file may still hold data: URIs
+                if is_embedded(v.get('image')):
+                    v.pop('image')
+            refs = design.setdefault('references', {})
+            refs.update(design_urls.get('DESIGN_REFERENCES', {}))
+            for key in [k for k, v in refs.items() if is_embedded(v)]:
+                refs.pop(key)
+            changed = sitedata.dumps(design, pretty=True) != before or not dpath.exists()
+            if changed and not a.dry_run:
+                sitedata.save_design(design, root)
+            design_note = f'{sitedata.rel(dpath, root)} {"updated" if changed else "unchanged"}'
 
-    # --- rewrite the literals (back to front so offsets stay valid) ---------------------------
-    for start, end, lit in sorted(replacements, reverse=True):
-        text = text[:start] + lit + text[end:]
+    # --- the patched legacy page (only with --out) ---------------------------------------------
+    applied, skipped, html_note = [], [], 'not written (no --out)'
+    if out is not None:
+        for start, end, lit in sorted(replacements, reverse=True):      # back to front: offsets stay valid
+            text = text[:start] + lit + text[end:]
+        for name, old, new in PATCHES:
+            if new in text:
+                skipped.append(name)
+                continue
+            n = text.count(old)
+            if n != 1:
+                sys.exit(f'patch {name}: expected 1 match of the original code, found {n}')
+            text = text.replace(old, new)
+            applied.append(name)
+        leftover = [m.group(0)[:40] for m in re.finditer(r'data:[\w/+.-]+;base64,[A-Za-z0-9+/=]{4096,}', text)]
+        if leftover:
+            sys.exit(f'large data URIs remain: {leftover}')
+        data = text.encode('utf-8')
+        html_changed = not out.exists() or out.read_bytes() != data
+        if html_changed and not a.dry_run:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(text, encoding='utf-8')
+        html_note = (f'{out} ({len(data) / 1e6:.2f} MB, {"updated" if html_changed else "unchanged"}'
+                     f'{", dry run" if a.dry_run else ""})')
 
-    # --- JS patches ------------------------------------------------------------------------
-    applied, skipped = [], []
-    for name, old, new in PATCHES:
-        if new in text:
-            skipped.append(name)
-            continue
-        n = text.count(old)
-        if n != 1:
-            sys.exit(f'patch {name}: expected 1 match of the original code, found {n}')
-        text = text.replace(old, new)
-        applied.append(name)
-
-    leftover = [m.group(0)[:40] for m in re.finditer(r'data:[\w/+.-]+;base64,[A-Za-z0-9+/=]{4096,}', text)]
-    if leftover:
-        sys.exit(f'large data URIs remain: {leftover}')
-
-    # --- manifest --------------------------------------------------------------------------
-    half_dir = root / ASSETS / 'panos' / '2k'
-    if not a.dry_run and half_dir.is_dir() and not any(half_dir.iterdir()):
-        half_dir.rmdir()
-    # The version hashes the pano/thumb files on disk, which were written above.
-    manifest = dump_manifest({i: nodes[i] for i in ids}, root)
-    w.write(f'{ASSETS}/panos/manifest.json', (json.dumps(manifest, indent=1, ensure_ascii=False) + '\n').encode())
-
-    data = text.encode('utf-8')
-    html_changed = not out.exists() or out.read_bytes() != data
-    if html_changed and not a.dry_run:
-        out.write_text(text, encoding='utf-8')
+    # --- manifest (old format only) ----------------------------------------------------------
+    if v3_manifest:
+        manifest_note = (f'{old_manifest.get("version")} kept: v3 `levels` manifest, panoramas and thumbnails '
+                         'belong to tools/web/publish_panos.py')
+    else:
+        half_dir = root / ASSETS / 'panos' / '2k'
+        if not a.dry_run and half_dir.is_dir() and not any(half_dir.iterdir()):
+            half_dir.rmdir()
+        # The version hashes the pano/thumb files on disk, which were written above.
+        manifest = dump_manifest({i: nodes[i] for i in ids}, root)
+        w.write(f'{ASSETS}/panos/manifest.json', (json.dumps(manifest, indent=1, ensure_ascii=False) + '\n').encode())
+        manifest_note = (f'{manifest["version"]} '
+                         f'({sum(1 for e in nodes.values() if e["source"] == "render")} rendered, '
+                         f'{sum(1 for e in nodes.values() if e["source"] != "render")} placeholder)')
 
     log(f'source            {src_label} ({size_before / 1e6:.2f} MB)')
-    log(f'output            {out} ({len(data) / 1e6:.2f} MB, {"updated" if html_changed else "unchanged"}'
-        f'{", dry run" if a.dry_run else ""})')
+    log(f'patched page      {html_note}')
     log(f'patches applied   {len(applied)}: {", ".join(applied) or "-"}')
     log(f'patches present   {len(skipped)}')
-    log(f'assets written    {len(w.changed)}' + (': ' + ', '.join(w.changed[:12]) + (' …' if len(w.changed) > 12 else '') if w.changed else ''))
+    log(f'assets written    {len(w.changed)}' + (': ' + ', '.join(w.changed[:12]) + (' …' if len(w.changed) > 12 else '') if w.changed else '')
+        + (' (dry run)' if a.dry_run else ''))
     log(f'assets unchanged  {len(w.kept)}')
-    log(f'manifest version  {manifest["version"]} '
-        f'({sum(1 for e in nodes.values() if e["source"] == "render")} rendered, '
-        f'{sum(1 for e in nodes.values() if e["source"] != "render")} placeholder)')
+    log(f'design data       {design_note}')
+    log(f'manifest version  {manifest_note}')
 
 
 if __name__ == '__main__':

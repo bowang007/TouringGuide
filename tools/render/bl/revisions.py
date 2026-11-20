@@ -24,6 +24,12 @@ Second round (2026-11-19):
 
 Third round (2026-11-19): 5 and 6 stop at a 2'-0" sill (revision_spec.TALL_SILL) instead of the floor.
 
+Fourth round (2026-11-19):
+11. Laundry closet (the architect's "W / D", sheet SKA002) in the kitchen's south-west corner, 3'-10" x 3'-5" over
+    its walls: new west and east walls and a north face with a 2'-6" x 6'-8" door (hinged east, open 90 degrees to the
+    north), baseboards, a flush ceiling light, a recessed outlet box in the back wall, and a stacked washer / dryer
+    (bl/laundry.py). The kitchen zone moved its fridge column and ovens east of the closet (kitchen_dining_kitchen.py).
+
 Repairs to the conversion run first: ceiling_seam and floor_seam close seams the slab warp opened. Two general
 repairs run last, after every change has cut or moved walls and slabs: floor_gaps (thin floor seams and the bare
 strips under door openings) and skirting_trim (baseboards cut back to the walls behind them).
@@ -40,8 +46,10 @@ from .common import FT, ft2bl
 
 COLL_SHELL, COLL_OPEN = 'shell', 'openings'
 
-from .revision_spec import (BATH_OLD_HOLE_Y, BATH_WIN_Z, FOYER_SKY, KITCHEN_SKY, OFFICE_CEILING,  # noqa: F401
-                            PRIMARY_BATH_SKY, SLIDER_HEAD, SLIDER_X, TALL_SILL)
+from .revision_spec import (BATH_OLD_HOLE_Y, BATH_WIN_Z, FOYER_SKY, KITCHEN_SKY, LAUNDRY_CEILING,  # noqa: F401
+                            LAUNDRY_CLEAR, LAUNDRY_DOOR_HEAD, LAUNDRY_DOOR_LINER, LAUNDRY_DOOR_LINER_PROUD,
+                            LAUNDRY_DOOR_X, LAUNDRY_HOOKUP_RECESS, LAUNDRY_OUTER, LAUNDRY_WALL_T, OFFICE_CEILING,
+                            PRIMARY_BATH_SKY, SLIDER_HEAD, SLIDER_X, TALL_SILL, laundry_leaf, laundry_walls)
 
 
 # ------------------------------------------------------------------------------------- helpers
@@ -302,7 +310,7 @@ def ceiling_seam(ctx):
     cen = find(r'^\d* ?Original house ceiling central panel')
     if len(west) != 1 or len(cen) != 1:
         return f'panels not found ({len(west)}, {len(cen)})'
-    wc, _ = _world(cen[0])
+    wc, mc = _world(cen[0])
     cx, cz = wc[:, 0] / FT, -wc[:, 1] / FT
     side = sorted({(round(a, 4), round(b, 4)) for a, b in zip(cx, cz) if a < cx.min() + 2.5}, key=lambda p: p[1])
     (xa, za), (xb, zb) = side[0], side[-1]          # the central panel's west edge, rear .. front
@@ -314,7 +322,22 @@ def ceiling_seam(ctx):
     ww[east, 0] = nx * FT
     _set_world(west[0], ww, mw)
     new = sorted({(round(a, 2), round(b, 2)) for a, b in zip(nx, wz[east])})
-    return {'edge': [(xa, za), (xb, zb)], 'west panel east edge': [old, new]}
+    out = {'edge': [(xa, za), (xb, zb)], 'west panel east edge': [old, new]}
+    # The same corner mapping skews the central panel's front edge: its west corner is mapped with the hall
+    # (z 30.84) and its east corner with the kitchen (z 31.24, the kitchen / garage wall's centre line). Between the
+    # garage west wall and x 22.5 the edge therefore stopped up to 0.03 ft short of that wall's north face: a
+    # hairline open to the attic along the back of the laundry closet's ceiling (fourth round; check_holes' 0.2 ft
+    # grid is too coarse to see it). Slide the west corner along the panel's own west edge to the east corner's z:
+    # the front edge is square on the wall line and the west edge stays where the west panel was just put.
+    front = float(cz.max())
+    if 0.01 < front - zb < 1.0:
+        corner = (np.abs(cx - xb) < 2e-3) & (np.abs(cz - zb) < 2e-3)
+        nxb = xa + (xb - xa) * (front - za) / (zb - za)
+        wc[corner, 0] = nxb * FT
+        wc[corner, 1] = -front * FT
+        _set_world(cen[0], wc, mc)
+        out['central panel front corner'] = [(round(xb, 3), round(zb, 3)), (round(nxb, 3), round(front, 3)), int(corner.sum())]
+    return out
 
 
 def _set_z(ob, pick, value):
@@ -601,6 +624,138 @@ def entry_vault_closure(ctx):
     return 2
 
 
+def _reshape(ob, x0, x1, y0, y1, z0, z1):
+    """Stretch a plain box piece (a wall, a baseboard) onto the SCENE-ft box x0..x1, y0..y1, z0..z1."""
+    w, mw = _world(ob)
+    for k, sgn, (a, b) in ((0, 1.0, (x0, x1)), (2, 1.0, (y0, y1)), (1, -1.0, (z0, z1))):
+        v = sgn * w[:, k] / FT
+        lo, hi = v.min(), v.max()
+        w[:, k] = sgn * (a + (v - lo) / max(hi - lo, 1e-9) * (b - a)) * FT
+    _set_world(ob, w, mw)
+    return ob
+
+
+def _like(src, name, *b):
+    """A copy of the shell piece `src` reshaped onto the box b. The copy keeps src's materials, collection and
+    `scene_index`, so it is baked with its family (a wall copy is class 'wall', not 'base') and is found by the
+    shell checks (baseboards, check_holes)."""
+    return _reshape(_copy(src, name), *b)
+
+
+def laundry_closet(ctx):
+    """Fourth round: the laundry closet of the architect's sheet (revision_spec.LAUNDRY_*) and its stacked pair.
+
+    Walls are copies of the garage west wall, so they carry its paint and bake as walls. The foyer's east baseboard
+    is extended along the closet's west face; new runs go round the outside and the inside. The door follows the
+    house's other interior doors: painted jamb liners and head trim, a flush slab leaf (here open), black levers.
+    The outlet box is a real recess: the back wall is split around it, with a thin piece left behind it."""
+    from . import laundry
+    x0, x1, z0, z1 = LAUNDRY_OUTER
+    t = LAUNDRY_WALL_T
+    cx0, cx1, cz0, cz1 = LAUNDRY_CLEAR
+    d0, d1 = LAUNDRY_DOOR_X
+    head, ln = LAUNDRY_DOOR_HEAD, LAUNDRY_DOOR_LINER
+    out = {}
+
+    def shell_one(pat, pick=lambda b: True):
+        obs = [o for o in find(pat, COLL_SHELL) if o.type == 'MESH' and len(o.data.vertices) == 8 and pick(bbox(o))]
+        return obs[0] if obs else None
+
+    # ---- walls: full height to the ceiling above (flat 8 ft here; measured, so a different ceiling is still met)
+    src = shell_one(r'^\d+ Garage interior access — north infill wall$') or shell_one(r'^\d+ Kitchen / garage separation$')
+    if src is None:
+        raise RuntimeError('no shell wall to copy for the closet walls')
+    ceil = [ceiling_y(x, z) for x, z in ((x0 + 0.1, z0 + 0.1), (x1 - 0.1, z0 + 0.1), (x0 + 0.1, z1 - 0.1),
+                                         (x1 - 0.1, z1 - 0.1), ((x0 + x1) / 2, (z0 + z1) / 2))]
+    top = max(LAUNDRY_CEILING, max(ceil))
+    for name, wx0, wx1, wy0, wy1, wz0, wz1 in laundry_walls():
+        _like(src, name, wx0, wx1, wy0, top if wy1 == LAUNDRY_CEILING else wy1, wz0, wz1)
+    out['ceiling y'] = [round(min(ceil), 3), round(max(ceil), 3)]
+
+    # ---- recess for the washer outlet box: the back wall is split around it (west / below / above / behind)
+    recess = None
+    back = shell_one(r'^\d+ Kitchen / garage separation$')
+    if back is not None:
+        rx0, rx1, ry0, ry1, dep = LAUNDRY_HOOKUP_RECESS
+        b = bbox(back)
+        if b[0] < rx0 - 0.05 and b[1] > rx1 + 0.05 and abs(b[4] - cz1) < 0.02 and b[5] - b[4] > dep + 0.05:
+            nm = re.sub(r'^\d+ ', '', back.name)
+            _like(back, f'{nm} (west of the laundry outlet box)', b[0], rx0, b[2], b[3], b[4], b[5])
+            _like(back, f'{nm} (below the laundry outlet box)', rx0, rx1, b[2], ry0, b[4], b[5])
+            _like(back, f'{nm} (above the laundry outlet box)', rx0, rx1, ry1, b[3], b[4], b[5])
+            _like(back, f'{nm} (behind the laundry outlet box)', rx0, rx1, ry0, ry1, b[4] + dep, b[5])
+            move_face(back, 'x', b[0], rx1)
+            recess = LAUNDRY_HOOKUP_RECESS
+    out['outlet recess'] = bool(recess)
+
+    # ---- baseboards (shell pieces named "skirting": skirting_trim and check_holes look after them)
+    sk_src = shell_one(r'^\d+ Painted skirting — Garage interior access', lambda b: b[1] < x0 + 0.1 and abs(b[4] - z1) < 0.4)   # the foyer's east run
+    if sk_src is not None:
+        sb = bbox(sk_src)
+        sy0, sy1, proud, sunk = sb[2], sb[3], x0 - sb[0], sb[1] - x0
+        move_face(sk_src, 'z', sb[4], z0)               # ... now also runs along the closet's west face
+    else:
+        sy0, sy1, proud, sunk = 0.025, 0.455, 0.045, 0.002
+    any_sk = sk_src or shell_one(r'^\d+ Painted skirting')
+
+    def skirt(name, bx0, bx1, bz0, bz1, corner=False):
+        nm = f'Laundry closet plinth block {name}' if corner else f'Painted skirting — Laundry closet {name}'
+        if any_sk is not None:
+            return _like(any_sk, nm, bx0, bx1, sy0, sy1, bz0, bz1)
+        return box(ctx, nm, bx0, bx1, sy0, sy1, bz0, bz1, 'paint_trim', COLL_SHELL)
+    if sk_src is None:
+        skirt('west face', x0 - proud, x0 + sunk, z0, cz1)
+    kit_front = [bbox(o)[4] for o in find(r'^kd tall wall door panel run') if o.type == 'MESH']
+    zk = min(kit_front) if kit_front else z1            # the pantry wall's fronts: the kitchen-side run dies into them
+    la, lb = d0 - ln, d1 + ln                           # outer edges of the jamb liners
+    skirt('north face W', x0, la, z0 - proud, z0 + sunk)
+    skirt('north face E', lb, x1, z0 - proud, z0 + sunk)
+    skirt('east face', x1 - sunk, x1 + proud, z0, zk)
+    # the two outside corners are closed with blocks: a run that turned the corner would have no wall behind its
+    # last 1/2 in and skirting_trim would cut it back
+    skirt('NW', x0 - proud, x0, z0 - proud, z0, corner=True)
+    skirt('NE', x1, x1 + proud, z0 - proud, z0, corner=True)
+    zb = cz1 - 0.052                                    # the back wall's own run (0.052 deep) stays; the others butt into it
+    skirt('inside W', cx0 - sunk, cx0 + proud, cz0 + proud, zb)
+    skirt('inside E', cx1 - proud, cx1 + sunk, cz0 + proud, zb)
+    skirt('inside NW', cx0 - sunk, la, cz0 - sunk, cz0 + proud)
+    skirt('inside NE', lb, cx1 + sunk, cz0 - sunk, cz0 + proud)
+    # the back wall's run used to start 0.2 ft west of the wall's end, in the open hall: now it starts inside the closet
+    kb = shell_one(r'^\d+ Painted skirting — Kitchen / garage separation$', lambda b: b[5] < cz1 + 0.05 and b[0] < cx0)
+    if kb is not None:
+        move_face(kb, 'x', bbox(kb)[0], cx0 - sunk)
+
+    # ---- floor: the oak runs through. The slab warp's hairline seam (see floor_gaps) crosses the closet; floor_gaps
+    # runs after this and stops at the new walls and baseboards, so the footprint gets one patch under the floor here.
+    # Its ends lie 0.03 ft past floor_gaps' scan columns (x = 0.3 + 0.1 k) beside the walls: the neighbouring patches
+    # reach 0.06 ft past their last column, so the three overlap under the baseboards.
+    floor = [o for o in find(r'^\d+ Oak floor substrate$', COLL_SHELL) if _overlap(bbox(o), x0, x1, z0, z1)]
+    if floor:
+        fy = max(bbox(o)[3] for o in floor)
+        px0 = 0.3 + 0.1 * math.floor((x0 - 0.05 - 0.3) / 0.1) + 0.03
+        px1 = 0.3 + 0.1 * math.ceil((x1 + 0.05 - 0.3) / 0.1) - 0.03
+        patch = ctx.box('Floor seam patch laundry closet', px0, px1, fy - 0.1, fy - 0.0026, z0, z1, None, COLL_SHELL)
+        if floor[0].data.materials:
+            patch.data.materials.append(floor[0].data.materials[0])
+    out['floor'] = [re.sub(r'^\d+ ', '', o.name) for o in floor]
+
+    # ---- door: jamb liners and head trim like the other interior doors, flush slab leaf standing open
+    c = COLL_OPEN
+    ow = LAUNDRY_DOOR_LINER_PROUD                       # the liners stand this far off both wall faces
+    box(ctx, 'Laundry closet door jamb W', d0 - ln, d0 + ln, 0.0, head - 0.08, z0 - ow, z0 + t + ow, 'paint_trim', c)
+    box(ctx, 'Laundry closet door jamb E', d1 - ln, d1 + ln, 0.0, head - 0.08, z0 - ow, z0 + t + ow, 'paint_trim', c)
+    box(ctx, 'Laundry closet door head trim', d0 - ln, d1 + ln, head - 0.08, head + 0.06, z0 - ow, z0 + t + ow, 'paint_trim', c)
+    leaf = laundry_leaf()
+    ctx.box_c('Laundry closet door leaf (open)', leaf['center'], leaf['size'], leaf['rot'], 'door_slab', c, bevel=0.006, segments=2)
+    laundry.door_hardware(ctx, leaf, c)
+    out['door'] = {'opening x': (round(d0, 4), round(d1, 4)), 'head': head, 'leaf': [round(v, 3) for v in leaf['aabb']]}
+
+    # ---- contents: stacked washer / dryer, hookups, ceiling light
+    out['contents'] = laundry.build(ctx, recess, top)
+    out['clear'] = [round(v, 3) for v in LAUNDRY_CLEAR]
+    return out
+
+
 # ---- repairs that run last (after every change above has cut or moved walls and slabs)
 def _bvh(colls, skip=None):
     from mathutils.bvhtree import BVHTree
@@ -771,7 +926,7 @@ def apply(ctx):
     bpy.context.view_layer.update()
     res = {}
     for f in (ceiling_seam, floor_seam, bedroom4_flat, bay_to_floor, primary_slider, bedroom2_tall_window, bath_window, kitchen_skylight,
-              foyer_skylights, primary_bath_skylight, entry_vault_closure, floor_gaps, skirting_trim):
+              foyer_skylights, primary_bath_skylight, entry_vault_closure, laundry_closet, floor_gaps, skirting_trim):
         try:
             res[f.__name__] = f(ctx)
         except Exception as e:                       # report, keep building

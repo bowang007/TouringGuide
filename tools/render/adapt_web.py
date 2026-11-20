@@ -19,9 +19,15 @@ the real-time equivalent of a camera's (or an eye's) auto exposure, and makes ev
 panorama.
 
   blender -b .cache/house.blend --python adapt_web.py -- \
-      --meta .cache/panos/render_meta.json --out ../../assets/model/adapt.json
+      --meta .cache/panos/render_meta.json --bake-summary .cache/web/house.summary.json \
+      --out ../../assets/model/adapt.json
 
-Pass the same --exposure-int as bake_web.py if you overrode it there. It only reads the colour
+--bake-summary (written by bake_web.py next to the GLB) carries the exposure / white balance the
+bake really used, so the adaptation always describes that GLB, even when panoramas were re-rendered
+or sweeps added after the bake. Without it the house values are recomputed from --meta with the same
+rule as the bake (render_panos.house_look: medians over the sweeps of the tour), or taken from
+--exposure-int / --wb-int / --exposure-ext / --wb-ext. A sweep's own values are the ones its panorama
+was rendered with (pinned by smooth_exposure.py in a production run). It only reads the colour
 management settings, so it takes a few seconds.
 """
 import argparse
@@ -78,23 +84,34 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--meta', default=os.path.join(CACHE_DIR, 'panos', 'render_meta.json'))
     ap.add_argument('--out', default=os.path.join(HERE, '..', '..', 'assets', 'model', 'adapt.json'))
+    ap.add_argument('--bake-summary', default=None, help='<glb name>.summary.json of the bake this adaptation is for')
     ap.add_argument('--exposure-int', type=float, default=None, help='bake_web.py --exposure-int, if overridden')
-    ap.add_argument('--exposure-ext', type=float, default=-1.2, help='bake_web.py --exposure-ext')
-    ap.add_argument('--wb-ext', default='8000,-8', help='bake_web.py --wb-ext')
+    ap.add_argument('--wb-int', default=None, help='bake_web.py --wb-int (kelvin,tint), if overridden')
+    ap.add_argument('--exposure-ext', type=float, default=None, help='bake_web.py --exposure-ext (default -1.2)')
+    ap.add_argument('--wb-ext', default=None, help='bake_web.py --wb-ext (default 8000,-8)')
     ap.add_argument('--look', default='AgX - Base Contrast')
     a = ap.parse_args(ARGS)
 
     meta = json.load(open(a.meta))
-    nodes = {n['id'] for n in json.load(open(os.path.join(DATA_DIR, 'scene.json')))['tour']['nodes']}
+    tour = json.load(open(os.path.join(DATA_DIR, 'scene.json')))['tour']['nodes']
+    nodes = {n['id'] for n in tour}
+    summary = json.load(open(a.bake_summary)) if a.bake_summary and os.path.exists(a.bake_summary) else {}
+    if a.bake_summary and not summary:
+        print(f'[adapt] WARNING {a.bake_summary} not found: house values recomputed from {a.meta}')
+    # the bake's look: explicit arguments, else what the bake recorded, else the bake's own rule
+    house_ev, house_wb = rp.house_look(meta, {n['id'] for n in tour if not n.get('outdoor')})
+    if 'exposure_int' in summary:
+        house_ev, house_wb = summary['exposure_int'], tuple(summary['wb_int'])
+    if a.exposure_int is not None:
+        house_ev = a.exposure_int
+    if a.wb_int:
+        v = [float(x) for x in a.wb_int.split(',')]
+        house_wb = (v[0], v[1] if len(v) > 1 else house_wb[1])
+    a.exposure_ext = a.exposure_ext if a.exposure_ext is not None else summary.get('exposure_ext', -1.2)
+    wb_ext = tuple(float(v) for v in a.wb_ext.split(',')) if a.wb_ext else tuple(summary.get('wb_ext', (8000.0, -8.0)))
+    print(f'[adapt] house ev {house_ev:+.2f} wb {house_wb[0]:.0f}K/{house_wb[1]:+.1f}, outdoor ev {a.exposure_ext:+.2f} '
+          f'wb {wb_ext[0]:.0f}K/{wb_ext[1]:+.1f}' + (f' (from {os.path.basename(a.bake_summary)})' if summary else ''))
 
-    def med(vals, default):                      # same rule as bake_web.py
-        vals = sorted(vals)
-        return vals[len(vals) // 2] if vals else default
-    house_wb = (med([v['wb'][0] for v in meta.values() if 'wb' in v], 6000.0),
-                med([v['wb'][1] for v in meta.values() if 'wb' in v], 0.0))
-    house_ev = a.exposure_int if a.exposure_int is not None else med([v['exposure'] for v in meta.values()], 0.5)
-
-    wb_ext = tuple(float(v) for v in a.wb_ext.split(','))
     sc = bpy.context.scene
     sc.view_settings.view_transform = 'AgX'
     rp.set_look(a.look)
