@@ -313,7 +313,12 @@ export function createUI() {
       b.textContent = r.label;
       b.dataset.room = r.id;
       b.dataset.testid = 'plan-label-' + r.id;
-      b.addEventListener('click', () => viewer.setMode('inside', { sweep: r.sweep }));
+      b.addEventListener('click', () => {
+        // the room's own sweep, on its own direction; a room nobody can stand in (the laundry closet) is
+        // seen from the sweep in front of it, looking at the room
+        const yaw = viewer.lookInto(r, viewer.sweep(r.sweep));
+        viewer.setMode('inside', yaw === undefined ? { sweep: r.sweep } : { sweep: r.sweep, yaw });
+      });
       $('planLabels').appendChild(b);
       return { r, el: b, shown: false, w: 0, h: 0, fits: true };
     });

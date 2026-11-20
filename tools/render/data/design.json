@@ -4,8 +4,8 @@
   "roof",
   "B3",
   "B4",
-  "K0",
   "LC",
+  "K0",
   "A0",
   "A1"
  ],
@@ -36,7 +36,7 @@
   "B4": {
    "label": "Bedroom 4",
    "title": "Bedroom 4: a flat ceiling and the bed turned across the room.",
-   "text": "A calm flat ceiling replaces the vault, at the same 8 ft as the rest of the house. The full bed is turned across the room, with its headboard on the north wall and its side along the window wall, so the room's length stays open from the bed to the desk and the closet. The room (the architect's office), its separate reach-in closet and the west-facing window keep their positions; the room is 8′0″ deep as on the architect's plan and 14′10⅜″ wide, because its foyer wall now lines up with the shared bathroom's wall.",
+   "text": "A calm flat ceiling replaces the vault, at the same 8 ft as the rest of the house. The full bed is turned across the room, with its headboard on the north wall and its side along the window wall, so the room's length stays open from the bed to the door and the reach-in closet. The desk stands in a niche on the north wall, between the nightstand and the back wall of the laundry closet, which takes the room's north-east corner and opens onto the foyer. The room (the architect's office), its separate reach-in closet and the west-facing window keep their positions; overall the room is still 8′0″ deep as on the architect's plan and 14′10⅜″ wide, because its foyer wall lines up with the shared bathroom's wall, and it is now L-shaped around the laundry closet.",
    "refs": [
     "front.PNG"
    ],
@@ -47,7 +47,7 @@
   "K0": {
    "label": "Kitchen",
    "title": "A warm vintage kitchen in cream, oak and brass.",
-   "text": "Cream shaker cabinets with unlacquered brass cup pulls and knobs, glass-front uppers and a greige pantry wall with a panelled fridge and stainless wall ovens. The pantry wall now starts at the new laundry closet in the kitchen's south-west corner: closet, fridge, ovens, a short counter under one glass-front upper, then the cooktop. A cream plaster hood with a dentil band rises over a scalloped marble backsplash and a brass pot filler, beside walnut open shelves on whitewashed brick. The fireclay farmhouse sink sits under the black grid window with brass sconces and linen café curtains. Amber-glass pendants hang over a white-oak island with a thick grey-veined quartzite top and a Persian runner, and a warm oak dining table for four continues the island under a brass lantern. A 3′6″ × 4′ skylight sits on the continuous east roof plane, over the sink and dishwasher. Proposed window: 6′ wide, 3′1¾″ sill, 7′9″ head. Styled after your kitchen style images.",
+   "text": "Cream shaker cabinets with unlacquered brass cup pulls and knobs, glass-front uppers and a greige pantry wall with a panelled fridge and stainless wall ovens. A cream plaster hood with a dentil band rises over a scalloped marble backsplash and a brass pot filler, beside walnut open shelves on whitewashed brick. The fireclay farmhouse sink sits under the black grid window with brass sconces and linen café curtains. Amber-glass pendants hang over a white-oak island with a thick grey-veined quartzite top and a Persian runner, and a warm oak dining table for six continues the island's west end, toward the hall, under a brass lantern, so the floor between the island and the family room stays open. A 3′6″ × 4′ skylight sits on the continuous east roof plane, over the sink and dishwasher. Proposed window: 6′ wide, 3′1¾″ sill, 7′9″ head. Styled after your kitchen style images.",
    "refs": [],
    "node": "K0",
    "opening": "W08",
@@ -84,8 +84,8 @@
   },
   "LC": {
    "label": "Laundry closet",
-   "title": "A stacked washer and dryer behind one door.",
-   "text": "The architect's plan draws a washer / dryer closet in the kitchen's south-west corner, across the foyer's north end from Bedroom 4, and it is built there as drawn. A front-load washer with the dryer stacked on top stands centred behind a 2′6″ × 6′8″ door, hinged on the east jamb and shown open toward the kitchen. The closet is 3′10″ × 3′5″ over its walls and 3′1⅜″ × 3′0⅝″ clear, under the 8 ft ceiling; the oak floor runs in, a recessed outlet box and the dryer vent are on the back wall, and a flush light sits in the ceiling. The refrigerator now stands directly east of it. The units are generic models of a typical stacked pair (27″ wide, 30¼″ deep, 39″ high each), not a selected product: connections, vent route and clearances need to be confirmed for the appliances you choose.",
+   "title": "A stacked washer and dryer off the foyer, next to Bedroom 4.",
+   "text": "The laundry closet is carved out of Bedroom 4's north-east corner and opens onto the foyer, on its west side right next to the bedroom door. A front-load washer with the dryer stacked on top stands centred behind a pair of narrow doors in a 2′6″ × 6′8″ opening; the doors are hinged on the two jambs and shown wide open against the foyer wall. The closet is 2′10″ wide and 3′0″ deep inside, under the 8 ft ceiling; the oak floor runs in from the foyer, a recessed outlet box and the dryer vent are on the back wall, and a flush light sits in the ceiling. Bedroom 4 keeps its overall size and is L-shaped around the closet. The units are generic models of a typical stacked pair (27″ wide, 30¼″ deep, 39″ high each), not a selected product: connections, vent route and clearances need to be confirmed for the appliances you choose.",
    "refs": [],
    "node": "LC",
    "opening": "M13",

@@ -10,10 +10,13 @@ Design (1077 W McKinley language, three cohesive but distinct rooms):
                  W10, cream lacquer nightstands, built-in upholstered window seat in the canted
                  bay W09 with pillows and roller shades, white-oak desk + sculptural boucle barrel
                  chair, colour-field painting, LED ring pendant hung from the ridge, slope cans.
-  * Bedroom 4  - compact (flat 8 ft ceiling, revisions.bedroom4_flat): white-oak full bed with a sage
+  * Bedroom 4  - compact (flat 8 ft ceiling, revisions.bedroom4_flat), L-shaped since the laundry closet
+                 took its north-east corner (revisions.laundry_closet): white-oak full bed with a sage
                  linen pad turned across the room (headboard on the north wall, its side along the W12
                  window wall) so the room's length stays open, one compact oak nightstand, oak desk on
-                 black steel sled legs with an oak/steel chair, line print, opal globe pendant.
+                 black steel sled legs with an oak/steel chair in the niche between the nightstand and the
+                 closet's west wall, brush print above it, a slim line print on the closet wall and an oak
+                 peg rail behind the door (bed4_closet_faces), opal globe pendant.
   * Closets    - Bedroom 3 compact closet: white built-in (drawers, shelves, double hang with
                  real shirts / a jacket / folded trousers, see bedrooms_garments) + open shelf
                  tower + black-framed mirror + disk light; Bedroom 4 reach-in: shelf + rail.
@@ -23,6 +26,7 @@ except Bedroom 2's bed, which moves from under the garden window to the solid ea
 window stays clear and the headboard gets art above it (classic listing composition).
 """
 import math
+import sys
 import time
 
 import bpy
@@ -30,7 +34,12 @@ import bpy
 from . import bedrooms_furniture as F
 from . import bedrooms_kit as K
 from .bedrooms_kit import Frame
-from ..common import FT
+from ..common import FT, RENDER_DIR
+from ..revision_spec import LAUNDRY_CLEAR, LAUNDRY_WALL_T
+
+if RENDER_DIR not in sys.path:
+    sys.path.insert(0, RENDER_DIR)
+import relayout as R  # noqa: E402  (the concept -> architect's plan maps that bl/warp.py applies to this zone)
 
 PI = math.pi
 
@@ -340,6 +349,36 @@ def _shoes(kit, M, x, z, y):
 
 
 # ================================================================================== Bedroom 4
+# Owner's correction of 2026-11-20: the laundry closet (bl/revision_spec.py LAUNDRY_*, built by
+# bl/revisions.laundry_closet after the warp) is carved out of this room's north-east corner. On the built plan
+# its west wall's bedroom face is x 11.725 and its south wall's bedroom face z 31.913, so the room is an L: the
+# full 14'-10" width south of z 31.913 (the door D04 and the reach-in closet), 11'-6" wide north of it (bed,
+# nightstand and the desk niche). The desk group that stood in the corner moved into the niche.
+B4_DESK_W = 3.5
+B4_DESK_GAP = 0.05          # ft between the desk's east end and the closet's west wall (on the built plan)
+B4_CHAIR_DX = 0.10          # the chair stands this far east of the desk's centre: its legs clear the rug's corner
+
+
+def _concept(f, v):
+    """Concept coordinate that the piecewise-linear relayout map `f` carries to the new-plan value v."""
+    ps = f.pairs
+    if v <= ps[0][1]:
+        return ps[0][0] + (v - ps[0][1])
+    if v >= ps[-1][1]:
+        return ps[-1][0] + (v - ps[-1][1])
+    for (a0, b0), (a1, b1) in zip(ps, ps[1:]):
+        if b0 <= v <= b1:
+            return a0 + (v - b0) / (b1 - b0) * (a1 - a0)
+
+
+def _b4_desk_x():
+    """Concept x of the desk's centre. bl/warp.py moves the desk group (desk, chair, lamp, books, plant, print: one
+    cluster, as wide as the desk top) rigidly by its centre's shift under relayout.X_FRONT_ROOMS, so the centre that
+    must land B4_DESK_GAP + half a desk west of the closet's wall face is that map's inverse."""
+    x_new = LAUNDRY_CLEAR[0] - LAUNDRY_WALL_T - B4_DESK_GAP - B4_DESK_W / 2
+    return _concept(R.X_FRONT_ROOMS, x_new)
+
+
 def build_bed4(ctx, kit, M):
     kit.use('bed4')
     # Owner's change (2026-11-19, third round): the bed is turned across the room, headboard on the north wall and
@@ -361,18 +400,19 @@ def build_bed4(ctx, kit, M):
     F.rug(kit, 'B4 rug', 1.6, 8.6, 31.7, 36.95, K.rug_material(
         'Z_bedrooms_rug_heather', ['#d3cdc2', '#e0dbd1', '#e9e5dc'], 60.0, 'heather',
         border=(3.25, 2.8, '#8a877e', ((0.3, 0.42), (0.52, 0.55)))))
-    # desk on the north wall (original compact desk anchor x 9.25-11.75)
-    a = _anchor(ctx, 'bed4', r'writing desk')
-    dx = (a[0] + a[1]) / 2 + 0.4 if a else 10.9
+    # desk group on the north wall, in the niche between the nightstand and the laundry closet's west wall (built
+    # plan: desk x 8.175..11.675, 2 in off the closet wall). The lamp stands at the closet end, books and the plant
+    # toward the nightstand; the chair is tucked in, clear of the rug.
+    dx = _b4_desk_x()
     fd = Frame(dx, 29.64 + 0.05, NORTH)
-    F.desk(kit, M, fd, 'B4 desk', 3.5, 1.6, 2.48, 'sled')
-    F.side_chair(kit, M, Frame(dx, 31.95, SOUTH), 'B4 chair', M['linen_sage'])
-    F.book_stack(kit, M, fd.sub(1.15, 0.85, 0.1, 2.48), 'B4 desk books', [(0.8, 1.05, 0.08, 'cover_sage'), (0.72, 0.98, 0.07, 'cover_white')])
+    F.desk(kit, M, fd, 'B4 desk', B4_DESK_W, 1.6, 2.48, 'sled')
+    F.side_chair(kit, M, Frame(dx + B4_CHAIR_DX, 31.95, SOUTH), 'B4 chair', M['linen_sage'])
+    F.book_stack(kit, M, fd.sub(-1.15, 0.85, -0.1, 2.48), 'B4 desk books', [(0.8, 1.05, 0.08, 'cover_sage'), (0.72, 0.98, 0.07, 'cover_white')])
     succ, _ = K.import_asset(kit, 'potted_plant_04', '1k')
-    x, y, z = fd.p(0.35, 2.48, 0.62)
+    x, y, z = fd.p(-0.3, 2.48, 0.62)
     succ.location = (x * FT, -z * FT, y * FT)
     succ.rotation_euler.z = 0.7
-    F.table_lamp(kit, M, fd.sub(-1.25, 0.6, 0, 2.48), 'B4 desk lamp', 'stoneware', 0.72, LIGHTS['B4']['desk'], LIGHTS['B4']['bulb'])
+    F.table_lamp(kit, M, fd.sub(1.25, 0.6, 0, 2.48), 'B4 desk lamp', 'stoneware', 0.72, LIGHTS['B4']['desk'], LIGHTS['B4']['bulb'])
     F.framed_print(kit, Frame(dx, 29.64, NORTH), 'B4 print', 1.7, 2.2, K.art_brush(560, 720, 21), 0.28, 5.05)
     F.roller_shade(kit, M, Frame(0.225, 32.53, WEST), 'B4 W12 shade', 4.08, 7.0, 0.45)
     # bypass closet door pulls (doors themselves are shell geometry)
@@ -388,6 +428,49 @@ def build_bed4(ctx, kit, M):
     for z in (31.6, 35.6):
         F.slope_can(kit, 10.6, z, LIGHTS['B4']['slope'], lens=LIGHTS['B4']['lens'])
     return info
+
+
+def bed4_closet_faces(ctx):
+    """Bedroom 4's side of the laundry closet's two new walls. Called by bl/revisions.laundry_closet AFTER the warp
+    (the walls exist only then), so everything here is in built-plan feet, from revision_spec:
+
+    * west wall (faces the bed, the desk's end stands against it): a slim black-framed line print;
+    * south wall (the pocket between the closet and the open door D04): an oak peg rail with black pegs and a canvas
+      tote, the usual thing behind a bedroom door. Nothing reaches into the door's swing (south of z 33.43)."""
+    kit = K.Kit(ctx)
+    kit.use('bed4')
+    M = F.mats()
+    xw = LAUNDRY_CLEAR[0] - LAUNDRY_WALL_T              # the west wall's bedroom face (11.725)
+    zs = LAUNDRY_CLEAR[3] + LAUNDRY_WALL_T              # the south wall's bedroom face (31.913)
+    zn = LAUNDRY_CLEAR[2]                               # the room's north wall (28.72)
+    out = {}
+    # ---- slim print, centred on the wall's width between the desk's back edge and the corner
+    zc = (zn + zs) / 2 + 0.2
+    F.framed_print(kit, Frame(xw, zc, EAST), 'B4 print slim', 0.9, 1.85, K.art_line(380, 780, 5), 0.2, 5.0)
+    out['print'] = {'z': round(zc, 3), 'frame w x h': (round(0.9 + 0.4 + 0.12, 2), round(1.85 + 0.4 + 0.12, 2))}
+    # ---- peg rail on the south face
+    x0, x1 = xw, LAUNDRY_CLEAR[1]                       # the face runs from the corner to the room's east wall
+    fr = Frame((x0 + x1) / 2 - 0.15, zs, NORTH)         # local +x east, +z south (out of the wall)
+    yr, rail_w, rail_h, rail_t = 5.55, 2.5, 0.3, 0.07
+    kit.box('B4 peg rail', fr, (0, yr, rail_t / 2), (rail_w, rail_h, rail_t), 'white_oak_veneer', 0.012, 2)
+    pegs = [-0.9, -0.3, 0.3, 0.9]
+    for i, lx in enumerate(pegs):
+        kit.cyl(f'B4 peg rail peg {i}', fr, (lx, yr, rail_t + 0.10), 0.028, 0.20, 'black_metal', 20, axis='Z')
+        kit.cyl(f'B4 peg rail peg {i} cap', fr, (lx, yr, rail_t + 0.205), 0.045, 0.025, 'black_metal', 24, axis='Z')
+    # canvas tote on the second peg: body hanging on two straps that loop over the peg
+    lx, zb = pegs[1], rail_t + 0.105                    # the bag hangs under the peg's middle
+    bw, bh, bd = 1.0, 1.1, 0.13
+    top = yr - 0.62
+    kit.soft('B4 peg rail tote', fr, (lx, top - bh / 2, zb), (bw, bh, bd), M['linen_sage'], 0.035, 3, 1, wrinkle=0.004)
+    for k, dz in enumerate((-0.045, 0.045)):
+        pts = []
+        for j in range(13):
+            a = math.pi * j / 12                        # over the peg: from the west attachment round to the east one
+            pts.append(fr.p(lx - 0.27 * math.cos(a), top - 0.02 + (yr + 0.03 - top + 0.02) * math.sin(a) ** 0.6, zb + dz))
+        v, f = K.tube_geo(pts, 0.018, 8)
+        kit.mesh(f'B4 peg rail tote strap {k}', v, f, M['leather'], smooth=True)
+    out['peg rail'] = {'x': [round(fr.p(-rail_w / 2, 0, 0)[0], 3), round(fr.p(rail_w / 2, 0, 0)[0], 3)], 'y': yr}
+    return out
 
 
 # ================================================================================== entry point

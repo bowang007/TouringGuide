@@ -137,6 +137,46 @@ test('Dimensions: select a room and a door on the plan, lists, units, CSV, Visit
   assert.equal(st.sweep, door.node, '"Visit in 3D" stands on the sweep of ' + door.id);
 });
 
+// The laundry closet (M13) is drawn inside Bedroom 4 and its doors (D17) on the foyer side of the wall
+// between them: three targets on a few square inches of the plan, each of which has to take its own click.
+test('Dimensions: the laundry closet M13 inside Bedroom 4 and its doors D17 are picked by their own clicks', async (s) => {
+  await s.open();
+  await s.enter();
+  await s.press(s.testid('btn-dimensions'));
+  await s.waitFor(() => !!document.querySelector('#planmodal.open'), { what: 'the Dimensions sheet' });
+  const data = await s.page.evaluate(() => { const M = window.MEASURE.data, pick = (x) => x && { id: x.id, name: x.name, node: x.node, bounds: x.bounds_ft }; return { room: pick(M.rooms.find((x) => x.id === 'M13')), door: pick(M.doors.find((x) => x.id === 'D17')), rooms: M.rooms.map(pick) }; });
+  assert.ok(data.room && data.door, 'the schedule has M13 and D17');
+  const pick = async (id) => {
+    await s.press('#dimensionPlan [data-measure="' + id + '"]');           // (fails when another target covers its middle)
+    await s.waitFor((id) => window.MEASURE.selected === id, { what: id + ' to be selected' }, id);
+    return s.page.evaluate((id) => ({ title: document.getElementById('dimensionDetailTitle').textContent, detail: document.getElementById('dimensionDetail').textContent, marked: [...document.querySelectorAll('#dimensionPlan .selected')].map((e) => e.dataset.measure) }), id);
+  };
+  // the room the closet is cut out of: the measured room whose rectangle holds the closet's
+  const [x0, x1, z0, z1] = data.room.bounds;
+  const host = data.rooms.find((r) => r.id !== 'M13' && r.bounds[0] <= x0 + 0.01 && r.bounds[1] >= x1 - 0.01 && r.bounds[2] <= z0 + 0.01 && r.bounds[3] >= z1 - 0.01);
+  if (host) {
+    const h = await pick(host.id);
+    assert.equal(h.title, host.name, 'a click in the middle of ' + host.name + ' still selects it');
+  } else s.note('the closet does not lie inside another measured room in this data');
+  const r = await pick('M13');
+  assert.equal(r.title, data.room.name);
+  assert.deepEqual(r.marked, ['M13'], 'the closet alone is highlighted on the plan');
+  assert.match(r.detail, /Clear width/);
+  await s.shot('M13-selected');
+  const d = await pick('D17');
+  assert.equal(d.title, data.door.name);
+  assert.deepEqual(d.marked, ['D17']);
+  assert.match(d.detail, /Opening width/);
+  await s.shot('D17-selected');
+  await s.press('#dimensionVisit');
+  const st = await s.waitRest(data.door.node, 15000);
+  assert.equal(await modal(s), null, 'the sheet closes');
+  const sw = (await s.tour()).sweeps.find((x) => x.id === data.door.node);
+  assert.ok(Math.abs(Math.atan2(Math.sin(st.yaw - sw.yaw * Math.PI / 180), Math.cos(st.yaw - sw.yaw * Math.PI / 180))) < 0.02, '"Visit in 3D" opens ' + sw.id + ' on its own direction, toward the doors');
+  await s.settle(8000);
+  await s.shot('D17-visit');
+});
+
 test('Design: the tabs follow design.json and each shows its picture and text', async (s) => {
   await s.open();
   await s.enter();
@@ -513,3 +553,58 @@ test('floor plan: a room name never runs over its pill, at any zoom', async (s) 
   }
 });
 
+// Room rectangles overlap: the laundry closet is cut out of Bedroom 4's, the hall's reaches over its
+// neighbours. Each name sits in the middle of its own rectangle, so two of them could land on top of
+// each other; and a click on the name of a room nobody can stand in has to show that room.
+test('floor plan: names never cover one another; a room inside another room shows its own name when zoomed in', { timeout: 240000 }, async (s) => {
+  const size = (r) => (r.bounds[2] - r.bounds[0]) * (r.bounds[3] - r.bounds[1]);
+  const holds = (r, x, z, tol = 0) => x >= r.bounds[0] - tol && x <= r.bounds[2] + tol && z >= r.bounds[1] - tol && z <= r.bounds[3] + tol;
+  const shown = () => s.page.evaluate(() => [...document.querySelectorAll('#planLabels .plan-label:not(.off)')].map((e) => { const b = e.getBoundingClientRect(); return { id: e.dataset.room, text: e.textContent, box: [b.left, b.top, b.right, b.bottom] }; }));
+  const seen = [];
+  for (const view of [{ width: 1400, height: 850 }, { width: 1024, height: 700 }, { width: 390, height: 844 }]) {
+    await s.page.setViewport(Object.assign({ deviceScaleFactor: 1 }, view));
+    await s.open('?mode=floorplan');
+    await s.waitFor(() => { const x = window.TOUR.getState(); return x.mode === 'floorplan' && x.floorplan && !x.floorplan.flight; }, { what: 'the floor plan', timeout: 30000 });
+    await s.settle(8000);
+    const tour = await s.tour();
+    const inner = tour.rooms.filter((r) => tour.rooms.some((o) => o !== r && size(o) > size(r) && holds(o, r.bounds[0], r.bounds[1], 0.01) && holds(o, r.bounds[2], r.bounds[3], 0.01)));
+    // zoom in on the smallest room inside another one (without one: on the smallest room of the house)
+    const room = (inner.length ? inner : tour.rooms).slice().sort((a, b) => size(a) - size(b))[0];
+    const host = inner.length ? tour.rooms.filter((o) => o !== room && holds(o, room.bounds[0], room.bounds[1], 0.01) && holds(o, room.bounds[2], room.bounds[3], 0.01)).sort((a, b) => size(a) - size(b))[0] : null;
+    let own = null, together = 0;
+    for (let step = 0; step < 9; step++) {
+      const names = await shown(), where = view.width + ' x ' + view.height + ', zoom step ' + step;
+      const over = [];
+      for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
+        const a = names[i].box, b = names[j].box;
+        if (Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > 0.5 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > 0.5) over.push('"' + names[i].text + '" and "' + names[j].text + '"');
+      }
+      assert.deepEqual(over, [], where + ': names on top of each other');
+      const mine = names.find((n) => n.id === room.id);
+      if (mine && !own) own = Object.assign({ step }, mine);
+      if (mine && host && names.some((n) => n.id === host.id)) together++;
+      if (own && step >= own.step + 2) break;
+      const p = await s.page.evaluate((at) => window.TOUR.viewer.project([at[0], 0, at[1]], 20), room.at);
+      await s.wheel(-200, Math.max(30, Math.min(view.width - 30, p.x)), Math.max(90, Math.min(view.height - 120, p.y)));
+      await s.waitFor(() => { const f = window.TOUR.getState().floorplan; return !!f && !f.flight; }, { what: 'the zoom' });
+      await sleep(600);
+    }
+    assert.ok(own, view.width + ' x ' + view.height + ': the name of ' + room.label + ' shows once the plan is zoomed in on it');
+    // the name stands on its own room
+    const on = await s.page.evaluate((b) => { const v = window.TOUR.viewer, a = v.project([b[0], 0, b[1]], 60), c = v.project([b[2], 0, b[3]], 60); return a && c ? [Math.min(a.x, c.x), Math.min(a.y, c.y), Math.max(a.x, c.x), Math.max(a.y, c.y)] : null; }, room.bounds);
+    const label = (await shown()).find((n) => n.id === room.id);
+    assert.ok(label && on, 'the name of ' + room.label + ' is still shown after two more steps');
+    const mid = [(label.box[0] + label.box[2]) / 2, (label.box[1] + label.box[3]) / 2];
+    assert.ok(mid[0] >= on[0] && mid[0] <= on[2] && mid[1] >= on[1] && mid[1] <= on[3], 'the name of ' + room.label + ' stands on its own room');
+    await s.shot('names-' + view.width);
+    // a click on the name: the room's sweep, and for a room nobody stands in the view toward it
+    await s.press(s.testid('plan-label-' + room.id));
+    const st = await s.waitRest(room.sweep, 12000), sw = tour.sweeps.find((x) => x.id === room.sweep);
+    if (!holds(room, sw.p[0], sw.p[2])) {
+      const want = Math.atan2(room.at[0] - sw.p[0], -(room.at[1] - sw.p[2])), off = Math.abs(Math.atan2(Math.sin(st.yaw - want), Math.cos(st.yaw - want))) * 180 / Math.PI;
+      assert.ok(off < 20, 'the name of ' + room.label + ' leads to ' + sw.id + ', which stands outside it, looking at the room (' + off.toFixed(1) + ' degrees off)');
+    }
+    seen.push(view.width + ' px: "' + own.text + '" from zoom step ' + own.step + (host ? ', together with "' + host.label + '" in ' + together + ' steps' : '') + ', click -> ' + st.sweep);
+  }
+  s.note(seen.join('; '));
+});

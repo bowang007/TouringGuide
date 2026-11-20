@@ -1,24 +1,33 @@
 """Laundry closet contents (runs inside Blender, called by bl/revisions.laundry_closet after the warp).
 
-Everything here is authored directly in new-plan SCENE feet (x west->east, y up, z rear->street), from the
-numbers in bl/revision_spec.py, so nothing is reshaped by bl/warp.py:
+The closet is carved out of Bedroom 4's north-east corner and opens east onto the foyer (bl/revision_spec.py,
+owner's correction of 2026-11-20). Everything here is authored from the numbers in revision_spec, after the
+warp, so nothing is reshaped by bl/warp.py:
 
-* a stacked front-load pair: washer below (detergent drawer, kick panel with the drain-filter cover, feet),
-  dryer above, a stainless stacking trim between them. Each body is 27 x 30 1/4 x 39 in: white enamel cabinet,
-  rounded door panel and control strip, a round door (chrome bezel, dark inner frame, dark tinted glass, grip),
-  a chrome-ringed dial, a black display with lit digits and a row of buttons;
-* on the back wall: a recessed washer outlet box (the recess itself is cut by the revision) with hot / cold
-  valves, braided supply hoses and the corrugated drain hose, the dryer's 4 in foil vent duct rising behind
-  the stack into a wall collar, a 240 V receptacle with the dryer cord;
+* a stacked front-load pair facing EAST: washer below (detergent drawer, kick panel with the drain-filter
+  cover, feet), dryer above, a stainless stacking trim between them. Each body is 27 x 30 1/4 x 39 in: white
+  enamel cabinet, rounded door panel and control strip, a round door (chrome bezel, dark inner frame, dark
+  tinted glass, grip), a chrome-ringed dial, a black display with lit digits and a row of buttons;
+* on the back (west) wall: a recessed washer outlet box (the recess itself is cut by the revision) with hot /
+  cold valves, braided supply hoses and the corrugated drain hose, the dryer's 4 in foil vent duct rising
+  behind the stack into a wall collar, a 240 V receptacle with the dryer cord;
 * a small flush LED ceiling light;
-* the door's lever sets and hinge knuckles (the leaf itself is built by the revision).
+* the hardware of the pair of door leaves: three knuckle hinges and one bar pull per leaf (the leaves
+  themselves are built by the revision).
+
+The units and hookups are modelled in a LOCAL frame, the one the first version was written in: local x runs
+across the closet from the viewer's right to the left, local z from the unit fronts toward the back wall
+(fronts look along -z). `_to_world` turns that frame a quarter turn about the vertical onto the plan
+(local x -> SCENE +z, local z -> SCENE -x), a proper rotation, so the display digits and the door hinge side
+stay un-mirrored. Kit(to_world=...) applies it to every primitive.
 
 Naming / collections (see the bake rules in bake_web.classify): every object is called 'laundry closet ...'
-and lives in 'kd_laundry' under 'zone_kitchen_dining'. "closet" keeps the pieces in the always-visible 'base'
-class of the web model and gives the washer a walk-collision box; nothing here is in 'openings' (a glass-named
-material there would get a light portal), and the hatch glass material is not called "glass" (the bake would
-export it as a transparent pane). The units' round doors are called "hatch" in object names: bake_web.WALL_PART
-files anything named "door" under the walls.
+and lives in 'heg_laundry' under 'zone_hall_entry_garage' (the closet opens onto the foyer). "closet" keeps
+the pieces in the always-visible 'base' class of the web model and gives the washer a walk-collision box;
+nothing here is in 'openings' except the door hardware (a glass-named material there would get a light
+portal), and the hatch glass material is not called "glass" (the bake would export it as a transparent
+pane). The units' round doors are called "hatch" in object names: bake_web.WALL_PART files anything named
+"door" under the walls.
 """
 import math
 
@@ -29,8 +38,8 @@ from mathutils import Vector
 from . import revision_spec as S
 from .common import FT
 
-COLL, ZONE = 'kd_laundry', 'zone_kitchen_dining'
-LIGHTS = 'kd_lights'
+COLL, ZONE = 'heg_laundry', 'zone_hall_entry_garage'
+LIGHTS = 'heg_lights'
 PFX = 'Z_laundry_'
 N = 'laundry closet'
 
@@ -43,6 +52,18 @@ KICK_H = 0.42            # washer kick panel top
 def P(x, y, z):
     """SCENE feet -> Blender metres."""
     return (x * FT, -z * FT, y * FT)
+
+
+def _to_world(lx, y, lz):
+    """Local unit frame (x across the closet, z from the fronts to the back wall) -> SCENE: a quarter turn that
+    points the fronts (local -z) east."""
+    return (-lz, y, lx)
+
+
+def _to_local_box(b):
+    """SCENE box (x0, x1, y0, y1, z0, z1) -> the same box in the local unit frame."""
+    x0, x1, y0, y1, z0, z1 = b
+    return (z0, z1, y0, y1, -x1, -x0)
 
 
 def _srgb(h):
@@ -88,13 +109,19 @@ def _glow(name, color, strength):
 
 
 class Kit:
-    """Mesh helpers in SCENE feet; every object goes into one collection."""
+    """Mesh helpers in SCENE feet; every object goes into one collection. `to_world` (x, y, z) -> (x, y, z) maps the
+    coordinates the caller works in onto the plan; it must turn axes onto axes (boxes stay axis-aligned)."""
 
-    def __init__(self, ctx, coll=COLL, parent=ZONE):
+    def __init__(self, ctx, coll=COLL, parent=ZONE, to_world=None):
         self.ctx = ctx
         self.coll = coll
         ctx.coll(coll, parent)
         self.objects = []
+        self.T = to_world or (lambda x, y, z: (x, y, z))
+
+    def P(self, x, y, z):
+        """Caller's feet -> Blender metres."""
+        return P(*self.T(x, y, z))
 
     def m(self, mat):
         return self.ctx.mat(mat) if isinstance(mat, str) else mat
@@ -118,6 +145,7 @@ class Kit:
         return ob
 
     def box(self, name, x0, x1, y0, y1, z0, z1, mat, bevel=0.0, seg=3):
+        (x0, y0, z0), (x1, y1, z1) = self.T(x0, y0, z0), self.T(x1, y1, z1)
         ob = self.ctx.box(name, min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1), min(z0, z1), max(z0, z1),
                           self.m(mat), self.coll, bevel, seg)
         self.objects.append(ob)
@@ -127,7 +155,7 @@ class Kit:
         """Several axis-aligned boxes [(x0, x1, y0, y1, z0, z1), ...] as one mesh."""
         bm = bmesh.new()
         for x0, x1, y0, y1, z0, z1 in items:
-            vs = [bm.verts.new(P(x, y, z)) for z in (z0, z1) for y in (y0, y1) for x in (x0, x1)]
+            vs = [bm.verts.new(self.P(x, y, z)) for z in (z0, z1) for y in (y0, y1) for x in (x0, x1)]
             for q in ((0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)):
                 bm.faces.new([vs[i] for i in q])
         ob = self._obj(name, bm, mat, smooth=False)
@@ -136,23 +164,24 @@ class Kit:
         return ob
 
     def revolve(self, name, prof, c, axis, mat, segs=72, sharp=40.0):
-        """Surface of revolution around the line through SCENE point c along `axis` ('y' = up, 'n' = north, the
-        -z direction the unit fronts face). prof = [(r, d), ...]: radius and distance along the axis from c.
+        """Surface of revolution around the line through point c along `axis` ('y' = up, 'n' = the -z direction
+        of the caller's frame, the way the unit fronts face). prof = [(r, d), ...]: radius and distance along the
+        axis from c.
         Give a closed outline (start and end on the axis, or first point == last point) so the solid is closed."""
         cx, cy, cz = c
         bm = bmesh.new()
         rings = []
         for r, d in prof:
             if r <= 1e-6:
-                rings.append([bm.verts.new(P(cx, cy + d, cz) if axis == 'y' else P(cx, cy, cz - d))])
+                rings.append([bm.verts.new(self.P(cx, cy + d, cz) if axis == 'y' else self.P(cx, cy, cz - d))])
                 continue
             ring = []
             for k in range(segs):
                 a = 2 * math.pi * k / segs
                 if axis == 'y':
-                    ring.append(bm.verts.new(P(cx + r * math.cos(a), cy + d, cz + r * math.sin(a))))
+                    ring.append(bm.verts.new(self.P(cx + r * math.cos(a), cy + d, cz + r * math.sin(a))))
                 else:
-                    ring.append(bm.verts.new(P(cx + r * math.cos(a), cy + r * math.sin(a), cz - d)))
+                    ring.append(bm.verts.new(self.P(cx + r * math.cos(a), cy + r * math.sin(a), cz - d)))
             rings.append(ring)
         for A, B in zip(rings, rings[1:]):
             if len(A) == 1 and len(B) == 1:
@@ -168,8 +197,8 @@ class Kit:
         return self._obj(name, bm, mat, sharp=sharp)
 
     def cyl(self, name, p0, p1, r, mat, verts=24):
-        """Capped cylinder between two SCENE points."""
-        a, b = Vector(P(*p0)), Vector(P(*p1))
+        """Capped cylinder between two points."""
+        a, b = Vector(self.P(*p0)), Vector(self.P(*p1))
         d = b - a
         bm = bmesh.new()
         bmesh.ops.create_cone(bm, cap_ends=True, segments=verts, radius1=r * FT, radius2=r * FT, depth=d.length)
@@ -190,7 +219,7 @@ class Kit:
         return ob
 
     def tube(self, name, pts, r, mat, segs=16, rib=None, amp=0.0, smooth_path=2):
-        """Round tube along SCENE points (corner-cut `smooth_path` times). rib = spacing (ft) of rings whose
+        """Round tube along points (corner-cut `smooth_path` times). rib = spacing (ft) of rings whose
         radius alternates by +-amp (corrugated hose, foil duct)."""
         path = [Vector(p) for p in pts]
         for _ in range(smooth_path):                       # Chaikin corner cutting, ends kept
@@ -210,7 +239,7 @@ class Kit:
             carry = (carry + L) % step
         if (res[-1] - path[-1]).length > step * 0.3:
             res.append(path[-1])
-        pb = [Vector(P(*p)) for p in res]
+        pb = [Vector(self.P(*p)) for p in res]
         bm = bmesh.new()
         rings, nrm = [], None
         for i, p in enumerate(pb):
@@ -259,9 +288,9 @@ def _digits(text, h):
 
 
 def _unit(kit, tag, box, washer, time_text):
-    """One front-load unit in the body box (x0, x1, y0, y1, z0, z1); its front is the z0 face and looks north.
-    Panel positions use the viewer's frame: u from the viewer's left (the east edge) to the right, v up from the
-    unit's bottom, d out of the front."""
+    """One front-load unit in the body box (x0, x1, y0, y1, z0, z1) of the kit's local frame; its front is the z0
+    face and looks along -z. Panel positions use the viewer's frame: u from the viewer's left (the x1 edge) to the
+    right, v up from the unit's bottom, d out of the front."""
     x0, x1, y0, y1, zf, zb = box
     W, H = x1 - x0, y1 - y0
     nm = f'{N} {tag}'
@@ -330,7 +359,7 @@ def _unit(kit, tag, box, washer, time_text):
                     (x1 - bu, y0 + vs - 0.045, zf - 0.007), 'n', 'chrome', 20)
         kit.revolve(f'{nm} button lamp {i}', [(0.0, 0.0), (0.0065, 0.0), (0.0065, 0.0015), (0.0, 0.0015)],
                     (x1 - bu, y0 + vs + 0.045, zf - 0.007), 'n', _glow('display_glow', (0.72, 0.9, 1.0), 4.0), 12)
-    return {'hatch centre': (round(c[0], 3), round(c[1], 3), round(zf, 3))}
+    return {'hatch centre': tuple(round(v, 3) for v in kit.T(*c))}
 
 
 def _stack(kit, units):
@@ -342,10 +371,10 @@ def _stack(kit, units):
 
 
 # ------------------------------------------------------------------------------- hookups on the back wall
-def _hookups(kit, units, recess):
+def _hookups(kit, units, recess, wall, side):
     """Washer outlet box in the wall recess `recess` = (x0, x1, y0, y1, depth), supply and drain hoses, the dryer's
-    vent duct and wall collar, the dryer receptacle and cord. The back wall's face is LAUNDRY_CLEAR[3]."""
-    wall = S.LAUNDRY_CLEAR[3]
+    vent duct and wall collar, the dryer receptacle and cord. All in the kit's local frame: `wall` = z of the back
+    wall's face, `side` = x of the side wall on the viewer's left (the receptacle sits beside the stack there)."""
     w, d = units['washer'], units['dryer']
     back = w[5]                                         # the cabinets' rear face
     white = _mat('plastic_white', '#ecece8', 0.35)
@@ -395,13 +424,14 @@ def _hookups(kit, units, recess):
     kit.revolve(f'{N} dryer vent clamp', [(r + 0.004, 0.0), (r + 0.016, 0.0), (r + 0.016, 0.05), (r + 0.004, 0.05), (r + 0.004, 0.0)],
                 (xv, y_col - br - 0.12, zc), 'y', steel, 40)
     # 240 V dryer receptacle on the back wall beside the stack, cord from the dryer's back
-    ex = S.LAUNDRY_CLEAR[1] - 0.2
+    ex = side - 0.2
     kit.box(f'{N} dryer receptacle plate', ex - 0.13, ex + 0.13, 3.62, 4.0, wall - 0.012, wall + 0.002, white, 0.006, 2)
     grey = _mat('cord_grey', '#3b3d40', 0.5)
     kit.cyl(f'{N} dryer plug', (ex, 3.81, wall - 0.012), (ex, 3.81, wall - 0.10), 0.085, grey, 24)
     kit.tube(f'{N} dryer cord', [(ex, 3.78, wall - 0.09), (ex, 3.6, wall - 0.17), (ex - 0.1, 3.42, wall - 0.2),
                                  (d[1] - 0.25, d[2] + 0.3, back + 0.1), (d[1] - 0.3, d[2] + 0.36, back - 0.02)], 0.024, grey, 10)
-    return {'outlet box': (bx0, bx1, by0, by1), 'vent collar': (round(xv, 3), y_col), 'receptacle': (round(ex, 3), 3.81)}
+    return {'outlet box z0 z1 y0 y1': (bx0, bx1, by0, by1), 'vent collar z y': (round(xv, 3), y_col),
+            'receptacle z y': (round(ex, 3), 3.81)}
 
 
 # ------------------------------------------------------------------------------------- ceiling light
@@ -432,41 +462,60 @@ def _ceiling_light(ctx, x, z, ceil):
 
 # -------------------------------------------------------------------------------------- door hardware
 def door_hardware(ctx, leaf, coll):
-    """Lever sets on both faces of the leaf (dict from revision_spec.laundry_leaf) and three butt-hinge knuckles on
-    its pin axis, in the house's black hardware. Works at any opening angle: the knuckles stand in the corner
-    between the leaf's outer face and the jamb liner, where the pins of an outward-opening door show."""
+    """Hardware of one leaf of the pair (dict from revision_spec.laundry_leaf), in the house's black metal: three
+    butt hinges (barrel knuckles with ball tips on the pin axis, a plate let into the leaf's hinge edge and one on
+    the jamb liner's reveal) and a bar pull on the outer (foyer) face near the meeting edge. Works at any opening
+    angle: the knuckles stand in the corner between the leaf's outer face and the jamb liner, where the pins of an
+    outward-opening door show. With the leaves wide open the pulls face the foyer wall and show from the foyer's
+    two ends."""
     kit = Kit(ctx, coll, None)
+    side = leaf['side']
     (ox, oz), (ax, az), (tx, tz) = leaf['corner'], leaf['along'], leaf['through']
     px, pz = leaf['pivot']
     w, _, th = leaf['size']
+    s = 1.0 if side == 'north' else -1.0               # from the hinge jamb into the opening (SCENE z)
 
     def pt(u, y, v):                                   # u along the leaf from its hinge edge, v through it from its outer face
         return (ox + ax * u + tx * v, y, oz + az * u + tz * v)
-    ul, yl = w - 0.23, 3.0                             # 2 3/4 in backset, 36 in high
-    for tag, v0, sgn in (('outer', 0.0, -1.0), ('inner', th, 1.0)):
-        kit.cyl(f'Laundry closet door lever rose {tag}', pt(ul, yl, v0), pt(ul, yl, v0 + sgn * 0.022), 0.088, 'black_metal', 32)
-        kit.cyl(f'Laundry closet door lever neck {tag}', pt(ul, yl, v0 + sgn * 0.02), pt(ul, yl, v0 + sgn * 0.15), 0.03, 'black_metal', 20)
-        kit.cyl(f'Laundry closet door lever {tag}', pt(ul + 0.025, yl, v0 + sgn * 0.135), pt(ul - 0.36, yl, v0 + sgn * 0.135), 0.024,
-                'black_metal', 20)
-    r = 0.021                                          # 1/2 in barrel, 3 1/2 in hinges with ball tips
-    for i, yh in enumerate((0.75, 3.3, 5.85)):
-        kit.cyl(f'Laundry closet door hinge {i}', (px, yh - 0.146, pz), (px, yh + 0.146, pz), r, 'black_metal', 20)
-        for k, (ya, yb) in enumerate(((yh - 0.146, yh - 0.168), (yh + 0.146, yh + 0.168))):
-            kit.revolve(f'Laundry closet door hinge {i} tip {k}', [(0.0, 0.0), (r * 0.8, 0.0), (r * 0.62, (yb - ya) * 0.6), (0.0, yb - ya)],
+    # bar pull: a 6 in round bar on two posts, 36 .. 42 in above the floor
+    inset, y0, y1 = S.LAUNDRY_PULL
+    up, off = w - inset, 0.085
+    kit.cyl(f'Laundry closet door pull {side}', pt(up, y0, -off), pt(up, y1, -off), 0.016, 'black_metal', 20)
+    for k, yp in enumerate((y0 + 0.07, y1 - 0.07)):
+        kit.cyl(f'Laundry closet door pull {side} post {k}', pt(up, yp, 0.0), pt(up, yp, -off), 0.012, 'black_metal', 16)
+        kit.cyl(f'Laundry closet door pull {side} rose {k}', pt(up, yp, 0.0), pt(up, yp, -0.008), 0.026, 'black_metal', 20)
+    # hinges: 1/2 in barrel, 3 1/2 in high, ball tips
+    r, hh, pw, pt_t = 0.021, 0.146, 0.09, 0.005
+    liner_face = pz - s * S.LAUNDRY_HINGE_GAP / 2      # the jamb liner's face toward the opening
+    liner_edge = S.LAUNDRY_HOST_WALL_X[1] + S.LAUNDRY_DOOR_LINER_PROUD    # ... and its outer (foyer) edge
+    for i, yh in enumerate(S.LAUNDRY_HINGE_Y):
+        kit.cyl(f'Laundry closet door hinge {side} {i}', (px, yh - hh, pz), (px, yh + hh, pz), r, 'black_metal', 20)
+        for k, (ya, yb) in enumerate(((yh - hh, yh - hh - 0.022), (yh + hh, yh + hh + 0.022))):
+            kit.revolve(f'Laundry closet door hinge {side} {i} tip {k}', [(0.0, 0.0), (r * 0.8, 0.0), (r * 0.62, (yb - ya) * 0.6), (0.0, yb - ya)],
                         (px, ya, pz), 'y', 'black_metal', 16)
+        # plate on the leaf's hinge edge (from its outer face inward) and plate on the liner's reveal
+        ob = ctx.box_c(f'Laundry closet door hinge {side} {i} plate leaf', pt(-pt_t / 2 + 0.001, yh, 0.004 + pw / 2), (pt_t, 2 * hh, pw),
+                       leaf['rot'], 'black_metal', coll)
+        kit.objects.append(ob)
+        z0, z1 = sorted((liner_face - s * 0.001, liner_face + s * (pt_t - 0.001)))
+        kit.box(f'Laundry closet door hinge {side} {i} plate jamb', liner_edge - pw, liner_edge + 0.001, yh - hh, yh + hh, z0, z1,
+                'black_metal')
     return len(kit.objects)
 
 
 # --------------------------------------------------------------------------------------------- build
 def build(ctx, recess=None, ceil=None):
-    """Stacked pair, hookups and the ceiling light. recess = (x0, x1, y0, y1, depth) of the outlet-box recess the
-    revision cut into the back wall (None: no outlet box). Returns the placed boxes for the build log."""
-    kit = Kit(ctx)
-    units = S.laundry_units()
-    res = {'units': {k: tuple(round(v, 3) for v in b) for k, b in units.items()}}
+    """Stacked pair, hookups and the ceiling light. recess = revision_spec.LAUNDRY_HOOKUP_RECESS (z0, z1, y0, y1,
+    depth) when the revision cut the outlet-box recess into the back wall (None: no outlet box). Returns the placed
+    boxes (SCENE feet) for the build log."""
+    kit = Kit(ctx, to_world=_to_world)
+    world = S.laundry_units()
+    units = {k: _to_local_box(b) for k, b in world.items()}
+    res = {'units': {k: tuple(round(v, 3) for v in b) for k, b in world.items()}}
     res.update(_stack(kit, units))
     if recess:
-        res['hookups'] = _hookups(kit, units, recess)
+        # local frame: the back wall's face is at z = -x_wall, the south side wall (the viewer's left) at x = z_wall
+        res['hookups'] = _hookups(kit, units, recess, -S.LAUNDRY_CLEAR[0], S.LAUNDRY_CLEAR[3])
     lx, lz = S.LAUNDRY_LIGHT
     _ceiling_light(ctx, lx, lz, S.LAUNDRY_CEILING if ceil is None else ceil)
     res['light'] = (round(lx, 3), round(lz, 3))

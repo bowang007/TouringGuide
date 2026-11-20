@@ -1,7 +1,8 @@
 """Place the tour's panorama sweeps automatically on a built scene (runs inside Blender, CPU only, ~70-90 s).
 
   blender -b tools/render/.cache/house.blend -noaudio --python tools/render/place_sweeps.py -- \
-      --out tools/render/data/sweeps.json [--overlay sweeps.png] [--scene tools/render/data/scene.json]
+      --out tools/render/data/sweeps.json [--overlay sweeps.png] [--scene tools/render/data/scene.json] \
+      [--keep tools/render/data/sweeps.json]
 
 Reads the old stops from the scene file (`tour.nodes`), ray-casts the built model and writes the sweeps of the
 Matterport-style tour: where the camera may rest, which sweeps are joined by a walkable straight line
@@ -24,8 +25,10 @@ How the layout is found (all distances in SCENE feet; x west->east, z north->sou
     the model no longer leaves standing room for (< 0.8 ft) goes to the nearest clear cell of its room, with
     a warning, so that an id the measurements and design views name is not lost.
  5. The laundry closet, when the model has one (a mesh named laundry / washer / dryer inside the closet's
-    rectangle): one sweep facing its door from about 3 ft north, at the clear cell nearest to (23.1, 24.5);
-    id LC. Otherwise a warning and no sweep.
+    rectangle, bl/revision_spec.py): one sweep in the foyer on the axis of the closet's doors, 4 ft in front
+    of the door wall (3.4 ft from the open leaves), facing the stacked units and looking 14 degrees down so
+    that both are in the picture (the nearest clear cell that sees the opening when that point is not
+    free); id LC. Otherwise a warning and no sweep.
  6. The old approach stops (T1 T2 T3 T4 T6 P1 GA) are candidates: one is kept when it joins parts of the
     walk graph that the sweeps placed so far do not join and stands >= 3 ft from every sweep it sees
     (connectivity), or when it stands >= 4 ft from every sweep it sees (spacing). Then every interior
@@ -54,15 +57,34 @@ G garage, F foyer, H halls, P primary bedroom, S primary dressing, A baths, C cl
 its region's seed (the nearest of H2 / H3 in the halls). Re-running on a scene that already holds the
 sweeps gives the same layout and the same ids.
 
-Output: {"eye", "generated_from", "units", "params", "stats", "notes", "sweeps": [{"id", "label", "room",
+Keeping an installed layout (--keep SWEEPS.json, e.g. the file this run overwrites): after a change to part of
+the model the panoramas of the untouched rooms stay valid only while their sweeps do not move, so
+ * every sweep of that file stays exactly where it is, with its id, yaw, pitch, label and room, while the
+   new model leaves it standable with >= --keep-clear (0.9 ft) of clearance; steps 4 and 6 do not run for
+   them and the approach stops that layout had dropped stay dropped;
+ * a seed that stood on its authored position follows the scene file when the scene has moved it since
+   (apply_revisions_web.py NODE_MOVES), by the rule of step 4;
+ * a sweep the model no longer leaves room for goes to the best clear cell within --nudge (1.5 ft) that it
+   sees, is >= 3 ft from the sweeps it sees and joins the walk graph (a seed: the rule of step 4), or is
+   dropped; every such decision is a note;
+ * the laundry sweep is always placed by step 5 (it follows the closet; its old place is released);
+ * steps 6 (doorways, bridges), 7 and 8 then add sweeps only where the kept ones leave floor uncovered; a
+   new sweep never takes an id of the kept file, used or dropped;
+ * links and visible are computed afresh for all sweeps.
+The file gets a "keep" block: {from, unchanged, moved {id: ft}, reaimed, new, removed} against the kept
+layout (apply_sweeps.py prints it; moved and new sweeps need a panorama, and so does every kept sweep that
+sees a changed part of the model). The overlay rings the moved and new sweeps in red.
+
+Output: {"eye", "generated_from", "units", "params", "stats", "notes", ["keep",] "sweeps": [{"id", "label", "room",
 "p", "floor", "yaw", "pitch", "links", "visible", "outdoor", "origin", "clearance"}]}. Angles are DEGREES
 (yaw 0 = looking toward -z / north, positive clockwise seen from above; the convention of
 assets/data/tour.json); apply_sweeps.py converts them to the radians that scene.json nodes use. A seed that
 did not move keeps its authored yaw / pitch, a moved one keeps aiming at its old look point, the others
 look toward the most open direction (LC and the outdoor sweeps at their door; LC also looks down at the
-stacked pair). `origin` says why a sweep exists: seed, seed-moved, approach, laundry, door, bridge, fill,
-region, outdoor. `notes` lists every decision (moved seeds, kept / dropped approach stops, doorway and
-bridge sweeps, outdoor sweeps).
+stacked pair); a sweep of a kept layout keeps the yaw / pitch of that file. `origin` says why a sweep
+exists: seed, seed-moved, approach, laundry, door, bridge, fill, region, outdoor. `notes` lists every
+decision (moved seeds, kept / dropped approach stops, doorway and bridge sweeps, outdoor sweeps, what
+became of a kept layout).
 
 With --overlay a top-down picture is drawn from the same rays (no rendering): floor tinted by clearance
 (green >= 1.2 ft, yellow reachable but tighter), furniture footprint, a section cut at 4 ft (walls black,
@@ -94,6 +116,7 @@ import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 from mathutils.bvhtree import BVHTree  # noqa: E402
 
+from bl import revision_spec as RS  # noqa: E402  (pure Python: the laundry closet's rectangle and opening)
 from bl.common import FT, ft2bl  # noqa: E402
 
 EYE = 5.0853
@@ -118,13 +141,24 @@ REGIONS = {
 OUTDOOR_REGIONS = ('porch',)          # roofed but outdoors: never filled, only the porch sweep of step 8
 ID_CHARS = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
-# laundry closet of DESIGN_V3 section 3: outer rectangle, door in the north face
-LAUNDRY = {'x0': 21.218, 'x1': 25.051, 'z0': 27.641, 'z1': 31.058, 'stand': (23.1, 24.5), 'id': 'LC',
-           'label': 'Laundry closet', 'names': ('laundry', 'washer', 'dryer'),
-           # height on the door plane that the sweep's own view centres on. Looking level from 3 ft the stacked
-           # pair (0 .. 6.5 ft) showed only the dryer, in the reel thumbnail too; about 18 degrees down shows the
-           # dryer's door, the washer's panel and the top of its door.
-           'aim_y': 4.05}
+# laundry closet of the owner's fifth round (bl/revision_spec.py): carved out of Bedroom 4's north-east corner, a
+# pair of doors in its EAST face that stand open onto the foyer, the stacked washer + dryer facing east
+LAUNDRY = {'id': 'LC', 'label': 'Laundry closet', 'names': ('laundry', 'washer', 'dryer'),
+           'outer': RS.LAUNDRY_OUTER,               # x0, x1, z0, z1 over the walls: the units stand in here
+           'clear': RS.LAUNDRY_CLEAR,               # inside
+           'door_face': RS.LAUNDRY_HOST_WALL_X[1],  # x of the door wall's foyer face
+           'door_c': RS.LAUNDRY_DOOR_C,             # x of the door wall's centre line
+           'door_z': RS.LAUNDRY_DOOR_Z,             # the opening, north jamb .. south jamb
+           'out': (1.0, 0.0),                       # the doors open east
+           # How far in front of the door wall the sweep stands, and its own view. The units' fronts are 0.46 ft
+           # behind that wall and reach from the floor to 6.5 ft. From 3 ft that is 79 degrees from foot to top,
+           # more than the page's 68 degree picture holds: whatever the pitch, one unit is cut in half (looked at
+           # on renders from 3.0, 3.55, 4.0 and 4.05 ft). From 4 ft it is 67 degrees; 14 degrees down shows the lit
+           # door head, the dryer with its panel and the washer down to its plinth, and the reel thumbnail
+           # (51 degrees) the dryer's door, the washer's panel and the top of its door. 4 ft from the wall is
+           # 3.4 ft from the open leaves and leaves 2.4 ft to the refrigerator's end panel behind the camera.
+           'dist': 4.0,
+           'pitch': -14.0}
 # outdoor sweeps: door id of the dimension schedule (centre used when the schedule lacks it), outward
 # direction (dx, dz), distance from the door plane, id, label, tour room id
 OUTDOOR = [
@@ -141,6 +175,7 @@ OUT_BAND = (-0.6, 0.2)                 # deck boards, porch paving, steps
 CLEAR_HEIGHTS = (0.6, 2.0, 3.5, EYE)
 WALK_HEIGHTS = (0.5, 2.0, 3.5, EYE)
 WALK_OFFSETS = (-0.45, 0.0, 0.45)
+KEEP_SAME = 1e-3                       # ft: --keep, a seed this near its place in the scene file has not been moved
 NDIR = 16
 DIRS = [(math.sin(2 * math.pi * k / NDIR), -math.cos(2 * math.pi * k / NDIR)) for k in range(NDIR)]
 ARCH, FURN, EXT = 0, 1, 2
@@ -181,6 +216,11 @@ def parse():
                     help='auto: add the laundry sweep when the model has laundry / washer / dryer objects')
     ap.add_argument('--outdoor', choices=('both', 'each', 'off'), default='both',
                     help='both: porch and deck sweeps only when both qualify; each: independently')
+    ap.add_argument('--keep', metavar='SWEEPS.json',
+                    help='keep the layout of this sweeps file: its sweeps stay where they are while the model '
+                         'leaves them standable, only uncovered floor gets new ones (see the docstring)')
+    ap.add_argument('--keep-clear', type=float, default=0.9,
+                    help='--keep: a sweep stays in place with at least this clearance')
     ap.add_argument('--mesh-cache', help='npz file that keeps the collected triangles between runs (development)')
     ap.add_argument('--px-per-ft', type=float, default=25.0, help='overlay scale')
     return ap.parse_args(argv)
@@ -573,53 +613,144 @@ class Layout:
         return sum(1 for s in self.sw if s['region'] == region and not s['outdoor'])
 
 
-def place_seeds(L, old):
-    """The 20 kept stops, nudged only where clearance fails."""
+def place_seed(L, sid, x, z):
+    """One of the 20 kept stops at its authored position (x, z), nudged only where clearance fails."""
     w, g, a = L.w, L.g, L.a
+    c = g.clearance_at(x, z)
+    if c >= a.min_clear:
+        return L.add(x, z, 'seed', sid, clearance=c)
+    # nudge: the best clear cell within reach that the seed position can see
+    best = None
+    for cx, cz, cc in g.cells(a.relaxed_clear, (x, z), a.nudge):
+        if not w.see((x, z), (cx, cz)):
+            continue
+        d = math.hypot(cx - x, cz - z)
+        key = (cc >= a.min_clear, min(cc, a.min_clear + 0.4) - 0.35 * d)
+        if best is None or key > best[0]:
+            best = (key, cx, cz, cc, d)
+    if best and (best[3] >= a.min_clear or best[3] >= c + 0.15 or c < a.relaxed_clear):
+        _, cx, cz, cc, d = best
+        L.notes.append('seed %s: clearance %.2f ft, moved %.2f ft to (%.2f, %.2f), clearance %.2f ft%s' % (
+            sid, c, d, cx, cz, cc, '' if cc >= a.min_clear else ' (no cell with %.1f ft within %.1f ft)'
+            % (a.min_clear, a.nudge)))
+        return L.add(cx, cz, 'seed-moved', sid, clearance=cc, moved=round(d, 2))
+    if c >= a.relaxed_clear:
+        L.notes.append('seed %s: clearance %.2f ft, kept (no better cell within %.1f ft; >= %.1f ft is accepted '
+                       'in a room that would otherwise have no sweep)' % (sid, c, a.nudge, a.relaxed_clear))
+        return L.add(x, z, 'seed', sid, clearance=c)
+    # the model changed under the stop (it stands in or against something): rather than lose an id
+    # that measurements, design views and highlights name, take the nearest clear cell of its room
+    here = g.region(x, z)
+    far = [(math.hypot(cx - x, cz - z), cx, cz, cc) for cx, cz, cc in g.cells(a.min_clear, (x, z), 6.0)
+           if g.region(cx, cz) == here]
+    k = None
+    if far:
+        d, cx, cz, cc = min(far)
+        L.notes.append('seed %s: clearance %.2f ft and no clear cell within %.1f ft; MOVED %.2f ft to '
+                       '(%.2f, %.2f), clearance %.2f ft: check it' % (sid, c, a.nudge, d, cx, cz, cc))
+        k = L.add(cx, cz, 'seed-moved', sid, clearance=cc, moved=round(d, 2))
+    else:
+        L.notes.append('seed %s: clearance %.2f ft and no clear cell of its room within 6 ft: DROPPED'
+                       % (sid, c))
+    P('WARNING:', L.notes[-1])
+    return k
+
+
+def place_seeds(L, old, kept=None):
+    """The 20 kept stops, nudged only where clearance fails. With a kept layout (--keep) only the seeds that
+    layout does not list (place_kept dealt with the others, also with those it dropped)."""
+    listed = {k['id'] for k in kept or ()}
     for sid in SEEDS:
+        if sid in listed:
+            continue
         n = old.get(sid)
         if n is None:
             P('WARNING: seed %s is not in the scene file; skipped' % sid)
             continue
-        x, z = n['p'][0], n['p'][2]
-        c = g.clearance_at(x, z)
-        if c >= a.min_clear:
-            L.add(x, z, 'seed', sid, clearance=c)
+        if kept is not None:
+            L.notes.append('seed %s is not in the kept layout: placed from the scene file' % sid)
+        place_seed(L, sid, n['p'][0], n['p'][2])
+
+
+def load_keep(path):
+    """The sweeps of an installed layout (--keep) as dicts id, x, z, yaw, pitch (degrees), label, room, outdoor,
+    origin, links; and the file's own description of where it came from."""
+    try:
+        doc = json.load(open(path))
+        rows = doc['sweeps']
+        deg = (doc.get('units') or {}).get('angle', 'deg') != 'rad'
+        ang = (lambda v: float(v)) if deg else (lambda v: math.degrees(float(v)))
+        out = [{'id': r['id'], 'x': float(r['p'][0]), 'z': float(r['p'][2]), 'yaw': ang(r.get('yaw', 0.0)),
+                'pitch': ang(r.get('pitch', 0.0)), 'label': r.get('label') or r['id'], 'room': r.get('room') or '',
+                'outdoor': bool(r.get('outdoor', False)), 'origin': r.get('origin') or 'keep',
+                'links': list(r.get('links', []))} for r in rows]
+    except (OSError, ValueError, KeyError, TypeError, IndexError) as e:
+        raise SystemExit('place_sweeps: cannot read the layout to keep, %s: %r' % (path, e))
+    if not out or len({k['id'] for k in out}) != len(out):
+        raise SystemExit('place_sweeps: %s has no sweeps or repeats an id' % path)
+    return out, '%s (%s)' % (os.path.basename(path), doc.get('generated_from', '?'))
+
+
+def place_kept(L, kept, old):
+    """--keep: the indoor sweeps of an installed layout stay exactly where they are while the model leaves them
+    standable; the others follow the scene (a seed the scene moved), are nudged, or are dropped with a note.
+    The laundry sweep and the outdoor sweeps are left to place_laundry / place_outdoor."""
+    w, g, a = L.w, L.g, L.a
+    later = []
+    for k in kept:
+        sid, x, z = k['id'], k['x'], k['z']
+        if k['outdoor'] or sid == LAUNDRY['id']:
             continue
-        # nudge: the best clear cell within reach that the seed position can see
+        n = old.get(sid)
+        if sid in SEEDS and k['origin'] == 'seed' and n is not None \
+                and math.hypot(n['p'][0] - x, n['p'][2] - z) > KEEP_SAME:
+            later.append((k, None))
+            continue
+        c = g.clearance_at(x, z)
+        if c < a.keep_clear:
+            later.append((k, c))
+            continue
+        # the number a sweep on a grid cell was given when it was placed, so an untouched room reads the same
+        i, j = g.cell(x, z)
+        on_cell = g.inside(i, j) and g.cl[i, j] >= 0 and abs(g.xs[i] - x) < 1e-6 and abs(g.zs[j] - z) < 1e-6
+        L.add(x, z, k['origin'], sid, clearance=float(g.cl[i, j]) if on_cell and k['origin'] not in (
+            'seed', 'approach') else c, keep=k)
+    stay = len(L.sw)
+    for k, c in later:
+        sid, x, z = k['id'], k['x'], k['z']
+        if c is None:                              # a seed on its authored position, and the scene moved it
+            n = old[sid]
+            sx, sz = n['p'][0], n['p'][2]
+            L.notes.append('keep %s: the scene file has moved this seed %.2f ft, from (%.2f, %.2f) to (%.2f, %.2f) '
+                           '(clearance at the old place now %.2f ft): it follows the scene'
+                           % (sid, math.hypot(sx - x, sz - z), x, z, sx, sz, g.clearance_at(x, z)))
+            place_seed(L, sid, sx, sz)
+            continue
+        if sid in SEEDS:                           # never lose an id the measurements and design views name
+            L.notes.append('keep %s: clearance %.2f ft < %.1f ft at (%.2f, %.2f): the seed rule decides'
+                           % (sid, c, a.keep_clear, x, z))
+            i = place_seed(L, sid, x, z)
+            if i is not None:
+                L.sw[i]['keep'] = k
+            continue
         best = None
-        for cx, cz, cc in g.cells(a.relaxed_clear, (x, z), a.nudge):
-            if not w.see((x, z), (cx, cz)):
+        for cx, cz, cc in g.cells(a.min_clear, (x, z), a.nudge):
+            if not w.see((x, z), (cx, cz)) or L.seen_sep(cx, cz) < a.door_sep:
                 continue
             d = math.hypot(cx - x, cz - z)
-            key = (cc >= a.min_clear, min(cc, a.min_clear + 0.4) - 0.35 * d)
-            if best is None or key > best[0]:
+            key = min(cc, a.min_clear + 0.4) - 0.35 * d
+            if (best is None or key > best[0]) and L.linked(cx, cz):
                 best = (key, cx, cz, cc, d)
-        if best and (best[3] >= a.min_clear or best[3] >= c + 0.15 or c < a.relaxed_clear):
-            _, cx, cz, cc, d = best
-            L.add(cx, cz, 'seed-moved', sid, clearance=cc, moved=round(d, 2))
-            L.notes.append('seed %s: clearance %.2f ft, moved %.2f ft to (%.2f, %.2f), clearance %.2f ft%s' % (
-                sid, c, d, cx, cz, cc, '' if cc >= a.min_clear else ' (no cell with %.1f ft within %.1f ft)'
-                % (a.min_clear, a.nudge)))
-        elif c >= a.relaxed_clear:
-            L.add(x, z, 'seed', sid, clearance=c)
-            L.notes.append('seed %s: clearance %.2f ft, kept (no better cell within %.1f ft; >= %.1f ft is accepted '
-                           'in a room that would otherwise have no sweep)' % (sid, c, a.nudge, a.relaxed_clear))
+        if best is None:
+            L.notes.append('keep %s: clearance %.2f ft < %.1f ft at (%.2f, %.2f) and no clear cell within %.1f ft '
+                           'that it sees, >= %.1f ft from the other sweeps and joined to them: DROPPED'
+                           % (sid, c, a.keep_clear, x, z, a.nudge, a.door_sep))
         else:
-            # the model changed under the stop (it stands in or against something): rather than lose an id
-            # that measurements, design views and highlights name, take the nearest clear cell of its room
-            here = g.region(x, z)
-            far = [(math.hypot(cx - x, cz - z), cx, cz, cc) for cx, cz, cc in g.cells(a.min_clear, (x, z), 6.0)
-                   if g.region(cx, cz) == here]
-            if far:
-                d, cx, cz, cc = min(far)
-                L.add(cx, cz, 'seed-moved', sid, clearance=cc, moved=round(d, 2))
-                L.notes.append('seed %s: clearance %.2f ft and no clear cell within %.1f ft; MOVED %.2f ft to '
-                               '(%.2f, %.2f), clearance %.2f ft: check it' % (sid, c, a.nudge, d, cx, cz, cc))
-            else:
-                L.notes.append('seed %s: clearance %.2f ft and no clear cell of its room within 6 ft: DROPPED'
-                               % (sid, c))
-            P('WARNING:', L.notes[-1])
+            _, cx, cz, cc, d = best
+            L.add(cx, cz, k['origin'], sid, clearance=cc, keep=k, moved=round(d, 2))
+            L.notes.append('keep %s: clearance %.2f ft < %.1f ft at (%.2f, %.2f), moved %.2f ft to (%.2f, %.2f), '
+                           'clearance %.2f ft' % (sid, c, a.keep_clear, x, z, d, cx, cz, cc))
+    P('keep: %d sweeps stay in place, %d decided otherwise' % (stay, len(later)))
 
 
 def has_laundry(a):
@@ -627,44 +758,57 @@ def has_laundry(a):
     not the dishwasher) standing inside the closet's rectangle."""
     if a.laundry != 'auto':
         return a.laundry == 'on'
+    x0, x1, z0, z1 = LAUNDRY['outer']
     pat = re.compile(r'(?<![a-z])(%s)(?![a-z])' % '|'.join(LAUNDRY['names']))
     for ob in bpy.data.objects:
         if ob.type != 'MESH' or ob.hide_render or not pat.search(ob.name.lower()):
             continue
         c = sum((ob.matrix_world @ Vector(v) for v in ob.bound_box), Vector()) / 8
-        if LAUNDRY['x0'] - 1 <= c.x / FT <= LAUNDRY['x1'] + 1 and LAUNDRY['z0'] - 1 <= -c.y / FT <= LAUNDRY['z1'] + 1:
+        if x0 - 1 <= c.x / FT <= x1 + 1 and z0 - 1 <= -c.y / FT <= z1 + 1:
             return True
     return False
 
 
 def place_laundry(L):
-    """One sweep facing the laundry closet's door, when the model has the closet."""
+    """One sweep facing the laundry closet's open doors, when the model has the closet: on the axis of the
+    opening, LAUNDRY['dist'] in front of the door wall; the nearest clear cell that sees the opening when that
+    point is not free."""
     w, g, a = L.w, L.g, L.a
+    sid = LAUNDRY['id']
     if not has_laundry(a):
-        L.notes.append('laundry closet: no laundry / washer / dryer object in the model, sweep %s skipped'
-                       % LAUNDRY['id'])
+        L.notes.append('laundry closet: no laundry / washer / dryer object in the model, sweep %s skipped' % sid)
         P('WARNING:', L.notes[-1])
         return
-    door = ((LAUNDRY['x0'] + LAUNDRY['x1']) / 2, LAUNDRY['z0'] - 0.3)
-    tx, tz = LAUNDRY['stand']
-    best = None
-    for cx, cz, cc in g.cells(a.min_clear, (tx, tz), 2.5):
-        if cz > LAUNDRY['z0'] - 1.5 or not w.see((cx, cz), door):
-            continue
-        d = math.hypot(cx - tx, cz - tz)
-        if best is None or d < best[0]:
-            best = (d, cx, cz, cc)
+    ox, oz = LAUNDRY['out']
+    zc = (LAUNDRY['door_z'][0] + LAUNDRY['door_z'][1]) / 2
+    face = (LAUNDRY['door_face'], zc)                     # middle of the opening on the foyer side
+    opening = (LAUNDRY['door_c'], zc)                     # ... inside the wall's thickness
+    units = ((LAUNDRY['clear'][0] + LAUNDRY['clear'][1]) / 2, zc)
+    tx, tz = face[0] + ox * LAUNDRY['dist'], face[1] + oz * LAUNDRY['dist']
+    c = g.clearance_at(tx, tz)
+    if c >= a.min_clear and w.see((tx, tz), opening):
+        best = (0.0, tx, tz, c)
+    else:
+        best = None
+        for cx, cz, cc in g.cells(a.min_clear, (tx, tz), 2.5):
+            if (cx - face[0]) * ox + (cz - face[1]) * oz < 1.5 or not w.see((cx, cz), opening):
+                continue
+            d = math.hypot(cx - tx, cz - tz)
+            if best is None or d < best[0]:
+                best = (d, cx, cz, cc)
     if best is None:
-        L.notes.append('laundry closet: no clear cell within 2.5 ft of (%.1f, %.1f) sees the door, sweep %s skipped'
-                       % (tx, tz, LAUNDRY['id']))
+        L.notes.append('laundry closet: (%.2f, %.2f) has %.2f ft of clearance and no clear cell within 2.5 ft sees '
+                       'the opening, sweep %s skipped' % (tx, tz, c, sid))
         P('WARNING:', L.notes[-1])
         return
-    _, cx, cz, cc = best
-    pitch = math.degrees(math.atan2(LAUNDRY['aim_y'] - EYE, math.hypot(door[0] - cx, LAUNDRY['z0'] - cz)))
-    L.add(cx, cz, 'laundry', LAUNDRY['id'], clearance=cc, aim=(door[0], LAUNDRY['z0']), pitch=round(pitch, 1),
-          label=LAUNDRY['label'])
-    L.notes.append('laundry closet: sweep %s at (%.2f, %.2f), %.2f ft from the target, clearance %.2f ft'
-                   % (LAUNDRY['id'], cx, cz, best[0], cc))
+    d, cx, cz, cc = best
+    near = [s for s in L.sw if math.hypot(s['x'] - cx, s['z'] - cz) < a.door_sep]
+    L.add(cx, cz, 'laundry', sid, clearance=cc, aim=units, pitch=LAUNDRY['pitch'], label=LAUNDRY['label'])
+    L.notes.append('laundry closet: sweep %s at (%.2f, %.2f), %.2f ft in front of the door wall%s, clearance %.2f ft%s'
+                   % (sid, cx, cz, (cx - face[0]) * ox + (cz - face[1]) * oz,
+                      '' if d < 1e-6 else ' (%.2f ft from the opening\'s axis point)' % d, cc,
+                      '' if not near else '; closer than %.1f ft to %s' % (a.door_sep, ' '.join(
+                          str(s['id']) for s in near))))
 
 
 def place_approach(L, old):
@@ -884,15 +1028,30 @@ def cover_regions(L):
         L.notes.append('region %s: no sweep (%s)' % (key, why))
 
 
-def place_outdoor(L, meas):
-    """Porch and deck sweeps, each only when a walkable line through its open door reaches an indoor sweep."""
+def place_outdoor(L, meas, kept=None):
+    """Porch and deck sweeps, each only when a walkable line through its open door reaches an indoor sweep.
+    An outdoor sweep of a kept layout (--keep) stays where it is while it still stands free and that line
+    exists; otherwise it is looked for again."""
     w, g, a = L.w, L.g, L.a
     if a.outdoor == 'off':
         L.notes.append('outdoor sweeps: switched off')
         return
     doors = {d[0]: d for d in door_frames(meas)}
+    stay = {k['id']: k for k in kept or () if k['outdoor']}
     plans, why = [], []
     for o in OUTDOOR:
+        k = stay.get(o['id'])
+        if k is not None:
+            f = w.down(k['x'], k['z'], site=True)
+            c = w.ray_clear(k['x'], k['z'], site=True) if f is not None and OUT_BAND[0] <= f[0] <= OUT_BAND[1] else 0.0
+            links = L.linked(k['x'], k['z'], site=True) if c >= a.keep_clear else []
+            if links:
+                L.add(k['x'], k['z'], 'outdoor', o['id'], links, clearance=c, outdoor=True, floor=f[0], keep=k)
+                L.sw[-1]['region'] = k['room'] or o['room']
+                continue
+            L.notes.append('keep %s (%s): %s at (%.2f, %.2f); looked for again' % (
+                o['id'], o['label'], 'clearance %.2f ft < %.1f ft' % (c, a.keep_clear) if c < a.keep_clear
+                else 'no walkable straight line to an indoor sweep', k['x'], k['z']))
         cx, cz = (doors[o['door']][2], doors[o['door']][3]) if o['door'] in doors else o['centre']
         ox, oz = o['out']
         tx, tz = cx + ox * o['dist'], cz + oz * o['dist']
@@ -1039,8 +1198,10 @@ def yaw_to(x, z, tx, tz):
     return math.degrees(math.atan2(tx - x, -(tz - z)))
 
 
-def assign_ids(L):
-    used = set(OLD_IDS) | {s['id'] for s in L.sw if s['id']}
+def assign_ids(L, kept=None):
+    """Ids for the new sweeps; never one of the old stops or of a kept layout, whether that sweep is still there
+    or not (its panorama exists under that name)."""
+    used = set(OLD_IDS) | {s['id'] for s in L.sw if s['id']} | {k['id'] for k in kept or ()}
     for s in L.sw:
         if s['id']:
             continue
@@ -1057,6 +1218,13 @@ def describe(L, old, extent):
     w = L.w
     for s in L.sw:
         x, z = s['x'], s['z']
+        if s.get('keep'):                         # a sweep of the kept layout: its view and its names stay
+            k = s['keep']
+            s['label'], s['room'], s['yaw'], s['pitch'] = k['label'], k['room'] or s['region'], k['yaw'], k['pitch']
+            if 'floor' not in s:
+                f = w.down(x, z, s['outdoor'])
+                s['floor'] = f[0] if f else 0.0
+            continue
         n = old.get(s['id']) if s['origin'] in ('seed', 'seed-moved') else None
         princ = [old[k] for k in REGIONS.get(s['region'], ([], None, None))[0] if k in old]
         near = min(princ, key=lambda p: math.hypot(p['p'][0] - x, p['p'][2] - z)) if princ else None
@@ -1251,6 +1419,9 @@ def draw_overlay(path, L, links, title, a, extent):
         dx, dz = math.sin(math.radians(s['yaw'])), -math.cos(math.radians(s['yaw']))
         cv.line(cx, cy, cx + dx * 20, cy + dz * 20, (255, 255, 255), 5)
         cv.line(cx, cy, cx + dx * 19, cy + dz * 19, (0, 0, 0), 3)       # where the sweep's yaw looks
+        if s.get('fresh'):                        # --keep: not where the kept layout had it (moved or new)
+            cv.disc(cx, cy, 13.5, (225, 20, 20))
+            cv.disc(cx, cy, 10.5, (255, 255, 255))
         cv.disc(cx, cy, 8.5, (255, 255, 255))
         cv.disc(cx, cy, 6.5, ORIGIN_COLOR.get(s['origin'], (90, 90, 90)))
     for s in L.sw:
@@ -1266,6 +1437,10 @@ def draw_overlay(path, L, links, title, a, extent):
         cv.disc(x + 6, 31, 6, ORIGIN_COLOR[name.split('/')[0]])
         cv.text(x + 16, 25, name, (0, 0, 0), 2)
         x += 16 + 12 * len(name) + 14
+    if any(s.get('fresh') for s in L.sw):
+        cv.disc(x + 6, 31, 8, (225, 20, 20))
+        cv.disc(x + 6, 31, 5.5, (255, 255, 255))
+        cv.text(x + 18, 25, 'moved/new', (0, 0, 0), 2)
     cv.rect(wpx - 12 - 5 * S, 19, wpx - 12, 22, (0, 0, 0))
     cv.text(wpx - 12 - 5 * S, 3, '5 FT  N UP', (0, 0, 0), 2)
     cv.save(path)
@@ -1288,25 +1463,30 @@ def main():
         cx, cz = (doors[o['door']][2], doors[o['door']][3]) if o['door'] in doors else o['centre']
         tx, tz = cx + o['out'][0] * o['dist'], cz + o['out'][1] * o['dist']
         want_ext.append([round(tx - 9, 2), round(tx + 9, 2), round(tz - 7, 2), round(tz + 7, 2)])
+    kept, kept_from = load_keep(a.keep) if a.keep else (None, None)
     mesh, blend = load_mesh(a, want_ext)
     w = World(mesh)
     g = Grid(w, rooms)
-    g.flood([(n['p'][0], n['p'][2]) for n in old.values()])
+    g.flood([(n['p'][0], n['p'][2]) for n in old.values()]
+            + [(k['x'], k['z']) for k in kept or () if not k['outdoor']])
     P('reachable floor (clearance >= 0.9 ft): %.0f sq ft; with clearance >= %.1f ft: %.0f sq ft' % (
         g.reach.sum() * STEP * STEP, a.min_clear, (g.reach & (g.cl >= a.min_clear)).sum() * STEP * STEP))
 
     L = Layout(w, g, a)
-    place_seeds(L, old)
+    if kept is not None:
+        place_kept(L, kept, old)
+    place_seeds(L, old, kept)
     place_laundry(L)
-    place_approach(L, old)
+    if kept is None:                   # a kept layout has made its choice among the old approach stops
+        place_approach(L, old)
     place_doors(L, meas)
     bridge(L, a.min_clear, 'bridge')
     fill(L)
     cover_regions(L)
     bridge(L, a.min_clear, 'bridge')
     bridge(L, a.relaxed_clear, 'bridge')
-    place_outdoor(L, meas)
-    assign_ids(L)
+    place_outdoor(L, meas, kept)
+    assign_ids(L, kept)
     L.notes = [re.sub(r'\{ids:([0-9,]*)\}', lambda m: ' '.join(L.sw[int(k)]['id'] for k in m.group(1).split(',') if k),
                       line) for line in L.notes]
     extent = (0.0, float(scene.get('extent', [39.42, 55.9])[0]), 0.0, float(scene.get('extent', [39.42, 55.9])[1]))
@@ -1319,10 +1499,41 @@ def main():
     links, vis, keep, npairs = build_graph(L)
     n = len(L.sw)
     at = {s['id']: i for i, s in enumerate(L.sw)}
-    gone = sorted('%s-%s' % (e[0], e[1]) for e in scene['tour'].get('edges', [])
-                  if e[0] in at and e[1] in at and at[e[1]] not in L.adj[at[e[0]]])
-    if gone:
-        L.notes.append('old edges between kept sweeps that are not walkable straight lines: ' + ' '.join(gone))
+    keep_block = None
+    if kept is None:
+        gone = sorted('%s-%s' % (e[0], e[1]) for e in scene['tour'].get('edges', [])
+                      if e[0] in at and e[1] in at and at[e[1]] not in L.adj[at[e[0]]])
+        if gone:
+            L.notes.append('old edges between kept sweeps that are not walkable straight lines: ' + ' '.join(gone))
+    else:
+        # what became of the kept layout: the sweeps that are not where it had them need a new panorama
+        was = {k['id']: k for k in kept}
+        keep_block = {'from': kept_from, 'unchanged': [], 'moved': {}, 'reaimed': [], 'new': [],
+                      'removed': [k['id'] for k in kept if k['id'] not in at]}
+        for i in idx:
+            s = L.sw[i]
+            k = was.get(s['id'])
+            d = None if k is None else math.hypot(s['x'] - k['x'], s['z'] - k['z'])
+            if k is None:
+                keep_block['new'].append(s['id'])
+            elif d > 1e-4:
+                keep_block['moved'][s['id']] = round(d, 2)
+            elif abs(s['yaw'] - k['yaw']) > 1e-6 or abs(s['pitch'] - k['pitch']) > 1e-6:
+                keep_block['reaimed'].append(s['id'])      # same panorama, another opening view
+            else:
+                keep_block['unchanged'].append(s['id'])
+            s['fresh'] = k is None or d > 1e-4
+        gone = sorted({'%s-%s' % tuple(sorted((k['id'], o), key=lambda v: at[v])) for k in kept for o in k['links']
+                       if k['id'] in at and o in at and not (L.sw[at[k['id']]]['fresh'] or L.sw[at[o]]['fresh'])
+                       and at[o] not in L.adj[at[k['id']]]})
+        if gone:
+            L.notes.append('links of the kept layout between sweeps that did not move which are no longer '
+                           'walkable straight lines: ' + ' '.join(gone))
+        L.notes.append('kept layout %s: %d sweeps unchanged; moved %s; new %s; removed %s%s' % (
+            kept_from, len(keep_block['unchanged']),
+            ', '.join('%s %.2f ft' % kv for kv in keep_block['moved'].items()) or '-',
+            ' '.join(keep_block['new']) or '-', ' '.join(keep_block['removed']) or '-',
+            '; view changed in place: ' + ' '.join(keep_block['reaimed']) if keep_block['reaimed'] else ''))
     comps = len({min(bfs(links, i)) for i in range(n)})
     ecc = [max(bfs(links, i).values()) for i in range(n)] if comps == 1 else []
     pts = [(s['x'], s['z']) for s in L.sw]
@@ -1361,9 +1572,11 @@ def main():
                    'door_sep': a.door_sep, 'tight_clear': a.tight_clear, 'tight_sep': a.tight_sep,
                    'far_cap': a.far_cap, 'clear_weight': a.clear_weight,
                    'laundry': a.laundry, 'outdoor': a.outdoor, 'grid_step': STEP,
+                   'keep': os.path.basename(a.keep) if a.keep else None, 'keep_clear': a.keep_clear,
                    'seeds': SEEDS, 'approach_candidates': sorted(APPROACH),
                    'id_letters': {k: v[1] for k, v in REGIONS.items()}},
         'stats': stats, 'notes': L.notes,
+        **({'keep': keep_block} if keep_block else {}),
         'sweeps': [{
             'id': s['id'], 'label': s['label'], 'room': s['room'],
             'p': [round(s['x'], 4), EYE, round(s['z'], 4)], 'floor': round(s['floor'], 3) + 0.0,

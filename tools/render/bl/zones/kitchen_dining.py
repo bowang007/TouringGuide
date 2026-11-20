@@ -4,16 +4,16 @@ z 14.5-20.8). Camera stops K0, D0, H2 (also seen from L2, H3).
 Warm vintage-American kitchen from the owner's style images (styles/kitchen *.jpg): soft layered
 neutrals, no heavy dark masses. Cream painted shaker base and glass-front upper cabinets with
 unlacquered-brass cup pulls and knobs and crown moulding; the tall fridge/oven wall as a greige
-"pantry wall" (panelled fridge, long brass appliance pulls) that starts at the laundry closet's
-east wall (fourth round: bl/revisions.laundry_closet builds the closet in the kitchen's south-west
-corner, kitchen_dining_kitchen.TALL_X0 follows it); a walnut open-shelf bay with brass
+"pantry wall" (panelled fridge, long brass appliance pulls); a walnut open-shelf bay with brass
 gallery rails on whitewashed brick; honed grey-veined marble worktops and a scalloped marble slab
 with a brass pot filler behind the gas cooktop; a cream plaster hood with a dentil band; a fireclay
 apron sink and brass bridge faucet under the grid-glazed window W08 with a cream casing, brass
 gooseneck sconces and cafe curtains; a white-oak drawer island with a thick quartzite top under two
 brass-and-glass bell pendants; a madder-red Persian runner in the work aisle; the dining table in
-line with the island (architect's plan) in warm oak with striped-linen oak chairs and a brass
-lantern; the indoor olive tree by W07 in a cream crock.
+line with the island at its west end (the shared-bathroom / hall side; owner's correction of 2026-11-20: it
+stood north of the island before and crowded the family room) in warm oak with six striped-linen
+oak chairs and a brass lantern; the indoor olive tree by W07 in a cream crock. The floor between
+the island and the living room is open.
 
 build(ctx) -> dict of counts / notes. Helpers live in kitchen_dining_*.py.
 """
@@ -33,13 +33,14 @@ from . import kitchen_dining_olive as olive
 from . import kitchen_dining_window as window
 from .kitchen_dining_geo import ZONE, Geo
 
-# Recessed 4in cans (x, z): tidy grid aligned to the room, clear of the tall units (the pantry wall east of the
-# laundry closet: x 25.9-31.6, z>29.21) and the pendant line.
+# Recessed 4in cans (x, z): tidy grid aligned to the room, clear of the skylight shaft
+# (x 29.24-33.56, z 25.39-28.71), the tall units (x<28.16, z>29.21) and the pendant line. The dining
+# table at the island's west end (concept x 22.26-28.26, z 22.1-24.9) is lit by its lantern: no can over
+# it; two cans light the walkway between its south chairs and the pantry wall.
 CANS_KITCHEN = [
-    (26.2, 22.6), (26.2, 26.9),            # west aisle (by K0 / laundry door / fridge), in line with living cans
-    (30.0, 26.9),                          # work aisle in front of the oven tower, in line with the west pendant
+    (24.14, 27.5), (26.89, 27.5),          # walkway hall -> kitchen: centred on the fridge and on the ovens
     (36.4, 22.6), (36.4, 26.4),            # east aisle (island <-> sink run)
-    (32.44, 29.55),                        # the short counter between the ovens and the cooktop
+    (30.0, 29.55), (32.8, 29.55),          # south counter, aligned with the pendant ends
     (38.6, 29.55),                         # south-east counter / shelves
     (39.45, 24.1), (39.45, 28.6),          # over the sink run, flanking the window centre
 ]
@@ -58,8 +59,9 @@ CAMERAS = ('K0', 'D0', 'H2', 'L2', 'H3')
 # the run end and crowded the east wall).
 INCLUDE_DINING = False
 INCLUDE_CONSOLE = False
-# The architect's plan (sizes/sizes.pdf) puts a rectangular table in line with the island, running
-# toward the living room, and no stools at the island: kitchen_dining_dining.build_rect().
+# A rectangular table in line with the island and no stools at the island (architect's plan). The
+# plan draws it running toward the living room; the owner moved it to the island's west end
+# (2026-11-20): kitchen_dining_dining.build_rect().
 DINING_RECT = True
 INCLUDE_OLIVE = not INCLUDE_DINING
 

@@ -336,11 +336,15 @@ export function createDollhouse(viewer, deps = {}) {
     const d = (p[0] - last.eye[0]) * last.dir[0] + (p[1] - last.eye[1]) * last.dir[1] + (p[2] - last.eye[2]) * last.dir[2];
     return 2 * Math.max(0.5, d) * last.k / viewer.size.cssH;
   }
-  // The sweep a click on a surface point enters: the one standing right there, else the nearest one of
-  // the room the point lies in (a wall counts for the room on the side it is seen from).
-  function sweepAt(hit) {
+  // The plan point [x, z] a surface point stands for: a wall counts for the room on the side it is seen from.
+  function planPoint(hit) {
     const n = hit.normal, flatOn = Math.abs(n[1]) > 0.7;
-    const x = hit.point[0] + (flatOn ? 0 : n[0] * 0.6), z = hit.point[2] + (flatOn ? 0 : n[2] * 0.6);
+    return [hit.point[0] + (flatOn ? 0 : n[0] * 0.6), hit.point[2] + (flatOn ? 0 : n[2] * 0.6)];
+  }
+  // The sweep a click on a surface point enters: the one standing right there, else the nearest one of
+  // the room the point lies in (viewer.nearestSweep: the smallest room that contains the point).
+  function sweepAt(hit) {
+    const [x, z] = planPoint(hit);
     let best = null, bd = 1e9;
     for (const d of dots.values()) {
       const dd = Math.hypot(d.s.p[0] - x, d.s.p[2] - z);
@@ -788,9 +792,12 @@ export function createDollhouse(viewer, deps = {}) {
     if (flight && flight.kind === 'free' && flight.to !== 'inside') return false;      // still on the way out
     const hit = pickAt(p.x, p.y), s = hit ? sweepAt(hit) : null;
     if (!s) return false;
-    // facing away from the camera's side; on the plan, toward the point clicked when it is not the sweep itself
+    // facing away from the camera's side; on the plan, toward the point clicked when it is not the sweep
+    // itself. A room nobody can stand in (the laundry closet behind its doors, a reach-in closet) is
+    // entered on the sweep in front of it, looking at the room (viewer.lookInto).
+    const at = planPoint(hit), into = viewer.lookInto(viewer.roomAt(at[0], at[1]), s);
     const d = [hit.point[0] - s.p[0], hit.point[2] - s.p[2]];
-    const heading = mode === 'dollhouse' ? node.psi : Math.hypot(d[0], d[1]) > 2.5 ? Math.atan2(d[0], -d[1]) : s.look.yaw;
+    const heading = into !== undefined ? into : mode === 'dollhouse' ? node.psi : Math.hypot(d[0], d[1]) > 2.5 ? Math.atan2(d[0], -d[1]) : s.look.yaw;
     viewer.setMode('inside', { sweep: s.id, clicked: true, heading });
     return s.id;
   }

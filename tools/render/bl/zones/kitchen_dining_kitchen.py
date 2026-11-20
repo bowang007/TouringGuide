@@ -2,7 +2,8 @@
 closet / cloest style", "kitchen island and style", "kitchen window (style)").
 
 Same plan as before (fridge column + wall ovens at the west end of the south wall, cooktop under the
-hood, dishwasher and sink on the east wall under the window, island with the dining table in line),
+hood, dishwasher and sink on the east wall under the window, island with the dining table in line at
+its west end, see kitchen_dining_dining),
 restyled: painted cream shaker base and upper cabinetry with unlacquered-brass cup pulls and knobs,
 crown moulding and a painted toe kick; the tall fridge/oven wall in a soft greige as the "pantry
 wall" (integrated fridge behind shaker panels with long brass appliance pulls); glass-front uppers
@@ -16,12 +17,6 @@ Plan anchors: south (garage) wall face z=31.41, east wall face x=40.61, flat cei
 south counter front z=29.13, east counter front x=38.405; island top x 28.4-34.4, z 22-25;
 W08 window z 23.387-29.387, sill 3.15, head 7.75 (sink centred at z 26.387); W07 ends at z 21.814.
 
-Fourth round (2026-11-19): the architect's sheet has a W/D closet in the kitchen's south-west corner, then the
-refrigerator, then the range. The pantry wall therefore starts at the closet's east face (revision_spec.LAUNDRY_OUTER,
-new-plan x 25.051 = concept 25.90, see TALL_X0 below) instead of standing free at the hall: a scribe filler against the
-closet wall replaces the old hall-side end panel, the fridge is a full 36in on the built plan, the ovens follow, and
-the counter run between the ovens and the cooktop is one 20in drawer base under a single glass-front upper.
-
 Warp naming: run fronts / carcasses / crowns / splashes are '... panel / carcass / cove / splash /
 tile ...' (fitted, reshaped with the room); knobs and cup pulls are '... hardware panel' (fitted, so
 each stays on its front, see kitchen_dining_cabs); appliances, appliance pulls, the faucet and pot
@@ -29,32 +24,12 @@ filler are loose (moved rigidly); the hood is '... soffit ...' (fitted) so it ke
 cabinets.
 """
 import math
-import sys
 
 import bmesh
 
-from ..common import RENDER_DIR
-from ..revision_spec import LAUNDRY_OUTER
 from . import kitchen_dining_cabs as C
 from . import kitchen_dining_mats as KM
 from .kitchen_dining_geo import Geo, P, principled, srgb
-
-if RENDER_DIR not in sys.path:
-    sys.path.insert(0, RENDER_DIR)
-import relayout as R  # noqa: E402  (the concept -> architect's plan maps that bl/warp.py applies to this zone)
-
-
-def _concept(f, v):
-    """Concept coordinate that the piecewise-linear relayout map `f` carries to the new-plan value v."""
-    ps = f.pairs
-    if v <= ps[0][1]:
-        return ps[0][0] + (v - ps[0][1])
-    if v >= ps[-1][1]:
-        return ps[-1][0] + (v - ps[-1][1])
-    for (a0, b0), (a1, b1) in zip(ps, ps[1:]):
-        if b0 <= v <= b1:
-            return a0 + (v - b0) / (b1 - b0) * (a1 - a0)
-
 
 # ----------------------------------------------------------------------------- constants
 WALL_S = 31.41
@@ -74,15 +49,10 @@ FRONT_S = 29.21           # face of the south-run fronts
 CT_FRONT_E = 38.405
 FRONT_E = 38.488          # face of the east-run fronts
 RUN_E0 = 21.84            # north end of the east run (W07 jamb)
-# Pantry wall, west to east: laundry closet wall | scribe filler | fridge | oven tower | side panel | base run.
-# The kitchen is warped with relayout.X_HALL (bl/warp.py: region 'kitchen + dining'); east of concept x 23.278 that is
-# a uniform 0.9615 squeeze, so widths that must come out exact on the built plan are divided by X_K.
-TALL_X0 = _concept(R.X_HALL, LAUNDRY_OUTER[1])          # the closet's east wall face: new 25.051 = concept 25.902
-X_K = R.X_HALL(TALL_X0 + 1.0) - R.X_HALL(TALL_X0)       # new ft per concept ft along this wall (0.9615)
-TALL_FILL = FT_T                                        # scribe filler between the closet wall and the fridge
-FRIDGE = (TALL_X0 + TALL_FILL, TALL_X0 + TALL_FILL + 3.0 / X_K)   # 36in panelled fridge (the sheet's "REF.")
-OVEN = (FRIDGE[1], FRIDGE[1] + 2.4375)                  # oven tower (27in ovens in a 28in niche once warped)
-BASE_X0 = OVEN[1] + FT_T                                # start of the base run / worktop (after the side panel)
+TALL_X0 = 22.60           # outer face of the tall-wall end panel
+FRIDGE = (22.6625, 25.6625)
+OVEN = (25.6625, 28.10)
+BASE_X0 = 28.1625
 HOOD = (33.2, 36.4)
 UPPER_Y0 = 4.75
 UPPER_TOP = 7.53          # top of the upper / tall doors (crown above)
@@ -97,7 +67,7 @@ Y_B0 = TOE_H + 0.012      # bottom of base fronts
 Y_B1 = CT_UNDER - 0.012   # top of base fronts
 Y_DR = Y_B1 - 0.5         # top drawer bottom (6in drawers)
 COOK = (33.30, 36.30, 29.32, 31.05)     # 36in gas cooktop (x0, x1, z0, z1)
-UPPER_N = max(1, round((HOOD[0] - BASE_X0) / 1.7))   # glass-front upper doors between the oven tower and the hood
+ISLAND = (28.4, 34.4, 22.0, 25.0)       # island worktop (x0, x1, z0, z1); the dining table continues its west end
 POT_FILLER = (34.80, 4.55)               # (x, y) on the wall inside the slab's scallop
 
 COLL = 'kd_kitchen'
@@ -237,19 +207,19 @@ def _tall_wall(g, M, col, hw):
     niche = C.Acc()
     niche.box(F, o0, o1, 1.55, 6.02, -FT_T, -0.02)
     niche.done(g, 'kd tall niche panel', M.greige, col, bevel=0.0)
-    # scribe filler against the laundry closet's wall (floor to the door tops, in the plane of the fronts), side
-    # panel to the counter, kick, carcass
+    # end panels (two stacked shaker panels on the hall side), side panel to the counter, kick, carcass
     side = C.Acc()
-    side.wbox(TALL_X0, FRIDGE[0], 0.0, UPPER_TOP, FRONT_S, FRONT_S + FT_T)
+    Fw = C.Face('mx', TALL_X0)
+    side.shaker(Fw, FRONT_S, WALL_S, 0.0, 3.4, sw=0.24)
+    side.shaker(Fw, FRONT_S, WALL_S, 3.4, UPPER_TOP, sw=0.24)
     side.wbox(OVEN[1], BASE_X0, 0.0, UPPER_TOP, FRONT_S, WALL_S)
     side.done(g, 'kd tall end panel', M.greige, col)
     g.box('kd tall plinth', FRIDGE[0], OVEN[1], 0.0, TOE_H, FRONT_S + 0.10, WALL_S - 0.02, M.greige, coll=col)
-    g.box('kd tall carcass', TALL_X0, OVEN[1], TOE_H, CEIL - 0.006, FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
-    # frieze behind the crown + crown: it dies into the closet wall at the west end and returns to the south wall
-    # with a mitre at the east end
+    g.box('kd tall carcass', FRIDGE[0], OVEN[1], TOE_H, CEIL - 0.006, FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
+    # frieze behind the crown + crown with mitred returns on both ends
     g.box('kd tall carcass frieze', TALL_X0, BASE_X0, UPPER_TOP, CEIL - 0.006, FRONT_S + 0.004, FRONT_S + FT_T + 0.012,
           M.greige, coll=col)
-    C.sweep(g, 'kd tall crown cove', [(TALL_X0, FRONT_S), (BASE_X0, FRONT_S), (BASE_X0, WALL_S - 0.004)],
+    C.sweep(g, 'kd tall crown cove', [(TALL_X0, WALL_S - 0.004), (TALL_X0, FRONT_S), (BASE_X0, FRONT_S), (BASE_X0, WALL_S - 0.004)],
             C.crown_profile(0.24, CROWN_H), CROWN_Y, M.greige, col)
     # hardware: long brass appliance pulls on the French doors, bar on the freezer, cups on the drawer
     for xx in (xm - 0.16, xm + 0.16):
@@ -287,8 +257,8 @@ def _base_runs(g, M, col, hw, lights):
     Fs = C.Face('mz', FRONT_S)
     Fe = C.Face('mx', FRONT_E)
     acc = C.Acc()
-    # one drawer base between the oven tower and the cooktop base (the run was two cabinets before the closet)
-    for (x0, x1), kind in (((BASE_X0, COOK[0]), 'drawers3'), ((COOK[0], COOK[1]), 'drawers3'), ((COOK[1], 38.40), 'doors2')):
+    for (x0, x1), kind in (((BASE_X0, 30.70), 'doors2'), ((30.70, 33.30), 'drawers3'),
+                           ((33.30, 36.30), 'drawers3'), ((36.30, 38.40), 'doors2')):
         _base_unit(acc, g, M, Fs, x0, x1, kind, hw)
     # blind corner fillers
     acc.box(Fs, 38.40, FRONT_E + FT_T, Y_B0, Y_B1, -FT_T, 0.0)
@@ -351,9 +321,8 @@ def _worktop_and_splash(g, M, col):
 
 # ================================================================================ uppers
 def _uppers(g, M, col, hw, lights):
-    """Glass-front upper cabinet(s) between the oven tower and the hood (x BASE_X0-HOOD0; UPPER_N doors, one since
-    the laundry closet shortened the run) with painted interiors, shelves and dishes, crown moulding to the
-    ceiling, warm under-cabinet light."""
+    """Three glass-front upper cabinets (x BASE_X0-HOOD0) with painted interiors, shelves and
+    dishes, crown moulding to the ceiling, warm under-cabinet light."""
     ux0, ux1 = BASE_X0, HOOD[0]
     zf = UPPER_FRONT + FT_T + 0.006            # carcass front
     t = 0.06
@@ -361,7 +330,7 @@ def _uppers(g, M, col, hw, lights):
     acc.wbox(ux0, ux1, UPPER_Y0, UPPER_Y0 + t, zf, WALL_S)                     # bottom
     acc.wbox(ux0, ux1, UPPER_TOP - t, CEIL - 0.006, zf, WALL_S)                # top + frieze block
     acc.wbox(ux0, ux1, UPPER_Y0 + t, UPPER_TOP - t, WALL_S - t, WALL_S)        # back
-    n = UPPER_N
+    n = 3
     w = (ux1 - ux0) / n
     xs = [ux0 + i * w for i in range(n + 1)]
     for i, x in enumerate(xs):                                                  # sides + partitions
@@ -381,7 +350,7 @@ def _uppers(g, M, col, hw, lights):
         a, b = xs[i] + GAP / 2, xs[i + 1] - GAP / 2
         doors.shaker(F, a, b, UPPER_Y0, UPPER_TOP, sw=0.2, glass=True)
         panes.box(F, a + 0.17, b - 0.17, UPPER_Y0 + 0.17, UPPER_TOP - 0.17, -0.036, -0.028)
-        _hw_door(g, M, F, a, b, UPPER_Y0, UPPER_TOP, 'l' if i < max(n - 1, 1) else 'r', hw, upper=True)
+        _hw_door(g, M, F, a, b, UPPER_Y0, UPPER_TOP, 'l' if i < 2 else 'r', hw, upper=True)
     doors.done(g, 'kd upper door panel run', M.cream, col)
     panes.done(g, 'kd upper door pane', M.glass, col, bevel=0.0)
     # frieze in the door plane above the doors, crown to the ceiling (dies into the tall-wall return
@@ -390,8 +359,8 @@ def _uppers(g, M, col, hw, lights):
     C.sweep(g, 'kd upper crown cove', [(ux0, UPPER_FRONT), (ux1, UPPER_FRONT)], C.crown_profile(0.2, CROWN_H), CROWN_Y,
             M.cream, col)
     # warm under-cabinet light (fixture hidden under the bottom)
-    g.area_light('kd under-upper light', (ux0 + ux1) / 2, UPPER_Y0 - 0.02, UPPER_FRONT + 0.35, ux1 - ux0 - 0.3, 0.06,
-                 5.0 * min(1.0, (ux1 - ux0) / 5.04), 2900, lights)
+    g.area_light('kd under-upper light', (ux0 + ux1) / 2, UPPER_Y0 - 0.02, UPPER_FRONT + 0.35, ux1 - ux0 - 0.3, 0.06, 5.0,
+                 2900, lights)
 
 
 # ========================================================================= open shelves
@@ -585,9 +554,10 @@ def _bridge_faucet(g, M, col):
 
 # ================================================================================ island
 def _island(g, M, col, hw):
-    """White-oak drawer island (three drawer stacks to the kitchen, panelled back toward the table,
-    furniture end panels) under a 2in honed quartzite top with an eased edge."""
-    x0, x1, z0, z1 = 28.4, 34.4, 22.0, 25.0
+    """White-oak drawer island (three drawer stacks to the kitchen, panelled back toward the living room,
+    furniture end panels; the dining table stands against the west one) under a 2in honed quartzite top
+    with an eased edge."""
+    x0, x1, z0, z1 = ISLAND
     t = 0.167
     top = g.box('kd island top', x0, x1, TOP - t, TOP, z0, z1, M.quartzite, coll=col)
     _soft_edge(g, top, 0.022, 3)

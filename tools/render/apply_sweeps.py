@@ -16,6 +16,10 @@ since the first version of the page, is updated with it (left alone when it hold
 An old stop that the sweeps leave in place (within 1e-4 ft / 1e-6 rad) keeps its exact numbers, so
 re-installing changes nothing and a seed's authored view survives bit for bit.
 
+It reports the kept / new / removed / moved ids against the scene it writes into (after apply_relayout.py that
+is the concept's 27 stops) and, when the sweeps were placed with `place_sweeps.py --keep` (the file's "keep"
+block), against that kept layout: the moved and new sweeps there are the ones that need a new panorama.
+
 The script is idempotent (a second run writes nothing) and refuses to write, with exit status 1, when
   * two sweeps share an id, or an id is not 2 characters,
   * a link or a visible entry names an unknown sweep, a sweep links to itself, or a link is one-way,
@@ -44,9 +48,10 @@ LOOK_FT = 8.0
 SAME_FT, SAME_RAD = 1e-4, 1e-6
 # Opening views chosen by eye on the rendered panoramas (degrees; None keeps the value of sweeps.json). They
 # override place_sweeps.py's automatic yaw / pitch every time the sweeps are installed:
-#   G0  look into the garage, not back at the foyer door      H2  toward the dining and living rooms
-#   LC  both stacked units in the picture (the automatic -18 deg cuts the dryer's top)
-OPENING = {'G0': (105.0, -3.0), 'H2': (40.0, -2.0), 'LC': (None, -10.0)}
+#   G0  look into the garage, not back at the foyer door
+#   H2  toward the dining table, the island and the living room beyond
+# (LC, the laundry sweep, has no entry any more: its view is place_sweeps.py LAUNDRY['pitch'].)
+OPENING = {'G0': (105.0, -3.0), 'H2': (40.0, -2.0)}
 
 sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
 sys.path.insert(0, os.path.join(REPO, 'tools', 'web'))
@@ -214,6 +219,32 @@ def build_tour(doc, scene, start=START):
     return nodes, edges, warn, summary
 
 
+def keep_report(doc):
+    """Lines about the kept layout the sweeps were placed on (place_sweeps.py --keep), checked against the
+    sweeps themselves; [] when the file has no such block."""
+    k = doc.get('keep') if isinstance(doc, dict) else None
+    if not isinstance(k, dict):
+        return []
+    ids = {s.get('id') for s in doc.get('sweeps', [])}
+    moved = k.get('moved') if isinstance(k.get('moved'), dict) else {}
+
+    def lst(key):
+        return [i for i in (k.get(key) or []) if isinstance(i, str)]
+    out = ['against the kept layout %s:' % k.get('from', '?'),
+           '  unchanged   %d sweeps' % len(lst('unchanged')),
+           '  moved       %s' % (', '.join('%s %.2f ft' % (i, d) for i, d in moved.items()) or '-'),
+           '  new ids     %s' % (' '.join(lst('new')) or '-'),
+           '  removed ids %s' % (' '.join(lst('removed')) or '-')]
+    if lst('reaimed'):
+        out.append('  view only   %s' % ' '.join(lst('reaimed')))
+    stale = sorted((set(lst('unchanged')) | set(moved) | set(lst('new')) | set(lst('reaimed'))) ^ ids, key=str)
+    back = sorted(set(lst('removed')) & ids)
+    if stale or back:
+        out.append('  warning: the "keep" block does not match the sweeps (%s): the file was edited after it was '
+                   'placed' % ' '.join(map(str, stale + back)))
+    return out
+
+
 def references(root, ids):
     """Warnings for measurements / design entries that name a stop the tour no longer has."""
     out = []
@@ -275,10 +306,13 @@ def main(argv=None):
         print('warning:', line)
     print('%d sweeps (%d outdoor), %d edges, start %s, from %s (%s)' % (
         summary['sweeps'], summary['outdoor'], summary['edges'], START, path, doc.get('generated_from', '?')))
+    print('against the scene it is installed into:')
     print('  kept ids    %s' % (' '.join(summary['kept']) or '-'))
     print('  new ids     %s' % (' '.join(summary['added']) or '-'))
     print('  removed ids %s' % (' '.join(summary['removed']) or '-'))
     print('  moved       %s' % (', '.join(summary['moved']) or '-'))
+    for line in keep_report(doc):
+        print(line)
     if a.check:
         print('check only: nothing written')
         return 0

@@ -1,6 +1,6 @@
 {
  "eye": 5.0853,
- "generated_from": "house_v3.blend",
+ "generated_from": "house_v4.blend",
  "units": {
   "length": "ft",
   "angle": "deg",
@@ -24,6 +24,8 @@
   "laundry": "auto",
   "outdoor": "both",
   "grid_step": 0.25,
+  "keep": "sweeps.json",
+  "keep_clear": 0.9,
   "seeds": [
    "E0",
    "H1",
@@ -76,17 +78,17 @@
   }
  },
  "stats": {
-  "sweeps": 43,
-  "indoor": 41,
+  "sweeps": 45,
+  "indoor": 43,
   "outdoor": 2,
   "per_room": {
    "bed2": 2,
    "bed3": 5,
    "bed4": 2,
    "deck": 1,
-   "dining": 1,
+   "dining": 2,
    "ensuite": 1,
-   "entry": 8,
+   "entry": 9,
    "garage": 4,
    "kitchen": 5,
    "living": 6,
@@ -104,9 +106,9 @@
    "bed4": 2,
    "common_hall": 5,
    "deck": 1,
-   "dining": 1,
+   "dining": 2,
    "ensuite": 1,
-   "front_hall": 3,
+   "front_hall": 4,
    "garage": 4,
    "kitchen": 5,
    "living": 6,
@@ -121,68 +123,108 @@
    "approach": 2,
    "bridge": 2,
    "door": 3,
-   "fill": 13,
+   "fill": 15,
    "laundry": 1,
    "outdoor": 2,
    "seed": 17,
    "seed-moved": 3
   },
-  "links": 52,
-  "walkable_pairs": 71,
+  "links": 55,
+  "walkable_pairs": 83,
   "components": 1,
-  "diameter_hops": 13,
+  "diameter_hops": 14,
   "degree_min_median_max": [
    1,
    2,
-   6
+   5
   ],
   "link_ft_min_median_max": [
-   3.24,
-   5.46,
+   2.9,
+   5.07,
    10.61
   ],
   "nearest_sweep_ft_min_median_max": [
-   3.24,
+   2.9,
    4.21,
    7.77
   ],
   "nearest_visible_sweep_ft_min_median_max": [
-   3.24,
-   4.22,
+   2.9,
+   4.21,
    10.44
   ],
   "visible_per_sweep_min_median_max": [
    2,
-   12,
-   21
+   14,
+   24
   ],
   "clearance_ft_min_median": [
    1.21,
-   1.82
+   1.83
   ],
-  "reachable_sqft": 771.4
+  "reachable_sqft": 784.2
  },
  "notes": [
-  "seed P0: clearance 1.16 ft, moved 0.76 ft to (9.50, 10.50), clearance 1.62 ft",
-  "seed A3: clearance 1.06 ft, moved 0.30 ft to (4.50, 41.00), clearance 1.45 ft",
-  "seed C3: clearance 1.18 ft, moved 0.63 ft to (13.00, 41.50), clearance 1.33 ft",
-  "laundry closet: sweep LC at (23.00, 24.50), 0.10 ft from the target, clearance 1.73 ft",
-  "approach T2: kept for connectivity (joins 3 parts of the walk graph; 3.72 ft from the nearest sweep it sees)",
-  "approach GA: kept for connectivity (joins 2 parts of the walk graph; 3.48 ft from the nearest sweep it sees)",
-  "approach T3: dropped (3.38 ft from the nearest sweep it sees, joins nothing new)",
-  "approach T4: dropped (2.60 ft from the nearest sweep it sees, joins nothing new)",
-  "approach T6: dropped (2.14 ft from the nearest sweep it sees, joins nothing new)",
-  "approach P1: dropped (1.75 ft from the nearest sweep it sees, joins nothing new)",
-  "approach T1: dropped (1.69 ft from the nearest sweep it sees, joins nothing new)",
-  "door D03 (Bedroom 3 entry): sweep Y0 at (15.25, 44.25), 0.01 ft from the door plane, clearance 1.28 ft",
-  "door D04 (Bedroom 4 entry): sweep Z0 at (15.25, 34.75), 0.01 ft from the door plane, clearance 1.21 ft",
-  "door D08 (Primary bathroom entry): sweep S1 at (7.25, 21.00), 0.02 ft from the door plane, clearance 1.27 ft",
-  "bridge: sweep Y1 at (7.00, 43.75) joins 2 parts of the walk graph (A3), clearance 1.31 ft, 3.60 ft from the nearest sweep it sees",
-  "bridge: sweep L3 at (34.25, 15.25) joins 2 parts of the walk graph (L0 L1), clearance 1.29 ft, 5.09 ft from the nearest sweep it sees",
-  "outdoor OP (Front porch): sweep at (18.33, 51.90), clearance 2.80 ft, floor 0.04 ft, walkable from E0",
-  "outdoor OD (Rear deck): sweep at (25.69, -1.70), clearance 2.09 ft, floor -0.05 ft, walkable from L4",
-  "old edges between kept sweeps that are not walkable straight lines: H2-K0 L2-L0"
+  "keep K0: the scene file has moved this seed 1.17 ft, from (26.50, 26.50) to (27.60, 26.90) (clearance at the old place now 0.91 ft): it follows the scene",
+  "laundry closet: sweep LC at (19.45, 30.14), 4.00 ft in front of the door wall, clearance 2.39 ft",
+  "kept layout sweeps.json (house_v3.blend): 41 sweeps unchanged; moved K0 1.17 ft, LC 6.66 ft; new D1 K4; removed -"
  ],
+ "keep": {
+  "from": "sweeps.json (house_v3.blend)",
+  "unchanged": [
+   "E0",
+   "H1",
+   "H2",
+   "H3",
+   "B3",
+   "B4",
+   "D0",
+   "L2",
+   "L0",
+   "L1",
+   "P0",
+   "S0",
+   "C0",
+   "A0",
+   "T2",
+   "B2",
+   "A1",
+   "G0",
+   "A3",
+   "C3",
+   "GA",
+   "G1",
+   "G2",
+   "G3",
+   "H0",
+   "H4",
+   "K1",
+   "K2",
+   "K3",
+   "L3",
+   "L4",
+   "L5",
+   "S1",
+   "X0",
+   "Y0",
+   "Y1",
+   "Y2",
+   "Y3",
+   "Z0",
+   "OD",
+   "OP"
+  ],
+  "moved": {
+   "K0": 1.17,
+   "LC": 6.66
+  },
+  "reaimed": [],
+  "new": [
+   "D1",
+   "K4"
+  ],
+  "removed": []
+ },
  "sweeps": [
   {
    "id": "E0",
@@ -210,6 +252,7 @@
     "GA",
     "H0",
     "H4",
+    "LC",
     "Y0",
     "Y1",
     "Z0",
@@ -232,8 +275,8 @@
    "yaw": 0.0,
    "pitch": -1.412486,
    "links": [
-    "H2",
     "GA",
+    "LC",
     "Z0"
    ],
    "visible": [
@@ -241,10 +284,13 @@
     "H2",
     "H3",
     "B4",
+    "D0",
+    "L2",
     "GA",
     "H0",
     "H4",
     "L4",
+    "LC",
     "Y0",
     "Z0",
     "OD",
@@ -267,25 +313,29 @@
    "yaw": 78.178512,
    "pitch": -1.173615,
    "links": [
-    "H1",
     "H4",
+    "K4",
     "LC"
    ],
    "visible": [
     "E0",
     "H1",
     "H3",
+    "K0",
     "D0",
     "L2",
     "L0",
     "L1",
     "GA",
+    "D1",
     "H0",
     "H4",
+    "K1",
+    "K3",
+    "K4",
     "L3",
     "L5",
     "LC",
-    "Z0",
     "OP"
    ],
    "outdoor": false,
@@ -319,11 +369,13 @@
     "C0",
     "T2",
     "GA",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
     "K3",
+    "K4",
     "L3",
     "LC",
     "OP"
@@ -390,36 +442,39 @@
    "label": "Kitchen",
    "room": "kitchen",
    "p": [
-    26.5,
+    27.6,
     5.0853,
-    26.5
+    26.9
    ],
-   "floor": 0.0,
+   "floor": 0.034,
    "yaw": 92.726311,
    "pitch": -2.099173,
    "links": [
-    "D0",
-    "H0",
-    "K3"
+    "K3",
+    "K4"
    ],
    "visible": [
+    "H2",
     "H3",
     "D0",
     "L2",
     "L0",
     "L1",
+    "S0",
     "T2",
     "H0",
+    "H4",
     "K1",
     "K2",
     "K3",
-    "L3",
+    "K4",
     "L4",
+    "L5",
     "OD"
    ],
    "outdoor": false,
    "origin": "seed",
-   "clearance": 2.05
+   "clearance": 1.51
   },
   {
    "id": "D0",
@@ -434,12 +489,12 @@
    "yaw": 87.614056,
    "pitch": -1.716869,
    "links": [
-    "K0",
     "L2",
-    "H0",
-    "LC"
+    "D1",
+    "H0"
    ],
    "visible": [
+    "H1",
     "H2",
     "H3",
     "K0",
@@ -449,21 +504,24 @@
     "S0",
     "C0",
     "T2",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
     "K3",
+    "K4",
     "L3",
     "L4",
     "L5",
     "LC",
+    "Y0",
     "Z0",
     "OD"
    ],
    "outdoor": false,
    "origin": "seed",
-   "clearance": 1.41
+   "clearance": 2.59
   },
   {
    "id": "L2",
@@ -479,24 +537,30 @@
    "pitch": -1.573824,
    "links": [
     "D0",
+    "D1",
     "H0",
     "L3",
     "L4"
    ],
    "visible": [
+    "H1",
     "H2",
     "K0",
     "D0",
     "L0",
     "L1",
+    "GA",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
+    "K4",
     "L3",
     "L4",
     "L5",
     "LC",
+    "Y0",
     "Z0",
     "OD"
    ],
@@ -527,11 +591,13 @@
     "D0",
     "L2",
     "L1",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
     "K3",
+    "K4",
     "L3",
     "L4",
     "L5",
@@ -565,11 +631,13 @@
     "D0",
     "L2",
     "L0",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
     "K3",
+    "K4",
     "L3",
     "L4",
     "L5",
@@ -626,16 +694,17 @@
    ],
    "visible": [
     "H3",
+    "K0",
     "D0",
     "P0",
     "C0",
     "A0",
     "T2",
+    "D1",
     "H0",
     "K1",
     "K2",
     "K3",
-    "LC",
     "S1",
     "X0"
    ],
@@ -665,6 +734,7 @@
     "P0",
     "S0",
     "T2",
+    "D1",
     "L3",
     "S1"
    ],
@@ -722,12 +792,13 @@
     "C0",
     "B2",
     "A1",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
     "K3",
-    "LC"
+    "K4"
    ],
    "outdoor": false,
    "origin": "approach",
@@ -884,12 +955,14 @@
     "H1",
     "H2",
     "H3",
+    "L2",
     "G0",
     "G1",
     "G3",
     "H0",
     "H4",
     "L4",
+    "LC",
     "Y0",
     "Z0",
     "OP"
@@ -897,6 +970,51 @@
    "outdoor": false,
    "origin": "approach",
    "clearance": 2.39
+  },
+  {
+   "id": "D1",
+   "label": "Open living area",
+   "room": "dining",
+   "p": [
+    30.75,
+    5.0853,
+    18.75
+   ],
+   "floor": 0.0,
+   "yaw": 5.0,
+   "pitch": 0.0,
+   "links": [
+    "D0",
+    "L2",
+    "K2",
+    "L3"
+   ],
+   "visible": [
+    "H2",
+    "H3",
+    "D0",
+    "L2",
+    "L0",
+    "L1",
+    "S0",
+    "C0",
+    "T2",
+    "H0",
+    "H4",
+    "K1",
+    "K2",
+    "K3",
+    "K4",
+    "L3",
+    "L4",
+    "L5",
+    "LC",
+    "Z0",
+    "OD"
+   ],
+   "outdoor": false,
+   "origin": "fill",
+   "clearance": 3.12
   },
   {
    "id": "G1",
@@ -988,11 +1106,9 @@
    "pitch": 0.0,
    "links": [
     "H3",
-    "K0",
     "D0",
     "L2",
-    "H4",
-    "LC"
+    "H4"
    ],
    "visible": [
     "E0",
@@ -1007,9 +1123,11 @@
     "S0",
     "T2",
     "GA",
+    "D1",
     "H4",
     "K2",
     "K3",
+    "K4",
     "L3",
     "L4",
     "L5",
@@ -1019,7 +1137,7 @@
    ],
    "outdoor": false,
    "origin": "fill",
-   "clearance": 3.66
+   "clearance": 1.33
   },
   {
    "id": "H4",
@@ -1036,34 +1154,35 @@
    "links": [
     "H2",
     "H3",
-    "H0",
-    "LC"
+    "H0"
    ],
    "visible": [
     "E0",
     "H1",
     "H2",
     "H3",
+    "K0",
     "D0",
     "L2",
     "L0",
     "L1",
     "T2",
     "GA",
+    "D1",
     "H0",
     "K1",
     "K2",
     "K3",
+    "K4",
     "L3",
     "L5",
     "LC",
     "Y0",
-    "Z0",
     "OP"
    ],
    "outdoor": false,
    "origin": "fill",
-   "clearance": 3.13
+   "clearance": 2.62
   },
   {
    "id": "K1",
@@ -1082,6 +1201,7 @@
     "K3"
    ],
    "visible": [
+    "H2",
     "H3",
     "K0",
     "D0",
@@ -1090,13 +1210,14 @@
     "L1",
     "S0",
     "T2",
+    "D1",
     "H4",
     "K2",
     "K3",
+    "K4",
     "L3",
     "L4",
     "L5",
-    "LC",
     "OD"
    ],
    "outdoor": false,
@@ -1116,6 +1237,7 @@
    "yaw": -15.0,
    "pitch": 0.0,
    "links": [
+    "D1",
     "K1",
     "L3"
    ],
@@ -1128,13 +1250,16 @@
     "L1",
     "S0",
     "T2",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K3",
+    "K4",
     "L3",
     "L4",
     "L5",
+    "LC",
     "OD"
    ],
    "outdoor": false,
@@ -1158,6 +1283,7 @@
     "K1"
    ],
    "visible": [
+    "H2",
     "H3",
     "K0",
     "D0",
@@ -1165,17 +1291,61 @@
     "L1",
     "S0",
     "T2",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
+    "K4",
     "L3",
-    "L5",
-    "LC"
+    "L5"
    ],
    "outdoor": false,
    "origin": "fill",
    "clearance": 2.12
+  },
+  {
+   "id": "K4",
+   "label": "Kitchen",
+   "room": "kitchen",
+   "p": [
+    23.0,
+    5.0853,
+    27.0
+   ],
+   "floor": 0.0,
+   "yaw": 20.0,
+   "pitch": 0.0,
+   "links": [
+    "H2",
+    "K0",
+    "LC"
+   ],
+   "visible": [
+    "H2",
+    "H3",
+    "K0",
+    "D0",
+    "L2",
+    "L0",
+    "L1",
+    "T2",
+    "D1",
+    "H0",
+    "H4",
+    "K1",
+    "K2",
+    "K3",
+    "L3",
+    "L4",
+    "L5",
+    "LC",
+    "Z0",
+    "OD"
+   ],
+   "outdoor": false,
+   "origin": "fill",
+   "clearance": 1.38
   },
   {
    "id": "L3",
@@ -1192,29 +1362,33 @@
    "links": [
     "L2",
     "L0",
+    "D1",
     "K2"
    ],
    "visible": [
     "H2",
     "H3",
-    "K0",
     "D0",
     "L2",
     "L0",
     "L1",
     "C0",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
     "K3",
+    "K4",
     "L4",
     "L5",
+    "LC",
+    "Z0",
     "OD"
    ],
    "outdoor": false,
    "origin": "bridge",
-   "clearance": 1.29
+   "clearance": 2.62
   },
   {
    "id": "L4",
@@ -1240,9 +1414,11 @@
     "L0",
     "L1",
     "GA",
+    "D1",
     "H0",
     "K1",
     "K2",
+    "K4",
     "L3",
     "L5",
     "LC",
@@ -1270,15 +1446,18 @@
    ],
    "visible": [
     "H2",
+    "K0",
     "D0",
     "L2",
     "L0",
     "L1",
+    "D1",
     "H0",
     "H4",
     "K1",
     "K2",
     "K3",
+    "K4",
     "L3",
     "L4",
     "LC",
@@ -1291,42 +1470,46 @@
   {
    "id": "LC",
    "label": "Laundry closet",
-   "room": "kitchen",
+   "room": "entry",
    "p": [
-    23.0,
+    19.445,
     5.0853,
-    24.5
+    30.1365
    ],
    "floor": 0.0,
-   "yaw": 177.548049,
-   "pitch": -18.2,
+   "yaw": -90.0,
+   "pitch": -14.0,
    "links": [
+    "H1",
     "H2",
-    "D0",
-    "H0",
-    "H4"
+    "K4",
+    "Z0"
    ],
    "visible": [
+    "E0",
+    "H1",
     "H2",
     "H3",
     "D0",
     "L2",
     "L0",
     "L1",
-    "S0",
-    "T2",
+    "GA",
+    "D1",
     "H0",
     "H4",
-    "K1",
-    "K3",
+    "K2",
+    "K4",
+    "L3",
     "L4",
     "L5",
+    "Y0",
     "Z0",
-    "OD"
+    "OP"
    ],
    "outdoor": false,
    "origin": "laundry",
-   "clearance": 1.73
+   "clearance": 2.39
   },
   {
    "id": "S1",
@@ -1399,10 +1582,13 @@
     "E0",
     "H1",
     "B3",
+    "D0",
+    "L2",
     "G0",
     "C3",
     "GA",
     "H4",
+    "LC",
     "Y1"
    ],
    "outdoor": false,
@@ -1505,12 +1691,12 @@
    "links": [
     "H1",
     "B4",
-    "GA"
+    "GA",
+    "LC"
    ],
    "visible": [
     "E0",
     "H1",
-    "H2",
     "B4",
     "D0",
     "L2",
@@ -1518,8 +1704,10 @@
     "L1",
     "G0",
     "GA",
+    "D1",
     "H0",
-    "H4",
+    "K4",
+    "L3",
     "L5",
     "LC",
     "OP"
@@ -1549,11 +1737,12 @@
     "D0",
     "L2",
     "L0",
+    "D1",
     "K1",
     "K2",
+    "K4",
     "L3",
-    "L4",
-    "LC"
+    "L4"
    ],
    "outdoor": true,
    "origin": "outdoor",
@@ -1582,6 +1771,7 @@
     "GA",
     "H0",
     "H4",
+    "LC",
     "Z0"
    ],
    "outdoor": true,

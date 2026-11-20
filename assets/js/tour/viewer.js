@@ -163,11 +163,38 @@ export function createViewer(opts) {
     }
     return null;
   }
-  // The sweep nearest to a plan point, preferring the ones standing in the room that contains it.
+  // The room a plan point lies in, or null: the SMALLEST one whose bounds contain it. The bounds are
+  // rectangles and may lie inside one another (the laundry closet is cut out of Bedroom 4's rectangle;
+  // the hall's rectangle reaches over its neighbours), and the smallest is the room meant. The same
+  // rule as room_of() in tools/web/build_site_data.py, which gives every sweep its `room`.
+  const within = (r, x, z) => x >= r.bounds[0] && x <= r.bounds[2] && z >= r.bounds[1] && z <= r.bounds[3];
+  const floorArea = (r) => (r.bounds[2] - r.bounds[0]) * (r.bounds[3] - r.bounds[1]);
+  function roomAt(x, z) {
+    let best = null;
+    for (const r of rooms) if (within(r, x, z) && (!best || floorArea(r) < floorArea(best))) best = r;
+    return best;
+  }
+  // The room each indoor sweep stands in. That is its `room`, except for the sweep in front of a room
+  // nobody can stand in (the laundry closet): it belongs to that room and stands in the one before it.
+  const standsIn = new Map(sweeps.map((s) => [s.id, s.outdoor ? null : roomAt(s.p[0], s.p[2])]));
+  // A room no sweep stands in (a closet behind its doors) is entered on the sweep in front of it, looking
+  // at the room: the direction (yaw, radians) from sweep `s` to the room's label point. undefined for a
+  // room somebody can stand in, where the visitor keeps the direction the view gives them.
+  const stoodIn = new Set(standsIn.values());
+  function lookInto(room, s) {
+    const r = room && roomMap.get(room.id);            // (a room of tour.json, by id)
+    if (!r || !s || stoodIn.has(r)) return undefined;
+    const dx = r.at[0] - s.p[0], dz = r.at[1] - s.p[2];
+    return Math.hypot(dx, dz) > 0.5 ? Math.atan2(dx, -dz) : undefined;
+  }
+  // The sweep a plan point leads to: the nearest of the sweeps of the point's room (the ones that belong
+  // to it and the ones that stand in it); the room's own sweep when it has none of either; the nearest
+  // sweep of all for a point outside every room.
   function nearestSweep(x, z) {
-    const room = rooms.find((r) => x >= r.bounds[0] && x <= r.bounds[2] && z >= r.bounds[1] && z <= r.bounds[3]);
-    const pool = room ? sweeps.filter((s) => s.room === room.id) : [];
-    const list = pool.length ? pool : sweeps;
+    const room = roomAt(x, z);
+    let list = room ? sweeps.filter((s) => s.room === room.id || standsIn.get(s.id) === room) : [];
+    if (!list.length && room && sweepMap.has(room.sweep)) return sweepMap.get(room.sweep);
+    if (!list.length) list = sweeps;
     return list.reduce((a, b) => Math.hypot(a.p[0] - x, a.p[2] - z) <= Math.hypot(b.p[0] - x, b.p[2] - z) ? a : b, list[0]) || null;
   }
 
@@ -579,7 +606,7 @@ export function createViewer(opts) {
   // ---- public --------------------------------------------------------------------------------
   const viewer = {
     canvas, engine, tour, util, caps, panos, size, pointers, keys, query,
-    sweeps, sweep, roomOf, path, nearestSweep,
+    sweeps, sweep, roomOf, roomAt, lookInto, path, nearestSweep,
     on, emit, report,
     register, controllers, setMode, setEngineState, start,
     setEngineMode, setBackground, render, project, ray, ndc, pick,

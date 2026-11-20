@@ -1,15 +1,23 @@
-"""Dining set for the open area between the living room and the kitchen (z 14.5-20.8).
+"""Dining set of the kitchen / open area.
 
-Default (kitchen_dining.DINING_RECT, architect's plan): build_rect() puts a warm white-oak farmhouse
-table with turned legs in line with the island, four oak chairs with cream pin-striped linen seats
-and backs, a cream wool rug and a brass lantern (owner's vintage-kitchen references).
+Default (kitchen_dining.DINING_RECT): build_rect() puts a warm white-oak farmhouse table with turned
+legs in line with the island at its WEST end (the shared-bathroom / hall side, owner's correction of 2026-11-20),
+six oak chairs with cream pin-striped linen seats and backs on its two long sides and a brass lantern
+over it (owner's vintage-kitchen references). The floor between the island and the family room, where
+the table stood before, is open.
 
 build() is the older alternative (off): a 42in round walnut pedestal table beside window W07 with
 four boucle barrel chairs and a double-ring LED chandelier.
 """
 import math
+import sys
 
+from ..common import RENDER_DIR
 from .kitchen_dining_geo import Geo, principled, srgb
+
+if RENDER_DIR not in sys.path:
+    sys.path.insert(0, RENDER_DIR)
+import relayout as R  # noqa: E402  (the concept -> architect's plan maps that bl/warp.py applies to this zone)
 
 TABLE_C = (35.55, 17.45)      # (x, z) centre (NE chair clears the living ledge at x>=38.25, z<=16.9)
 TABLE_R = 1.75                # 42in round
@@ -122,54 +130,108 @@ def _chandelier(g, cx, cz, col, lights):
     g.point_light('chandelier glow 1', cx, 5.96, cz, 14.0, 3000, 0.7, lights)
 
 
-# ------------------------------------------------------------------ rectangular set by the island
-# The architect's plan (sizes/sizes.pdf, SKA002) draws the dining table running north-south from the
-# island's north face toward the living room, chairs on its long sides and no stools at the island.
-# Concept coordinates (bl/warp.py carries them onto the new plan): island worktop x 28.4-34.4,
-# north face z 22.0; living rug ends at z 13.3, its south lounge chair at z 12.4.
-RECT_CX = 31.4                # on the island's centre line
-RECT_Z1 = 21.95               # south end, against the island's waterfall
-RECT_LEN = 6.5                # 78in, seats four (two each side) with room at the ends
-RECT_W = 3.17                 # 38in
+# --------------------------------------------------------- rectangular set at the island's west end
+# Owner's correction of 2026-11-20: the table stood north of the island, between the island and the family
+# room, and crowded it. It now continues the island's WEST end (the shared-bathroom / hall side), long axis
+# east-west on the island's centre line, three chairs on each long side and none at the ends (the west end
+# faces the hall, the east end is the island). No rug: the set stands on the oak floor like the island, so
+# nothing runs into the hall or the kitchen aisle. The floor north of the island stays open.
+#
+# The set is loose furniture: bl/warp.py moves the whole cluster (table, chairs, lantern, centrepiece) by the
+# shift of its plan centre and keeps its size. The plan numbers are therefore given on the ARCHITECT'S plan
+# and the cluster centre is carried back to the concept plan with the inverse of the kitchen's maps
+# (relayout.X_HALL / Z_RIGHT, region 'kitchen + dining'). Built (new-plan feet): island worktop x 27.453..33.222,
+# z 21.754..24.720; table x 21.433..27.433, z 21.862..24.612; chairs x 21.838..27.028, their backs at z 20.80
+# (north) and 25.67 (south); pantry-wall fronts z 28.882 (3.21 ft south of the chair backs; fridge pulls 3.06,
+# oven handles 3.01); hall line x 21.2 (0.23 ft west of the table's end).
+RECT_LEN = 6.0                # 72in: three chairs a side between the legs
+RECT_W = 2.75                 # 33in, a little narrower than the island's worktop (2.97 ft built)
 RECT_TOP = 2.5                # 30in
-RECT_CHAIR_OUT = 0.55         # chair centre beyond the table's long edge
-RECT_CHAIR_DZ = 1.5           # chair centres +- this from the table's mid-length
+RECT_GAP = 0.02               # between the table's east end and the island worktop's west edge (built feet)
+RECT_CHAIR_OUT = 0.20         # chair centre beyond the table's long edge: seats pushed well in, which keeps
+                              # 3 ft and more between the south chairs' backs and the oven handles
+RECT_CHAIR_DX = 1.82          # chair centres along the table: 0 and +- this (chairs are 1.55 wide)
+RECT_CHAIR_BACK = 0.86        # the raked back's top rail behind the chair centre
+RECT_LANTERN = 2.80           # lantern's underside above the table top (34in: standing in the hall one
+                              # looks along the table under it; it was 2.55 north of the island)
+
+
+def _concept(f, v):
+    """Concept coordinate that the piecewise-linear relayout map `f` carries to the new-plan value v."""
+    ps = f.pairs
+    if v <= ps[0][1]:
+        return ps[0][0] + (v - ps[0][1])
+    if v >= ps[-1][1]:
+        return ps[-1][0] + (v - ps[-1][1])
+    for (a0, b0), (a1, b1) in zip(ps, ps[1:]):
+        if b0 <= v <= b1:
+            return a0 + (v - b0) / (b1 - b0) * (a1 - a0)
+
+
+def _rect_centre():
+    """Concept (x, z) of the table's centre: its east end RECT_GAP short of the island worktop's west edge
+    on the built plan, its long axis on the island's centre line."""
+    from . import kitchen_dining_kitchen as K
+    ix0, _, iz0, iz1 = K.ISLAND
+    east_new = R.X_HALL(ix0) - RECT_GAP
+    return _concept(R.X_HALL, east_new - RECT_LEN / 2), (iz0 + iz1) / 2
+
+
+RECT_CX, RECT_CZ = _rect_centre()
+
+
+def rect_seats():
+    """Concept (x, z, rot) of the six chairs: three north of the table facing south, three south facing north."""
+    out = []
+    for sz, rot in ((-1, 0.0), (1, math.pi)):          # chair front is local +z: rot 0 faces south
+        for dx in (-RECT_CHAIR_DX, 0.0, RECT_CHAIR_DX):
+            out.append((RECT_CX + dx, RECT_CZ + sz * (RECT_W / 2 + RECT_CHAIR_OUT), rot))
+    return out
 
 
 def rect_footprint():
-    """(x0, x1, z0, z1) of the table plus chairs."""
-    z0 = RECT_Z1 - RECT_LEN
-    half = RECT_W / 2 + RECT_CHAIR_OUT + 0.93
-    return RECT_CX - half, RECT_CX + half, z0, RECT_Z1
+    """Concept (x0, x1, z0, z1) of the table plus chairs (the cluster bl/warp.py moves as one)."""
+    half = RECT_W / 2 + RECT_CHAIR_OUT + RECT_CHAIR_BACK
+    return RECT_CX - RECT_LEN / 2, RECT_CX + RECT_LEN / 2, RECT_CZ - half, RECT_CZ + half
+
+
+def rect_plan():
+    """The set on the built (architect's) plan, new-plan feet: what the build log and the notes report."""
+    x0, x1, z0, z1 = rect_footprint()
+    dx = R.X_HALL(RECT_CX) - RECT_CX
+    dz = R.Z_RIGHT(RECT_CZ) - RECT_CZ
+    r = lambda v: round(v, 3)                                            # noqa: E731
+    return {'table_x': [r(x0 + dx), r(x1 + dx)],
+            'table_z': [r(RECT_CZ - RECT_W / 2 + dz), r(RECT_CZ + RECT_W / 2 + dz)],
+            'chair_backs_z': [r(z0 + dz), r(z1 + dz)],
+            'chairs_x': [r(RECT_CX - RECT_CHAIR_DX - 0.775 + dx), r(RECT_CX + RECT_CHAIR_DX + 0.775 + dx)],
+            'lantern_xz': [r(RECT_CX + dx), r(RECT_CZ + dz)],
+            'lantern_y': [RECT_TOP + RECT_LANTERN, CEIL]}
 
 
 def build_rect(ctx, g: Geo):
-    """Warm white-oak farmhouse table (6'-6" x 3'-2", turned legs, apron) in line with the island,
-    four oak chairs with cream pin-striped upholstery, a brass lantern over the table and a cream
-    wool rug (vintage restyle; owner's 'kitchen cloest style' reference)."""
+    """Warm white-oak farmhouse table (6'-0" x 2'-9", turned legs, apron) continuing the island's west end,
+    six oak chairs with cream pin-striped upholstery and a brass lantern over the middle of the table
+    (vintage restyle; owner's 'kitchen cloest style' reference)."""
     from . import kitchen_dining_lights as KL
     from . import kitchen_dining_mats as KM
     col = g.sub('kd dining')
     lights = g.sub('kd_lights')
     oak = KM.oak_island()
-    cx, z1 = RECT_CX, RECT_Z1
-    z0 = z1 - RECT_LEN
-    x0, x1 = cx - RECT_W / 2, cx + RECT_W / 2
-    cz = (z0 + z1) / 2
-    # rug under the set, stopping short of the island
-    g.box('kd dining rug', cx - 3.3, cx + 3.3, 0.001, RUG_T, z0 - 1.5, z1 - 0.05, 'rug_wool_cream', 0.008, coll=col)
-    # 1.5in oak top with an eased edge, grain along the table
-    top = g.box('kd dining table top', x0, x1, RECT_TOP - 0.125, RECT_TOP, z0, z1, oak, 0.025, coll=col)
-    top['tg_grain'] = 1
-    # apron (inset 2.5in) and four turned legs
-    ins = 0.21
+    cx, cz = RECT_CX, RECT_CZ
+    x0, x1 = cx - RECT_LEN / 2, cx + RECT_LEN / 2
+    z0, z1 = cz - RECT_W / 2, cz + RECT_W / 2
+    # 1.5in oak top with an eased edge, grain along the table (east-west: the wood maps' default)
+    g.box('kd dining table top', x0, x1, RECT_TOP - 0.125, RECT_TOP, z0, z1, oak, 0.025, coll=col)
+    # apron (inset 2in) and four turned legs standing on the floor
+    ins = 0.17
     ay0 = RECT_TOP - 0.125 - 0.33
     for (ax0, ax1, az0, az1) in ((x0 + ins, x0 + ins + 0.07, z0 + ins, z1 - ins), (x1 - ins - 0.07, x1 - ins, z0 + ins, z1 - ins),
                                  (x0 + ins, x1 - ins, z0 + ins, z0 + ins + 0.07), (x0 + ins, x1 - ins, z1 - ins - 0.07, z1 - ins)):
         a = g.box('kd dining table apron', ax0, ax1, ay0, RECT_TOP - 0.125, az0, az1, oak, 0.006, coll=col)
         if az1 - az0 > ax1 - ax0:
             a['tg_grain'] = 1
-    leg = [(0.0, RUG_T), (0.085, RUG_T), (0.095, RUG_T + 0.03), (0.08, RUG_T + 0.08), (0.075, 0.25), (0.11, 0.33),
+    leg = [(0.0, 0.0), (0.085, 0.0), (0.095, 0.03), (0.08, 0.08), (0.075, 0.25), (0.11, 0.33),
            (0.075, 0.43), (0.08, 0.6), (0.12, 0.85), (0.125, 0.98), (0.09, 1.12), (0.07, 1.2), (0.085, 1.28),
            (0.12, 1.36), (0.12, 1.4), (0.105, 1.45), (0.13, 1.5), (0.13, ay0 - 0.0), (0.0, ay0)]
     for lx in (x0 + ins + 0.035, x1 - ins - 0.035):
@@ -177,25 +239,23 @@ def build_rect(ctx, g: Geo):
             g.lathe('kd dining table leg', leg, lx, lz, oak, 40, col, sharp_deg=55)
             g.box('kd dining table leg block', lx - 0.13, lx + 0.13, ay0, RECT_TOP - 0.125, lz - 0.13, lz + 0.13, oak, 0.008,
                   coll=col)
-    # chairs: two along each long side, facing the table
-    parts = _oak_chair(g, col, oak, KM.fabric_stripe())
-    seats = [(x0 - RECT_CHAIR_OUT, cz - RECT_CHAIR_DZ), (x0 - RECT_CHAIR_OUT, cz + RECT_CHAIR_DZ),
-             (x1 + RECT_CHAIR_OUT, cz - RECT_CHAIR_DZ), (x1 + RECT_CHAIR_OUT, cz + RECT_CHAIR_DZ)]
-    for i, (x, z) in enumerate(seats):
-        rot = math.atan2(cx - x, 0.0)              # face the table across its long edge
+    # chairs: three along each long side, facing the table, on the floor
+    parts = _oak_chair(g, col, oak, KM.fabric_stripe(), y0=0.0)
+    seats = rect_seats()
+    for i, (x, z, rot) in enumerate(seats):
         for p in parts:
             q = p if i == 0 else p.copy()
             if i:
                 g._link(q, col)
             q.name = f'{p.name.split(" #")[0]} #{i}'
-            q.location = (x * 0.3048, -z * 0.3048, RUG_T * 0.3048)
+            q.location = (x * 0.3048, -z * 0.3048, 0.0)
             q.rotation_euler = (0, 0, rot)
     # brass lantern over the middle of the table
-    KL.lantern(g, 'kd dining lantern', cx, cz, RECT_TOP + 2.55, col, lights)
-    return {'table': 1, 'chairs': len(seats), 'lantern': 1, 'rug': 1}
+    KL.lantern(g, 'kd dining lantern', cx, cz, RECT_TOP + RECT_LANTERN, col, lights)
+    return {'table': 1, 'chairs': len(seats), 'lantern': 1, 'rug': 0, 'plan': rect_plan()}
 
 
-def _oak_chair(g, col, oak, fabric):
+def _oak_chair(g, col, oak, fabric, y0=RUG_T):
     """Oak dining chair (seat 18.5in, back 33in) at the local origin, front toward local +z:
     square tapered legs, side and front stretchers, an upholstered seat cushion and a rounded
     upholstered back panel between two slightly raked back posts."""
@@ -245,7 +305,7 @@ def _oak_chair(g, col, oak, fabric):
         for v in p.data.vertices:
             v.co = R @ (v.co - pivot) + pivot
     for p in parts:
-        p['y0'] = RUG_T
+        p['y0'] = y0
     return parts
 
 

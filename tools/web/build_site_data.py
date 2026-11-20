@@ -6,7 +6,7 @@
 Reads tools/render/data/{scene,measurements,design,scene_classification}.json through tools/web/sitedata.py
 and writes (only when the bytes change):
 
-  assets/data/tour.json          what the viewer needs of the scene, without the 5361 objects (about 10 kB)
+  assets/data/tour.json          what the viewer needs of the scene, without its objects (about 13 kB)
   assets/data/measurements.json  the dimension schedule (rooms, windows, doors, source, precision,
                                  basis_legend) plus `audit`, the room table of the About sheet
   assets/data/design.json        the Design window: order, views {label, title, text, refs, node, opening,
@@ -37,6 +37,10 @@ tour.json (SCENE feet: x west -> east, y up, z rear/north -> street/south):
              schedule (tag = its M-number, bounds = clear interior, at = centre of the bounds, sweep = the
              sweep to enter the room) followed by the open spaces the schedule does not measure (living,
              kitchen + dining, hall, garage; tag null; bounds from scene_classification.json).
+             The bounds are rectangles and may lie inside one another: the laundry closet is cut out of
+             Bedroom 4's rectangle, and an open space's rectangle reaches over its neighbours. A point
+             belongs to the SMALLEST room that contains it: room_of() here, roomAt() in
+             assets/js/tour/viewer.js (a click in the dollhouse or on the floor plan), and the tests.
   highlights sweep ids of the highlight reel, one card per place: scene.tour.highlights when present, else
              the old page's `roomIDs` order; the start sweep (the entrance) always comes first, and a sweep
              or a caption (sweep label) that is already in the reel is left out.

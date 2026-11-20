@@ -43,7 +43,10 @@ python3 tools/web/build_site_data.py [--version V] [--check] [--out DIR]
   yaw, pitch, links, visible, outdoor`; angles in **degrees**, yaw 0 = north, clockwise), `rooms`
   (`id, label, bounds, at, sweep, tag`: the measured rooms, then living, kitchen + dining, hall and
   garage) and `highlights` (the reel: the entrance first, each caption once). A room nobody can stand
-  in, such as the laundry closet, owns the sweep in front of it.
+  in, such as the laundry closet, owns the sweep in front of it. A room may lie inside another
+  room's rectangle (the closet is cut out of Bedroom 4, whose entry stays a rectangle): a sweep
+  belongs to the smallest room that contains it, and any other lookup by position has to choose
+  the same way.
 * **`design.json`** (`tools/render/data/`) is hand-edited: tab order, and per view `label`, `title`,
   `text`, `refs`, `node`, `opening`, `image`.
 * **Release label.** `tour.json` is fetched without caching and names the release; the page appends
@@ -63,10 +66,33 @@ SITEDATA_ROOT=$R python3 tools/web/build_site_data.py
 ```
 
 `build_site_data.py --out DIR` alone builds the three runtime files from the checkout's data into
-another directory. To look at the result in a browser, link the rest of the site (`index.html`,
-`assets/js`, `assets/css`, `assets/model`, ...) into the root and serve it; to run the whole test suite
-against it, copy `tools/web/tests` into the root as well, because `data.test.js` reads the files of
-the tree it runs from.
+another directory.
+
+To look at the result in a browser, complete the root and serve it on another port:
+
+```bash
+cp index.html $R/                                   # a copy: --version rewrites its ?v= tokens
+for d in js css model vendor design references exterior; do ln -s $PWD/assets/$d $R/assets/$d; done
+cp -r assets/panos assets/thumbs $R/assets/         # copies: the publisher writes into them
+(cd $R && python3 -m http.server 8766 --bind 127.0.0.1)
+```
+
+A sweep that is new or has moved has no panorama until the render is published. For the rehearsal
+give it a stand-in: any `<ID>.png` equirect, for example a low-resolution review render enlarged to
+8192×4096 (a narrower source gets fewer levels; one under 2048 px is published as it is, and
+`data.test.js` then reports its width). Publish it into the root and stamp the root with a label of
+its own:
+
+```bash
+tools/render/.cache/venv/bin/python tools/web/publish_panos.py <stand-ins> --repo $R --only D1,K4,K0,LC
+SITEDATA_ROOT=$R python3 tools/web/build_site_data.py --version rehearsal
+```
+
+The model, the Design stills and the exterior frames of such a root are still the published ones.
+To run the test suite against it, copy `tools/web/tests` (without `node_modules` and `out`) into
+the root as well, because `data.test.js` reads the files of the tree it runs from. Run it there with
+`TOUR_BASE=http://127.0.0.1:8766`, after `npm install` or with `NODE_PATH` set to a `node_modules`
+that holds puppeteer-core.
 
 ## Publishers
 
@@ -104,7 +130,7 @@ every sweep `tour.json` names.
 python3 -m http.server 8765 --bind 127.0.0.1            # in another terminal, from the repository root
 cd tools/web/tests
 npm install                                             # once: puppeteer-core only
-npm test                                                # 132 tests, about 10 minutes
+npm test                                                # the whole suite, about 10 minutes
 npm run test:quick                                      # tools + data + smoke + rest, 30 s
 npm run test:igpu                                       # everything on the integrated GPU
 node --test data.test.js                                # the data checks alone, no browser

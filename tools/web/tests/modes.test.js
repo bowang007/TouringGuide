@@ -168,6 +168,86 @@ test('floor plan: straight down, north up, room names; a click on a name or on t
   s.note('click on the floor of ' + c.room.label + ' -> inside on ' + st.sweep);
 });
 
+// A room nobody can stand in (the laundry closet behind its doors, a reach-in closet) is seen from the
+// sweep in front of it, and its rectangle may lie inside another room's: the laundry closet is cut out
+// of Bedroom 4. A click on it is a click on the smallest room there, not on the room around it, and the
+// visitor arrives looking at what they clicked.
+test('a click on a room nobody can stand in enters on the sweep in front of it, looking at the room', { timeout: 240000 }, async (s) => {
+  await s.open();
+  const tour = await s.tour(), all = byId(tour.sweeps);
+  const size = (r) => (r.bounds[2] - r.bounds[0]) * (r.bounds[3] - r.bounds[1]);
+  const holds = (r, x, z, tol = 0) => x >= r.bounds[0] - tol && x <= r.bounds[2] + tol && z >= r.bounds[1] - tol && z <= r.bounds[3] + tol;
+  const roomAt = (x, z) => tour.rooms.filter((r) => holds(r, x, z)).sort((a, b) => size(a) - size(b))[0] || null;
+  const stood = new Set(tour.sweeps.filter((x) => !x.outdoor).map((x) => roomAt(x.p[0], x.p[2])).filter(Boolean).map((r) => r.id));
+  const inAnother = (r) => tour.rooms.some((o) => o !== r && size(o) > size(r) && holds(o, r.bounds[0], r.bounds[1], 0.01) && holds(o, r.bounds[2], r.bounds[3], 0.01));
+  // the rooms without a sweep in them, the ones inside another room first (the hard case)
+  const rooms = tour.rooms.filter((r) => !stood.has(r.id) && all.has(r.sweep)).sort((a, b) => inAnother(b) - inAnother(a));
+  if (!rooms.length) { s.note('every room of this data has a sweep standing in it'); return; }
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  // Screen points whose surface, as the page's own ray cast sees it, is a level one inside the room (its
+  // floor, the top of what stands in it), a hand's width clear of its walls; the most central first.
+  const spots = (room) => s.page.evaluate((b) => {
+    const v = window.TOUR.viewer, box = [1e9, 1e9, -1e9, -1e9], out = [];
+    for (const x of [b[0], b[2]]) for (const z of [b[1], b[3]]) for (const y of [0, 8]) {
+      const q = v.project([x, y, z], 3);
+      if (q) { box[0] = Math.min(box[0], q.x); box[1] = Math.min(box[1], q.y); box[2] = Math.max(box[2], q.x); box[3] = Math.max(box[3], q.y); }
+    }
+    const n = 16;
+    for (let i = 1; i < n; i++) for (let j = 1; j < n; j++) {
+      const x = box[0] + (box[2] - box[0]) * i / n, y = box[1] + (box[3] - box[1]) * j / n;
+      if (x < 70 || y < 80 || x > innerWidth - 70 || y > innerHeight - 110) continue;      // clear of the title and the toolbar
+      const e = document.elementFromPoint(x, y);
+      if (!e || e.tagName !== 'CANVAS') continue;        // under a room name
+      const h = v.pick(x, y, { classes: ['base', 'wall', 'furniture', 'decor_high'] });
+      if (!h || Math.abs(h.normal[1]) < 0.7) continue;
+      const px = h.point[0], pz = h.point[2];
+      if (px > b[0] + 0.3 && px < b[2] - 0.3 && pz > b[1] + 0.3 && pz < b[3] - 0.3) out.push({ x, y, point: h.point.map((c) => Math.round(c * 100) / 100), off: Math.hypot(px - (b[0] + b[2]) / 2, pz - (b[1] + b[3]) / 2) });
+    }
+    return { box: box.map(Math.round), spots: out.sort((p, q) => p.off - q.off) };
+  }, room.bounds);
+  await s.inside(tour.start);
+  const done = [];
+  for (const m of ['floorplan', 'dollhouse']) {
+    for (const room of rooms) {
+      const sw = all.get(room.sweep), named = room.tag === 'M13';        // the laundry closet: it has to work there
+      await s.press(s.testid('btn-' + m));
+      await mode(s, m);
+      await s.waitFor((m) => { const x = window.TOUR.getState()[m]; return !!x && !x.flight; }, { what: 'the ' + m + ' view to stand still' }, m);
+      await s.settle(8000);
+      // the dollhouse hides a small room behind its own walls from some sides: turn it a quarter at a time
+      let found = await spots(room);
+      for (let turn = 0; m === 'dollhouse' && !found.spots.length && turn < 3; turn++) {
+        const { width: W, height: H } = s.viewport;
+        await s.drag([W * 0.3, H * 0.3], [W * 0.3 + 286, H * 0.3], { steps: 12, hold: 200 });
+        await s.settle(8000);
+        found = await spots(room);
+      }
+      if (!found.spots.length) {
+        assert.ok(!named, 'no point of the ' + room.label + ' can be clicked in the ' + m + ' view (its box on screen: ' + found.box + ')');
+        s.note(m + ': no level surface of ' + room.label + ' is in view; not clicked');
+        await s.press(s.testid('btn-inside'));
+        await s.waitRest(null, 12000);
+        continue;
+      }
+      const at = found.spots[0];
+      await s.moveTo(at.x, at.y);
+      const hover = await s.waitFor((m) => window.TOUR.getState()[m].hover, { what: 'the cursor to show the sweep a click would enter', timeout: 4000 }, m);
+      assert.equal(hover, sw.id, m + ': over the ' + room.label + ' the cursor marks its sweep ' + sw.id + ', not ' + hover);
+      if (named) await s.shot(m + '-cursor-on-' + room.id);
+      await s.clickAt(at.x, at.y);
+      const st = await s.waitRest(null, 12000);
+      assert.equal(st.sweep, sw.id, m + ': a click on the ' + room.label + ' (surface point ' + at.point + ') enters on ' + sw.id + ', got ' + st.sweep + (inAnother(room) ? ' (the room lies inside another room\'s rectangle: the smallest room counts)' : ''));
+      const want = Math.atan2(room.at[0] - sw.p[0], -(room.at[1] - sw.p[2])), off = Math.abs(wrap(st.yaw - want)) * 180 / Math.PI;
+      assert.ok(off < 3, m + ': the visitor arrives on ' + sw.id + ' looking at the ' + room.label + ' (' + off.toFixed(1) + ' degrees off)');
+      assert.ok(Math.abs(st.pitch - sw.pitch * Math.PI / 180) < 0.02, m + ': at the height the sweep itself looks (pitch ' + st.pitch.toFixed(3) + ')');
+      if (named) { await s.settle(8000); await s.shot(m + '-landed-' + sw.id); }
+      done.push(m + ': ' + room.label + (inAnother(room) ? ' (inside another room)' : '') + ' -> ' + st.sweep + ', ' + off.toFixed(1) + ' deg off the room');
+    }
+  }
+  s.note(done.join('; '));
+  assert.ok(done.length > 0, 'at least one such room was clicked');
+});
+
 // Records every frame from a button press until the picture has settled in the view it leads to.
 async function fly(s, button, arrived) {
   await s.settle(8000);

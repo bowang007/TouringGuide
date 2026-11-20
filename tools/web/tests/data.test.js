@@ -320,36 +320,158 @@ test('tour.json names the model and the plan by their content', (t) => {
   }
 });
 
-// Design section 3: the laundry closet and what the web data must say about it.
-test('laundry closet: room M13, door D17, plan targets, a sweep in front of it', () => {
+// ---- rooms inside rooms ----------------------------------------------------------------------------
+// Room bounds are rectangles and may lie inside one another: the laundry closet is cut out of Bedroom 4's
+// rectangle, and the rectangle of an open space reaches over its neighbours. A point belongs to the
+// SMALLEST room that contains it (room_of in tools/web/build_site_data.py, roomAt in
+// assets/js/tour/viewer.js).
+const span = (b) => (b[2] - b[0]) * (b[3] - b[1]);                     // bounds [x0, z0, x1, z1]
+const holds = (r, x, z, tol = 0) => x >= r.bounds[0] - tol && x <= r.bounds[2] + tol && z >= r.bounds[1] - tol && z <= r.bounds[3] + tol;
+const roomAt = (x, z) => tour.rooms.filter((r) => holds(r, x, z)).sort((a, b) => span(a.bounds) - span(b.bounds))[0] || null;
+const bearing = (from, x, z) => Math.atan2(x - from.p[0], -(z - from.p[2])) * 180 / Math.PI;      // yaw in degrees, 0 = north
+const turn = (a, b) => Math.abs(((a - b + 540) % 360) - 180);                                    // degrees between two yaws
+
+test('a sweep belongs to the smallest room that contains it; a room nobody stands in owns the sweep in front of it', (t) => {
+  const stood = new Set(tour.sweeps.filter((s) => !s.outdoor).map((s) => roomAt(s.p[0], s.p[2])).filter(Boolean).map((r) => r.id));
+  const bad = [];
+  for (const s of tour.sweeps) {
+    if (s.outdoor) continue;
+    const at = roomAt(s.p[0], s.p[2]);
+    if (!at || s.room === at.id) continue;             // (in a doorway, between two rooms: the nearest one)
+    const own = tour.rooms.find((r) => r.id === s.room);
+    // the only other case: the sweep in front of a room that holds no sweep, named by that room
+    if (!own || stood.has(own.id) || own.sweep !== s.id) bad.push(s.id + ': room "' + s.room + '", stands in "' + at.id + '"');
+  }
+  assert.deepEqual(bad, []);
+  const nested = tour.rooms.filter((r) => tour.rooms.some((o) => o !== r && span(o.bounds) > span(r.bounds) && holds(o, r.bounds[0], r.bounds[1], 0.01) && holds(o, r.bounds[2], r.bounds[3], 0.01)));
+  const vacant = tour.rooms.filter((r) => !stood.has(r.id));
+  t.diagnostic('rooms inside another room\'s rectangle: ' + (nested.map((r) => r.id).join(', ') || 'none') + '; rooms nobody stands in: ' + (vacant.map((r) => r.id + ' (seen from ' + r.sweep + ')').join(', ') || 'none'));
+  // such a room is entered on its own sweep, which therefore has to see it: not farther than 8 ft from it
+  for (const r of vacant) {
+    const s = byId.get(r.sweep);
+    const d = Math.hypot(Math.max(r.bounds[0] - s.p[0], 0, s.p[0] - r.bounds[2]), Math.max(r.bounds[1] - s.p[2], 0, s.p[2] - r.bounds[3]));
+    assert.ok(d <= 8, r.id + ': its sweep ' + s.id + ' stands ' + d.toFixed(1) + ' ft from it');
+  }
+});
+
+// A target of the Dimensions plan that lies inside a larger one (the closet inside Bedroom 4, a skylight
+// inside its room) must be drawn after it, or the larger one takes its clicks.
+test('plan targets: a target inside a larger one lies on top of it', () => {
+  const svg = fs.readFileSync(disk('assets/plans/dimension-plan.svg'), 'utf8');
+  const hits = [...svg.matchAll(/<rect\b([^>]*\bdata-measure="([^"]+)"[^>]*)>/g)].map((m) => {
+    const num = (k) => Number((new RegExp('(?:^|\\s)' + k + '="(-?[\\d.]+)"').exec(m[1]) || [])[1]);      // (not stroke-width)
+    return { id: m[2], x: num('x'), y: num('y'), w: num('width'), h: num('height') };
+  });
+  assert.ok(hits.length > 0 && hits.every((h) => [h.x, h.y, h.w, h.h].every(isNum) && h.w > 0 && h.h > 0), 'the targets are rectangles with a size');
+  const under = [];
+  hits.forEach((a, i) => hits.forEach((b, j) => {
+    const cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+    if (i < j && a.w * a.h < b.w * b.h && cx > b.x && cx < b.x + b.w && cy > b.y && cy < b.y + b.h) under.push(a.id + ' lies under ' + b.id);
+  }));
+  assert.deepEqual(under, []);
+});
+
+// ---- the laundry closet (owner's fifth round, 2026-11-20) ---------------------------------------------
+// It is cut out of Bedroom 4's north-east corner and opens east onto the foyer through a pair of doors;
+// nobody can stand in it, so it is seen from the sweep LC in the foyer, in front of the doors. The ids
+// the design names are M13 (room), D17 (doors) and LC (sweep and design view); everything else is read
+// from the data and held to the rule, not to coordinates.
+test('laundry closet: room M13 is just large enough for the stacked pair and has the doors D17 in one of its sides', () => {
   const room = measurements.rooms.find((r) => r.id === 'M13');
   assert.ok(room, 'measurements.json has room M13');
   assert.match(room.name, /laundry/i);
-  assert.ok(Math.abs(room.width_ft - 3.08) < 0.2 && Math.abs(room.depth_ft - 3.0) < 0.2, 'clear size about 3\'-1" x 3\'-0", got ' + room.width_ft + ' x ' + room.depth_ft);
+  const [x0, x1, z0, z1] = room.bounds_ft, sx = x1 - x0, sz = z1 - z0;
+  // a stacked 27 in pair, 30 1/4 in deep with its hoses: at least 2'-6" each way, and no more than about 3.2 ft
+  assert.ok(Math.min(sx, sz) >= 2.5 && Math.max(sx, sz) <= 3.2, 'clear size between 2\'-6" and about 3.2 ft each way, got ' + sx.toFixed(3) + ' x ' + sz.toFixed(3));
+  // width (across the doors) and depth are the two sides of the bounds, in either order
+  const named = [room.width_ft, room.depth_ft].sort(), sides = [sx, sz].sort();
+  assert.ok(Math.abs(named[0] - sides[0]) < 0.02 && Math.abs(named[1] - sides[1]) < 0.02, 'width and depth are the sides of the bounds: ' + named + ' against ' + sides.map((v) => v.toFixed(3)));
+  assert.ok(Math.abs(room.area_sqft - sx * sz) < 0.15, 'area ' + room.area_sqft + ' sq ft is width x depth');
+  assert.ok((measurements.audit || []).some((a) => a.id === 'M13' || /laundry/i.test(a.name)), 'the room table (audit) lists the laundry closet');
   const door = measurements.doors.find((d) => d.id === 'D17');
   assert.ok(door, 'measurements.json has door D17');
-  assert.ok(Math.abs(door.width - 2.5) < 0.1 && Math.abs(door.height - 6.67) < 0.1, 'door 2\'-6" x 6\'-8", got ' + door.width + ' x ' + door.height);
-  assert.ok((measurements.audit || []).some((a) => /laundry/i.test(a.name)), 'the room table (audit) lists the laundry closet');
+  assert.match(door.name, /laundry/i);
+  assert.ok(Math.abs(door.width - 2.5) < 0.1 && Math.abs(door.height - 6.67) < 0.1, 'opening 2\'-6" x 6\'-8", got ' + door.width + ' x ' + door.height);
+  assert.ok(Math.abs(door.end - door.start - door.width) < 0.02, 'start and end of the opening are its width apart');
+  // the opening lies in one side of the room: within that side's length, in the wall just outside it
+  const along = door.axis === 'z' ? [z0, z1] : [x0, x1], across = door.axis === 'z' ? [x0, x1] : [z0, z1];
+  assert.ok(door.start >= along[0] - 0.05 && door.end <= along[1] + 0.05, 'the opening (' + door.start + ' .. ' + door.end + ') lies within the side of the room (' + along + ')');
+  const out = door.c < across[0] ? across[0] - door.c : door.c - across[1];
+  assert.ok(out > 0 && out <= 0.5, 'the door line is in the wall of one side of the room (' + out.toFixed(3) + ' ft outside the clear face)');
+  assert.ok(door.width <= (along[1] - along[0]) + 0.01, 'the doors are not wider than the closet');
+  // both on the plan
+  const svg = fs.readFileSync(disk('assets/plans/dimension-plan.svg'), 'utf8');
+  for (const id of ['M13', 'D17']) assert.ok(svg.includes('data-measure="' + id + '"'), 'dimension-plan.svg has a target for ' + id);
+});
+
+test('laundry closet: carved out of Bedroom 4\'s north-east corner, opening east onto the foyer', () => {
   const tr = tour.rooms.find((r) => r.tag === 'M13');
   assert.ok(tr, 'tour.json has a room with tag M13');
   assert.match(tr.label, /laundry/i);
-  const cx = (21.218 + 25.051) / 2, cz = (27.641 + 31.058) / 2;
-  assert.ok(Math.abs(tr.at[0] - cx) < 1.5 && Math.abs(tr.at[1] - cz) < 1.5, 'the room sits in the kitchen\'s south-west corner');
-  const near = tour.sweeps.filter((s) => Math.hypot(s.p[0] - cx, s.p[2] - cz) < 8);
-  assert.ok(near.length > 0, 'a sweep stands within 8 ft of the closet');
-  assert.ok(byId.has(tr.sweep) && Math.hypot(byId.get(tr.sweep).p[0] - cx, byId.get(tr.sweep).p[2] - cz) < 8, 'the room\'s own sweep faces the closet');
-  // nobody can stand in the closet: the sweep in front of it is its sweep (room chip, reel, a click on the room)
-  assert.equal(byId.get(tr.sweep).room, tr.id, 'the sweep in front of the closet belongs to the closet');
-  assert.ok(tour.highlights.includes(tr.sweep), 'the highlight reel has the laundry closet');
-  assert.match(byId.get(tr.sweep).label, /laundry/i, 'and names it');
+  const m = measurements.rooms.find((r) => r.id === 'M13'), [x0, x1, z0, z1] = m.bounds_ft;
+  assert.deepEqual(tr.bounds.map((v) => v.toFixed(3)), [x0, z0, x1, z1].map((v) => v.toFixed(3)), 'tour.json and the schedule give the closet the same bounds');
+  // inside the rectangle of the room named Bedroom 4, in its north-east corner (x east, z south)
+  const host = tour.rooms.find((r) => r !== tr && /^bedroom 4$/i.test(r.label));
+  assert.ok(host, 'tour.json has the room "Bedroom 4"');
+  assert.ok(holds(host, tr.bounds[0], tr.bounds[1], 0.01) && holds(host, tr.bounds[2], tr.bounds[3], 0.01), 'the closet lies inside Bedroom 4\'s rectangle (' + tr.bounds + ' in ' + host.bounds + ')');
+  assert.ok(Math.abs(tr.bounds[2] - host.bounds[2]) < 0.01 && Math.abs(tr.bounds[1] - host.bounds[1]) < 0.01, 'in its north-east corner: the east and north sides coincide');
+  assert.ok(span(tr.bounds) < span(host.bounds) / 5, 'and takes a small part of it');
+  assert.equal(roomAt(tr.at[0], tr.at[1]).id, tr.id, 'a point in the closet belongs to the closet, not to Bedroom 4 (the smallest room wins)');
+  const hostM = measurements.rooms.find((r) => r.id === host.tag);
+  assert.ok(hostM.area_sqft < hostM.width_ft * hostM.depth_ft - span(tr.bounds) + 0.01, 'Bedroom 4\'s area (' + hostM.area_sqft + ' sq ft) leaves the closet out');
+  // the doors are in the east side, and beyond them is the foyer
+  const door = measurements.doors.find((d) => d.id === 'D17');
+  assert.ok(door.axis === 'z' && door.c > x1, 'the doors D17 are in the closet\'s east side');
+  const beyond = roomAt(door.c + 1, (door.start + door.end) / 2);
+  assert.ok(beyond && /foyer/i.test(beyond.label), 'one foot east of the doors is the foyer, got ' + (beyond && beyond.label));
 });
 
-test('laundry closet: design view "LC" and the fourth round of owner\'s changes', () => {
+test('laundry closet: the sweep LC stands in the foyer in front of the doors and looks at them', () => {
+  const tr = tour.rooms.find((r) => r.tag === 'M13'), room = measurements.rooms.find((r) => r.id === 'M13'), door = measurements.doors.find((d) => d.id === 'D17');
+  assert.equal(tr.sweep, 'LC', 'the closet is seen from the sweep LC');
+  assert.equal(room.node, 'LC', '"Visit in 3D" of M13 goes to LC');
+  assert.equal(door.node, 'LC', '"Visit in 3D" of D17 goes to LC');
+  const s = byId.get('LC');
+  assert.ok(s && !s.outdoor, 'LC is an indoor sweep');
+  assert.ok(!holds(tr, s.p[0], s.p[2], 0.3), 'nobody can stand in the closet: LC stands outside it');
+  // the middle of the opening on the plan, and which way is out
+  const mid = (door.start + door.end) / 2, dx = door.axis === 'z' ? door.c : mid, dz = door.axis === 'z' ? mid : door.c;
+  const d = Math.hypot(s.p[0] - dx, s.p[2] - dz);
+  assert.ok(d >= 2 && d <= 6, 'LC stands 2 to 6 ft from the doors, got ' + d.toFixed(2) + ' ft');
+  const outward = Math.sign(door.c - (door.axis === 'z' ? tr.at[0] : tr.at[1])), off = (door.axis === 'z' ? s.p[0] : s.p[2]) - door.c;
+  assert.ok(off * outward > 0, 'on the side the doors open to, not behind the closet');
+  const side = (door.axis === 'z' ? s.p[2] : s.p[0]) - mid;
+  assert.ok(Math.abs(side) <= door.width / 2, 'in front of the opening, not beside it (' + side.toFixed(2) + ' ft off its axis)');
+  const away = turn(s.yaw, bearing(s, dx, dz));
+  assert.ok(away <= 15, 'LC opens looking at the doors (' + away.toFixed(1) + ' degrees off)');
+  assert.ok(s.pitch <= 0 && s.pitch >= -25, 'level or a little down, so that both stacked units are in the picture (pitch ' + s.pitch + ')');
+  // the sweep in front of the closet is the closet's: room chip, reel, a click on the room
+  assert.equal(s.room, tr.id, 'LC belongs to the closet');
+  assert.match(s.label, /laundry/i, 'and is named after it');
+  assert.ok(tour.highlights.includes('LC'), 'the highlight reel has the laundry closet');
+  assert.ok(s.links.length >= 2, 'it is a place on the way, not a dead end (links ' + s.links.join(', ') + ')');
+  const standing = roomAt(s.p[0], s.p[2]);
+  assert.ok(standing && /foyer/i.test(standing.label), 'LC stands in the foyer, got ' + (standing && standing.label));
+});
+
+test('design sheet: the view "LC" and the owner\'s rounds describe the closet at Bedroom 4 and the table at the island', () => {
   assert.ok(design.order.includes('LC') && design.views.LC, 'design.json has the view LC in its tab order');
-  assert.match(design.views.LC.label, /laundry/i);
-  assert.ok(exists(design.views.LC.image), 'the Laundry still exists: ' + design.views.LC.image);
-  const rounds = (design.owner_changes || []).map((r) => r.round);
-  assert.ok(rounds.includes(4), 'owner_changes has a fourth round (rounds: ' + rounds.join(', ') + ')');
-  const fourth = design.owner_changes.find((r) => r.round === 4);
-  assert.ok(fourth.changes.some((c) => /laundry|washer/i.test(c)), 'the fourth round mentions the laundry closet');
+  const v = design.views.LC;
+  assert.match(v.label, /laundry/i);
+  assert.ok(exists(v.image), 'the Laundry still exists: ' + v.image);
+  assert.equal(v.node, 'LC', 'its "Walk into this room" goes to LC');
+  assert.equal(v.opening, 'M13', 'its "Opening details" show M13');
+  assert.match(v.title + ' ' + v.text, /bedroom 4/i, 'the text places the closet at Bedroom 4');
+  assert.match(v.title + ' ' + v.text, /foyer/i, 'and says that it opens onto the foyer');
+  // no view still tells the fourth round's story, the closet in the kitchen's corner ("dishwasher" is not a washer)
+  const stale = Object.entries(design.views).filter(([, o]) => /laundry|\bwasher\b/i.test(o.title + ' ' + o.text) && /kitchen/i.test(o.title + ' ' + o.text)).map(([k]) => k);
+  assert.deepEqual(stale, [], 'views that mention the laundry closet together with the kitchen');
+  // the rounds of owner's changes: numbered 1.., the laundry closet in the fourth, moved to Bedroom 4 in a later one
+  const rounds = design.owner_changes || [];
+  assert.deepEqual(rounds.map((r) => r.round), rounds.map((_, i) => i + 1), 'rounds are numbered from 1 without a gap');
+  const about = rounds.filter((r) => r.changes.some((c) => /laundry|\bwasher\b/i.test(c)));
+  assert.ok(about.some((r) => r.round === 4), 'the fourth round mentions the laundry closet (rounds: ' + rounds.map((r) => r.round).join(', ') + ')');
+  const last = about[about.length - 1];
+  assert.ok(last.round >= 5 && last.changes.some((c) => /laundry|\bwasher\b/i.test(c) && /bedroom 4/i.test(c)), 'the latest round about the laundry closet (round ' + last.round + ') puts it at Bedroom 4');
+  assert.ok(last.changes.some((c) => /dining table/i.test(c) && /island/i.test(c)), 'the same round moves the dining table to the island (round ' + last.round + ')');
 });

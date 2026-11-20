@@ -17,9 +17,10 @@ Coordinates are feet: x runs west -> east, z rear (north, garden) -> street (sou
 
 What it draws: the floor footprint, room fills, walls cut at 4 ft (dark) and floor-level pieces
 below the cut such as sills and the bay base (light), door leaves, window and skylight symbols,
-room labels with clear sizes in feet-inches, chains of clear interior dimensions on all four
-sides (found by scanning the walls), overall outside-face dimensions, and one hit rect per room,
-window, skylight and door:
+room labels with clear sizes in feet-inches (a door tag that would cover a room's label moves
+across its wall, away from that room: the laundry closet is no bigger than its label), chains of
+clear interior dimensions on all four sides (found by scanning the walls), overall outside-face
+dimensions, and one hit rect per room, window, skylight and door:
     <rect ... class="review-hit" data-measure="M01" tabindex="0" role="button" aria-label="..."/>
 (openings carry class="review-hit opening-hit"), which the page's measurementDetail() /
 click handlers use to select an item.
@@ -217,6 +218,25 @@ def build(scene, meas):
         svg.add('<polygon %s/>' % attrs(points=' '.join('%s,%s' % (f(X(a)), f(X(b))) for a, b in box_corners(o)),
                                         fill=WALL, stroke=WALL, stroke_width=0.5))
 
+    # Room labels are laid out first (and drawn after the openings), so that a door tag can keep off them.
+    def room_label(r):
+        """Centre, size, scale and lines of a room's label: name, clear size, area; scaled down to fit the room."""
+        x0, x1, z0, z1 = r['bounds_ft']
+        lines = [(r['name'].upper(), 15, 700, INK), ('%s × %s' % (ft(r['width_ft']), ft(r['depth_ft'])), 14, 400, INK),
+                 ('%.1f sq ft · %s' % (r['area_sqft'], r.get('basis', '')), 12, 400, MUTED)]
+        rw, rh = X(x1 - x0) - 10, X(z1 - z0) - 8
+        for keep in (3, 2):
+            ls = lines[:keep]
+            w = max(text_w(s, sz, wt) for s, sz, wt, _ in ls) + 14
+            h = sum(sz * 1.3 for _, sz, _, _ in ls) + 8
+            k = min(1.0, rw / w, rh / h)
+            if k >= .72 or keep == 2:
+                break
+        k = max(k, .55)
+        return X((x0 + x1) / 2), X((z0 + z1) / 2), w * k, h * k, k, ls
+
+    room_labels = [room_label(r) for r in rooms]
+
     # Openings: symbol on the wall, a tag, and a hit rect around both.
     hits = []
 
@@ -226,8 +246,11 @@ def build(scene, meas):
             return n['p'][0], n['p'][2]
         return (ox0 + ox1) / 2, (oz0 + oz1) / 2
 
+    def tag_size(label, size=10):
+        return text_w(label, size, 600) + 10, size + 8
+
     def tag(cx, cy, label, size=10):
-        w, h = text_w(label, size, 600) + 10, size + 8
+        w, h = tag_size(label, size)
         svg.rect(cx - w / 2, cy - h / 2, w, h, fill=TAG_FILL, stroke=TAG_LINE, stroke_width=0.8, rx=4)
         svg.text(cx, cy + size * .36, label, size, fill=GREEN, weight=600)
         return cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2
@@ -280,7 +303,17 @@ def build(scene, meas):
         else:
             r = (X(c - .3), X(a), X(c + .3), X(b))
             svg.line(X(c), X(a), X(c), X(b), stroke=LEAF_LINE, stroke_width=1, stroke_dasharray='3 3')
-        t = tag((r[0] + r[2]) / 2, (r[1] + r[3]) / 2, d['id'], 10)
+        # The tag sits on the opening. Where that would cover a room's label (a closet as small as its own label,
+        # with the door in the wall beside it), it moves across the wall to the side away from that room.
+        cx, cy = (r[0] + r[2]) / 2, (r[1] + r[3]) / 2
+        w, h = tag_size(d['id'], 10)
+        for lx, ly, lw, lh, _, _ in room_labels:
+            if abs(cx - lx) < (w + lw) / 2 and abs(cy - ly) < (h + lh) / 2:
+                if d['axis'] == 'x':
+                    cy = ly + (1 if cy >= ly else -1) * ((h + lh) / 2 + 3)
+                else:
+                    cx = lx + (1 if cx >= lx else -1) * ((w + lw) / 2 + 3)
+        t = tag(cx, cy, d['id'], 10)
         hits.append((d, r, t))
 
     # Labels for spaces outside the schedule.
@@ -304,21 +337,7 @@ def build(scene, meas):
         svg.text(x, y + 16, sub, 13, fill=MUTED)
 
     # Room labels: name, clear size, area; scaled down to fit the room.
-    for r in rooms:
-        x0, x1, z0, z1 = r['bounds_ft']
-        lines = [(r['name'].upper(), 15, 700, INK), ('%s × %s' % (ft(r['width_ft']), ft(r['depth_ft'])), 14, 400, INK),
-                 ('%.1f sq ft · %s' % (r['area_sqft'], r.get('basis', '')), 12, 400, MUTED)]
-        rw, rh = X(x1 - x0) - 10, X(z1 - z0) - 8
-        for keep in (3, 2):
-            ls = lines[:keep]
-            w = max(text_w(s, sz, wt) for s, sz, wt, _ in ls) + 14
-            h = sum(sz * 1.3 for _, sz, _, _ in ls) + 8
-            k = min(1.0, rw / w, rh / h)
-            if k >= .72 or keep == 2:
-                break
-        k = max(k, .55)
-        w, h = w * k, h * k
-        cx, cy = X((x0 + x1) / 2), X((z0 + z1) / 2)
+    for cx, cy, w, h, k, ls in room_labels:
         svg.rect(cx - w / 2, cy - h / 2, w, h, fill='#fffdf7', fill_opacity='.88', rx=4)
         y = cy - h / 2 + 4 * k
         for s, sz, wt, col in ls:

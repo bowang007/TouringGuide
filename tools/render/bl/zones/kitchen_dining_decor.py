@@ -154,11 +154,10 @@ def build(ctx, g: Geo, dining=True, herb=True):
     _leaf_bouquet(g, 'kd island branch', (vx, TOP + ch - 0.08, vz), 9, 1.8, 0.95, 11, col, leaf_r=0.085, droop=0.32,
                   leaf_mat=leaf)
 
-    # ---------------- south counter under the glass upper (one 20in base since the laundry closet): an oak board
-    # and the cream vase; the utensil crock moved to the corner right of the cooktop
-    cb = K.BASE_X0 + 0.60
-    _cutting_board(g, cb, col, KM.oak_island())
-    ux, uz = 38.75, 30.85
+    # --------------------------------------- south counter under the glass uppers
+    _cutting_board(g, 29.15, col, KM.oak_island())
+    _cutting_board(g, 29.55, col, 'walnut_slab', scale=0.78, out=0.082)
+    ux, uz = 31.25, 30.9
     g.lathe('kd decor utensil crock', [(0.0, 0.0), (0.2, 0.0), (0.215, 0.02), (0.22, 0.5), (0.205, 0.52), (0.19, 0.5),
                                        (0.19, 0.05), (0.0, 0.05)], ux, uz, crock, 48, col, y_base=TOP, sharp_deg=60)
     for k, (dx, dz, tilt, h) in enumerate(((-0.06, 0.03, 0.10, 1.05), (0.06, -0.04, -0.12, 1.0), (0.02, 0.07, 0.05, 0.95),
@@ -168,7 +167,7 @@ def build(ctx, g: Geo, dining=True, herb=True):
         g.cyl_axis('kd decor spoon stem', a, b, 0.017, KM.oak_island(), 8, col)
         g.lathe('kd decor spoon head', [(0.0, 0.0), (0.04, 0.02), (0.055, 0.08), (0.045, 0.15), (0.0, 0.17)],
                 b[0], b[2], KM.oak_island(), 16, col, y_base=b[1] - 0.02)
-    _import(g, 'ceramic_vase_04', 0.62, (K.HOOD[0] - 0.33, TOP, 30.9), 2.4, col)
+    _import(g, 'ceramic_vase_04', 0.62, (32.6, TOP, 30.95), 2.4, col)
 
     # ----------------------------------------- right of the cooktop: brass lamp, salt, cruet
     lx, lz = 37.15, 30.95
@@ -196,10 +195,9 @@ def build(ctx, g: Geo, dining=True, herb=True):
         print('[kitchen_dining] kettle skipped:', e)
 
     # ----------------------------------------------------- glass uppers: dishes
-    nu = K.UPPER_N
-    xs = [K.BASE_X0 + i * (K.HOOD[0] - K.BASE_X0) / nu for i in range(nu + 1)]
+    xs = [K.BASE_X0 + i * (K.HOOD[0] - K.BASE_X0) / 3 for i in range(4)]
     zc = 30.86
-    for i in range(nu):
+    for i in range(3):
         cx = (xs[i] + xs[i + 1]) / 2
         if i != 1:
             for k in range(6):
@@ -248,16 +246,18 @@ def build(ctx, g: Geo, dining=True, herb=True):
         _leaf_bouquet(g, 'kd herb', (hx, TOP + 0.37, hz), 11, 0.55, 0.35, 21, col, leaf_r=0.045, droop=0.6, leaf_mat=herb_m)
 
     # ------------------------------------------------------------ dining table
+    # centrepiece along the table's east-west axis: the pitcher of eucalyptus toward the hall end, the oak
+    # bowl toward the island; both clear of the lantern over the middle (its underside is 2.8 ft above the top)
     try:
-        from .kitchen_dining_dining import RECT_CX, RECT_Z1, RECT_LEN, RECT_TOP
-        tx, tz = RECT_CX + 0.35, RECT_Z1 - RECT_LEN / 2 - 0.9
+        from .kitchen_dining_dining import RECT_CX, RECT_CZ, RECT_TOP
+        tx, tz = RECT_CX - 0.9, RECT_CZ - 0.2
         g.lathe('kd decor table pitcher', [(0.0, 0.0), (0.17, 0.0), (0.2, 0.1), (0.21, 0.35), (0.16, 0.5), (0.14, 0.56),
                                            (0.16, 0.6), (0.15, 0.61), (0.12, 0.57), (0.0, 0.55)], tx, tz, crock, 48, col,
                 y_base=RECT_TOP, sharp_deg=60)
         _leaf_bouquet(g, 'kd table eucalyptus', (tx, RECT_TOP + 0.55, tz), 9, 0.9, 0.55, 3, col, leaf_r=0.06, droop=0.45)
         g.lathe('kd decor table bowl', [(0.0, 0.0), (0.13, 0.0), (0.14, 0.012), (0.24, 0.07), (0.34, 0.19), (0.36, 0.24),
                                         (0.345, 0.245), (0.32, 0.20), (0.22, 0.09), (0.12, 0.04), (0.0, 0.035)],
-                RECT_CX - 0.2, RECT_Z1 - RECT_LEN / 2 + 1.0, KM.oak_island(), 72, col, y_base=RECT_TOP, sharp_deg=70)
+                RECT_CX + 1.0, RECT_CZ + 0.15, KM.oak_island(), 72, col, y_base=RECT_TOP, sharp_deg=70)
     except Exception as e:
         print('[kitchen_dining] table decor skipped:', e)
     return {'decor_objects': g.n_objects - n0, 'assets': list(USED_ASSETS)}
