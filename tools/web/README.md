@@ -129,6 +129,22 @@ $PY tools/web/publish_exterior.py tools/render/.cache/exterior [--prune]
 Publish the data last (`build_site_data.py --version <new label>`): the page expects a panorama for
 every sweep `tour.json` names.
 
+## Mirror for visitors who cannot reach GitHub Pages
+
+`github.io` is unreliable from mainland China. `deploy_mirror.sh` uploads `index.html` and `assets/` (nothing else)
+to Tencent EdgeOne Pages:
+
+```bash
+tools/web/deploy_mirror.sh --dry-run     # build the upload folder, print file count and size, send nothing
+tools/web/deploy_mirror.sh               # upload; needs the API token in ~/.edgeone_token or $EDGEONE_API_TOKEN
+```
+
+It needs an EdgeOne account with an API token, and a domain name added to the project in the console: the
+project's own address serves mainland visitors only through preview links that expire after 3 hours. With the
+project in the area "Global AZ (excluding Chinese mainland)" (`EDGEONE_AREA=overseas`, the default) the domain
+needs no ICP filing. Run it after every publish; GitHub Pages stays the address for everyone else. Whether a
+visitor in mainland China gets through has to be tested from there.
+
 ## Tests
 
 ```bash
