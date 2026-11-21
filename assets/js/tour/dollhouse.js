@@ -336,6 +336,8 @@ export function createDollhouse(viewer, deps = {}) {
     const d = (p[0] - last.eye[0]) * last.dir[0] + (p[1] - last.eye[1]) * last.dir[1] + (p[2] - last.eye[2]) * last.dir[2];
     return 2 * Math.max(0.5, d) * last.k / viewer.size.cssH;
   }
+  // radius of a sweep's dot as drawn (feet): DOT_FT, and never smaller than DOT_PX on screen
+  const dotRadius = (d) => Math.max(DOT_FT, DOT_PX * feetPerPx(d.c));
   // The plan point [x, z] a surface point stands for: a wall counts for the room on the side it is seen from.
   function planPoint(hit) {
     const n = hit.normal, flatOn = Math.abs(n[1]) > 0.7;
@@ -343,6 +345,9 @@ export function createDollhouse(viewer, deps = {}) {
   }
   // The sweep a click on a surface point enters: the one standing right there, else the nearest one of
   // the room the point lies in (viewer.nearestSweep: the smallest room that contains the point).
+  // "Right there" is within 1.5 ft of the sweep's dot. Not through the walls of a measured room: a point
+  // of such a room beside the dot of a sweep that stands in another room, beyond a wall or a doorway
+  // (viewer.walledOff), belongs to its own room, and only a click on the dot itself still means the dot.
   function sweepAt(hit) {
     const [x, z] = planPoint(hit);
     let best = null, bd = 1e9;
@@ -350,7 +355,7 @@ export function createDollhouse(viewer, deps = {}) {
       const dd = Math.hypot(d.s.p[0] - x, d.s.p[2] - z);
       if (dd < bd) { bd = dd; best = d.s; }
     }
-    if (best && bd <= 1.5) return best;
+    if (best && bd <= (viewer.walledOff(x, z, best) ? dotRadius(dots.get(best.id)) : 1.5)) return best;
     const s = viewer.nearestSweep(x, z);
     return s && dots.has(s.id) ? s : best;
   }
@@ -391,7 +396,7 @@ export function createDollhouse(viewer, deps = {}) {
     for (const d of dots.values()) {
       const hg = d.s.id === hot ? 1 : 0;
       if (d.heat !== hg) { d.heat = hg > d.heat ? Math.min(1, d.heat + dt / 0.12) : Math.max(0, d.heat - dt / 0.2); touched = true; }
-      const size = Math.max(DOT_FT, DOT_PX * feetPerPx(d.c)) * (1 + 0.35 * d.heat);
+      const size = dotRadius(d) * (1 + 0.35 * d.heat);
       if (Math.abs(size - d.size) > 1e-4 * size) { d.size = size; d.dot.scale.setScalar(size); d.halo.scale.setScalar(size); touched = true; }
       const a = (0.84 + 0.16 * d.heat) * dotAlpha, h = 0.34 * dotAlpha;
       if (d.dot.material.opacity !== a) { d.dot.material.opacity = a; d.halo.material.opacity = h; d.dot.visible = d.halo.visible = a > 0.004; touched = true; }

@@ -41,6 +41,10 @@ tour.json (SCENE feet: x west -> east, y up, z rear/north -> street/south):
              Bedroom 4's rectangle, and an open space's rectangle reaches over its neighbours. A point
              belongs to the SMALLEST room that contains it: room_of() here, roomAt() in
              assets/js/tour/viewer.js (a click in the dollhouse or on the floor plan), and the tests.
+             The page takes a room with a tag for a walled room, because its bounds are the clear faces
+             of its own walls: a click inside it enters one of its own sweeps, never the sweep that
+             stands a foot away in the room next door (walledOff() in viewer.js). The walk-in closet
+             (M05) and the vestibule (M14) of the primary suite are two such rooms side by side.
   highlights sweep ids of the highlight reel, one card per place: scene.tour.highlights when present, else
              the old page's `roomIDs` order; the start sweep (the entrance) always comes first, and a sweep
              or a caption (sweep label) that is already in the reel is left out.

@@ -24,6 +24,9 @@ How the layout is found (all distances in SCENE feet; x west->east, z north->sou
     is none it stays (>= 0.8 ft is accepted in rooms that would otherwise have no sweep). Only a seed that
     the model no longer leaves standing room for (< 0.8 ft) goes to the nearest clear cell of its room, with
     a warning, so that an id the measurements and design views name is not lost.
+    The walk-in closet's stop C0 is the exception: its authored place is under the south rod of the closet
+    the owner's sixth round built (bl/revision_spec.py SUITE_CLOSET_*), so it goes to the most open cell
+    of the aisle between the three hanging walls, which is on the axis of the pocket door (WALKIN).
  5. The laundry closet, when the model has one (a mesh named laundry / washer / dryer inside the closet's
     rectangle, bl/revision_spec.py): one sweep in the foyer on the axis of the closet's doors, 4 ft in front
     of the door wall (3.4 ft from the open leaves), facing the stacked units and looking 14 degrees down so
@@ -62,6 +65,9 @@ the model the panoramas of the untouched rooms stay valid only while their sweep
  * every sweep of that file stays exactly where it is, with its id, yaw, pitch, label and room, while the
    new model leaves it standable with >= --keep-clear (0.9 ft) of clearance; steps 4 and 6 do not run for
    them and the approach stops that layout had dropped stay dropped;
+ * a name follows the scene file: a seed takes the label its stop has there now, and the other sweeps that
+   carried a renamed seed's old label and room take the new one with it (the sixth round renamed S0
+   "Primary vestibule" and C0 "Walk-in closet"; S1 had S0's old label). The panorama is not affected;
  * a seed that stood on its authored position follows the scene file when the scene has moved it since
    (apply_revisions_web.py NODE_MOVES), by the rule of step 4;
  * a sweep the model no longer leaves room for goes to the best clear cell within --nudge (1.5 ft) that it
@@ -71,9 +77,9 @@ the model the panoramas of the untouched rooms stay valid only while their sweep
  * steps 6 (doorways, bridges), 7 and 8 then add sweeps only where the kept ones leave floor uncovered; a
    new sweep never takes an id of the kept file, used or dropped;
  * links and visible are computed afresh for all sweeps.
-The file gets a "keep" block: {from, unchanged, moved {id: ft}, reaimed, new, removed} against the kept
-layout (apply_sweeps.py prints it; moved and new sweeps need a panorama, and so does every kept sweep that
-sees a changed part of the model). The overlay rings the moved and new sweeps in red.
+The file gets a "keep" block: {from, unchanged, moved {id: ft}, reaimed, new, removed, renamed {id: label}}
+against the kept layout (apply_sweeps.py prints it; moved and new sweeps need a panorama, and so does every
+kept sweep that sees a changed part of the model). The overlay rings the moved and new sweeps in red.
 
 Output: {"eye", "generated_from", "units", "params", "stats", "notes", ["keep",] "sweeps": [{"id", "label", "room",
 "p", "floor", "yaw", "pitch", "links", "visible", "outdoor", "origin", "clearance"}]}. Angles are DEGREES
@@ -159,6 +165,14 @@ LAUNDRY = {'id': 'LC', 'label': 'Laundry closet', 'names': ('laundry', 'washer',
            # 3.4 ft from the open leaves and leaves 2.4 ft to the refrigerator's end panel behind the camera.
            'dist': 4.0,
            'pitch': -14.0}
+# walk-in closet of the owner's sixth round (bl/revision_spec.py): a 6'-1" x 8'-0" room of its own behind a pocket
+# door in its east wall, rods and shelves on the north, west and south walls. The concept's stop C0 stood where the
+# south rod hangs now (0.6 ft of clearance). A nudge of the usual 1.5 ft would leave it at the south-west edge of
+# the aisle with 1.7 ft of clearance, on a line through the door that passes 0.2 ft from the leaf's nose (after the
+# body's half width); the most open cell of the aisle has 2.4 ft all round and stands on the door's axis.
+WALKIN = {'id': 'C0',
+          'clear': RS.SUITE_CLOSET_CLEAR,           # x0, x1, z0, z1 inside the closet
+          'door_z': RS.SUITE_CLOSET_DOOR_Z}         # the pocket door's opening, strike jamb .. pocket jamb
 # outdoor sweeps: door id of the dimension schedule (centre used when the schedule lacks it), outward
 # direction (dx, dz), distance from the door plane, id, label, tour room id
 OUTDOOR = [
@@ -619,6 +633,10 @@ def place_seed(L, sid, x, z):
     c = g.clearance_at(x, z)
     if c >= a.min_clear:
         return L.add(x, z, 'seed', sid, clearance=c)
+    if sid == WALKIN['id']:
+        k = place_walkin(L, x, z, c)
+        if k is not None:
+            return k
     # nudge: the best clear cell within reach that the seed position can see
     best = None
     for cx, cz, cc in g.cells(a.relaxed_clear, (x, z), a.nudge):
@@ -654,6 +672,27 @@ def place_seed(L, sid, x, z):
                        % (sid, c))
     P('WARNING:', L.notes[-1])
     return k
+
+
+def place_walkin(L, x, z, c):
+    """The walk-in closet's stop when its place (x, z) has lost its clearance c: the most open reachable cell
+    inside the closet (clearance compared in tenths of a foot), among equals the one nearest the axis of the pocket
+    door and then the closet's middle. None when the closet has no clear cell (the seed rule then decides)."""
+    g, a = L.g, L.a
+    x0, x1, z0, z1 = WALKIN['clear']
+    if not (x0 <= x <= x1 and z0 <= z <= z1):
+        return None                               # the stop is not in the closet: an older plan
+    zc = (WALKIN['door_z'][0] + WALKIN['door_z'][1]) / 2
+    cells = [((round(cc, 1), -abs(cz - zc), -abs(cx - (x0 + x1) / 2)), cx, cz, cc)
+             for cx, cz, cc in g.cells(a.min_clear) if x0 < cx < x1 and z0 < cz < z1]
+    if not cells:
+        return None
+    _, cx, cz, cc = max(cells)
+    d = math.hypot(cx - x, cz - z)
+    L.notes.append('walk-in closet: seed %s has %.2f ft of clearance at (%.2f, %.2f) (the south rod hangs there); '
+                   'moved %.2f ft to the most open cell of the aisle, (%.2f, %.2f), clearance %.2f ft, %.2f ft '
+                   'off the axis of the pocket door' % (WALKIN['id'], c, x, z, d, cx, cz, cc, abs(cz - zc)))
+    return L.add(cx, cz, 'seed-moved', WALKIN['id'], clearance=cc, moved=round(d, 2))
 
 
 def place_seeds(L, old, kept=None):
@@ -1213,14 +1252,31 @@ def assign_ids(L, kept=None):
         s['id'] = sid
 
 
-def describe(L, old, extent):
+def kept_renames(kept, old):
+    """--keep: {(label, room) in the kept layout: label in the scene file} for the seeds the scene file has renamed
+    since. Left out when seeds that shared a label and a room no longer agree on one."""
+    votes = collections.defaultdict(set)
+    for k in kept or ():
+        n = old.get(k['id'])
+        if k['id'] in SEEDS and n is not None:
+            votes[(k['label'], k['room'])].add(n.get('label') or n.get('name') or k['label'])
+    return {key: next(iter(v)) for key, v in votes.items() if len(v) == 1 and next(iter(v)) != key[0]}
+
+
+def describe(L, old, extent, kept=None):
     """label, room, yaw, pitch, floor for every sweep."""
     w = L.w
+    renames = kept_renames(kept, old)
     for s in L.sw:
         x, z = s['x'], s['z']
-        if s.get('keep'):                         # a sweep of the kept layout: its view and its names stay
-            k = s['keep']
-            s['label'], s['room'], s['yaw'], s['pitch'] = k['label'], k['room'] or s['region'], k['yaw'], k['pitch']
+        if s.get('keep'):                         # a sweep of the kept layout: its view and its room stay,
+            k = s['keep']                         # its name follows the scene file (a seed's own stop, or the
+            n = old.get(s['id']) if s['id'] in SEEDS else None          # renamed seed whose label it carried)
+            label = (n.get('label') or n.get('name') or k['label']) if n is not None \
+                else renames.get((k['label'], k['room']), k['label'])
+            if label != k['label']:
+                s['renamed'] = k['label']
+            s['label'], s['room'], s['yaw'], s['pitch'] = label, k['room'] or s['region'], k['yaw'], k['pitch']
             if 'floor' not in s:
                 f = w.down(x, z, s['outdoor'])
                 s['floor'] = f[0] if f else 0.0
@@ -1490,7 +1546,7 @@ def main():
     L.notes = [re.sub(r'\{ids:([0-9,]*)\}', lambda m: ' '.join(L.sw[int(k)]['id'] for k in m.group(1).split(',') if k),
                       line) for line in L.notes]
     extent = (0.0, float(scene.get('extent', [39.42, 55.9])[0]), 0.0, float(scene.get('extent', [39.42, 55.9])[1]))
-    describe(L, old, extent)
+    describe(L, old, extent, kept)
 
     # order: old stops in their old order, then the new ones by id
     order = {k: i for i, k in enumerate(old)}
@@ -1509,7 +1565,12 @@ def main():
         # what became of the kept layout: the sweeps that are not where it had them need a new panorama
         was = {k['id']: k for k in kept}
         keep_block = {'from': kept_from, 'unchanged': [], 'moved': {}, 'reaimed': [], 'new': [],
-                      'removed': [k['id'] for k in kept if k['id'] not in at]}
+                      'removed': [k['id'] for k in kept if k['id'] not in at],
+                      'renamed': {L.sw[i]['id']: L.sw[i]['label'] for i in idx if L.sw[i].get('renamed')}}
+        for i in idx:
+            if L.sw[i].get('renamed'):
+                L.notes.append('keep %s: named "%s" as the scene file has it now (was "%s")'
+                               % (L.sw[i]['id'], L.sw[i]['label'], L.sw[i]['renamed']))
         for i in idx:
             s = L.sw[i]
             k = was.get(s['id'])

@@ -18,7 +18,8 @@ re-installing changes nothing and a seed's authored view survives bit for bit.
 
 It reports the kept / new / removed / moved ids against the scene it writes into (after apply_relayout.py that
 is the concept's 27 stops) and, when the sweeps were placed with `place_sweeps.py --keep` (the file's "keep"
-block), against that kept layout: the moved and new sweeps there are the ones that need a new panorama.
+block), against that kept layout: the moved and new sweeps there are the ones that need a new panorama (a
+renamed sweep does not: its label follows the scene file).
 
 The script is idempotent (a second run writes nothing) and refuses to write, with exit status 1, when
   * two sweeps share an id, or an id is not 2 characters,
@@ -50,8 +51,17 @@ SAME_FT, SAME_RAD = 1e-4, 1e-6
 # override place_sweeps.py's automatic yaw / pitch every time the sweeps are installed:
 #   G0  look into the garage, not back at the foyer door
 #   H2  toward the dining table, the island and the living room beyond
+# Sixth round (the primary suite laid out as on the architect's sheet; a kept layout keeps the views of the rooms
+# as they were before):
+#   C0  the walk-in closet: the double-hung north wall with its rod and shelf, the drawer and shelf tower at the left
+#   S1  in the vestibule, through the bathroom door: the stone vanity wall, both mirrors, the beam and its lamps
+#   A0  from the door side of the bath across the vanity: stone wall, mirror, beam and lamp, the shelf, the toilet,
+#       the west window, the shower's glass at the right edge
+#   P5  at the foot of the bed: the bed on the west wall between the two west windows
 # (LC, the laundry sweep, has no entry any more: its view is place_sweeps.py LAUNDRY['pitch'].)
-OPENING = {'G0': (105.0, -3.0), 'H2': (40.0, -2.0)}
+OPENING = {'G0': (105.0, -3.0), 'H2': (40.0, -2.0),
+           'C0': (-30.0, -4.0), 'S1': (-170.0, -4.0), 'A0': (-138.0, -5.0), 'P5': (-90.0, -3.0),
+           'A3': (-75.0, -3.0)}      # A3: face the taller shower window (sixth round)
 
 sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
 sys.path.insert(0, os.path.join(REPO, 'tools', 'web'))
@@ -237,6 +247,9 @@ def keep_report(doc):
            '  removed ids %s' % (' '.join(lst('removed')) or '-')]
     if lst('reaimed'):
         out.append('  view only   %s' % ' '.join(lst('reaimed')))
+    renamed = k.get('renamed') if isinstance(k.get('renamed'), dict) else {}
+    if renamed:
+        out.append('  renamed     %s' % ', '.join('%s "%s"' % kv for kv in renamed.items()))
     stale = sorted((set(lst('unchanged')) | set(moved) | set(lst('new')) | set(lst('reaimed'))) ^ ids, key=str)
     back = sorted(set(lst('removed')) & ids)
     if stale or back:

@@ -46,7 +46,9 @@ python3 tools/web/build_site_data.py [--version V] [--check] [--out DIR]
   in, such as the laundry closet, owns the sweep in front of it. A room may lie inside another
   room's rectangle (the closet is cut out of Bedroom 4, whose entry stays a rectangle): a sweep
   belongs to the smallest room that contains it, and any other lookup by position has to choose
-  the same way.
+  the same way. Since the sixth round there are 49 sweeps and 17 rooms: the primary suite's
+  walk-in closet keeps the id `primary_dressing` (tag M05, sweep `C0`) from the open area it
+  replaced, and the vestibule beside it is `primary_vestibule` (M14, sweeps `S0`, `S1`).
 * **`design.json`** (`tools/render/data/`) is hand-edited: tab order, and per view `label`, `title`,
   `text`, `refs`, `node`, `opening`, `image`.
 * **Release label.** `tour.json` is fetched without caching and names the release; the page appends
@@ -77,18 +79,21 @@ cp -r assets/panos assets/thumbs $R/assets/         # copies: the publisher writ
 (cd $R && python3 -m http.server 8766 --bind 127.0.0.1)
 ```
 
-A sweep that is new or has moved has no panorama until the render is published. For the rehearsal
-give it a stand-in: any `<ID>.png` equirect, for example a low-resolution review render enlarged to
-8192×4096 (a narrower source gets fewer levels; one under 2048 px is published as it is, and
-`data.test.js` then reports its width). Publish it into the root and stamp the root with a label of
-its own:
+A new sweep has no panorama until the render is published, and a moved one still shows its old
+place. For the rehearsal give each a stand-in: any `<ID>.png` equirect, for example a
+low-resolution review render enlarged to 8192×4096 (a narrower source gets fewer levels; one under
+2048 px is published as it is, and `data.test.js` then reports its width; the publisher's seam
+warning on an enlarged picture can be ignored). Publish them into the root and stamp the root
+with a label of its own (the ids are the sixth round's new and moved sweeps):
 
 ```bash
-tools/render/.cache/venv/bin/python tools/web/publish_panos.py <stand-ins> --repo $R --only D1,K4,K0,LC
+tools/render/.cache/venv/bin/python tools/web/publish_panos.py <stand-ins> --repo $R --only C0,S1,P2,P3,P4,P5
 SITEDATA_ROOT=$R python3 tools/web/build_site_data.py --version rehearsal
 ```
 
-The model, the Design stills and the exterior frames of such a root are still the published ones.
+The model, the Design stills and the exterior frames of such a root are still the published ones:
+the dollhouse and the floor plan show a rebuilt room as it was, under its new name, and a move
+projects the new panoramas onto the old walls.
 To run the test suite against it, copy `tools/web/tests` (without `node_modules` and `out`) into
 the root as well, because `data.test.js` reads the files of the tree it runs from. Run it there with
 `TOUR_BASE=http://127.0.0.1:8766`, after `npm install` or with `NODE_PATH` set to a `node_modules`

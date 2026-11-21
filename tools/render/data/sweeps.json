@@ -1,6 +1,6 @@
 {
  "eye": 5.0853,
- "generated_from": "house_v4.blend",
+ "generated_from": "house_v5.blend",
  "units": {
   "length": "ft",
   "angle": "deg",
@@ -78,8 +78,8 @@
   }
  },
  "stats": {
-  "sweeps": 45,
-  "indoor": 43,
+  "sweeps": 49,
+  "indoor": 47,
   "outdoor": 2,
   "per_room": {
    "bed2": 2,
@@ -93,7 +93,7 @@
    "kitchen": 5,
    "living": 6,
    "porch": 1,
-   "primary": 1,
+   "primary": 5,
    "shared": 1,
    "suite3_bath": 1,
    "suite3_wic": 1,
@@ -113,7 +113,7 @@
    "kitchen": 5,
    "living": 6,
    "porch": 1,
-   "primary": 1,
+   "primary": 5,
    "primary_dressing": 3,
    "shared_bath": 1,
    "suite3_bath": 1,
@@ -123,16 +123,16 @@
    "approach": 2,
    "bridge": 2,
    "door": 3,
-   "fill": 15,
+   "fill": 19,
    "laundry": 1,
    "outdoor": 2,
-   "seed": 17,
-   "seed-moved": 3
+   "seed": 16,
+   "seed-moved": 4
   },
-  "links": 55,
-  "walkable_pairs": 83,
+  "links": 58,
+  "walkable_pairs": 88,
   "components": 1,
-  "diameter_hops": 14,
+  "diameter_hops": 16,
   "degree_min_median_max": [
    1,
    2,
@@ -140,37 +140,42 @@
   ],
   "link_ft_min_median_max": [
    2.9,
-   5.07,
+   5.09,
    10.61
   ],
   "nearest_sweep_ft_min_median_max": [
    2.9,
-   4.21,
+   4.1,
    7.77
   ],
   "nearest_visible_sweep_ft_min_median_max": [
    2.9,
-   4.21,
+   4.1,
    10.44
   ],
   "visible_per_sweep_min_median_max": [
-   2,
-   14,
+   1,
+   11,
    24
   ],
   "clearance_ft_min_median": [
    1.21,
    1.83
   ],
-  "reachable_sqft": 784.2
+  "reachable_sqft": 790.2
  },
  "notes": [
-  "keep K0: the scene file has moved this seed 1.17 ft, from (26.50, 26.50) to (27.60, 26.90) (clearance at the old place now 0.91 ft): it follows the scene",
+  "keep C0: clearance 0.62 ft < 0.9 ft at (3.91, 18.45): the seed rule decides",
+  "walk-in closet: seed C0 has 0.62 ft of clearance at (3.91, 18.45) (the south rod hangs there); moved 1.80 ft to the most open cell of the aisle, (4.50, 16.75), clearance 2.38 ft, 0.09 ft off the axis of the pocket door",
+  "keep S1: clearance 0.33 ft < 0.9 ft at (7.25, 21.00), moved 1.25 ft to (8.25, 20.25), clearance 1.38 ft",
   "laundry closet: sweep LC at (19.45, 30.14), 4.00 ft in front of the door wall, clearance 2.39 ft",
-  "kept layout sweeps.json (house_v3.blend): 41 sweeps unchanged; moved K0 1.17 ft, LC 6.66 ft; new D1 K4; removed -"
+  "keep S0: named \"Primary vestibule\" as the scene file has it now (was \"Open primary dressing area\")",
+  "keep C0: named \"Walk-in closet\" as the scene file has it now (was \"Primary dressing storage\")",
+  "keep S1: named \"Primary vestibule\" as the scene file has it now (was \"Open primary dressing area\")",
+  "kept layout sweeps.json (house_v4.blend): 43 sweeps unchanged; moved C0 1.80 ft, S1 1.25 ft; new P2 P3 P4 P5; removed -"
  ],
  "keep": {
-  "from": "sweeps.json (house_v3.blend)",
+  "from": "sweeps.json (house_v4.blend)",
   "unchanged": [
    "E0",
    "H1",
@@ -178,13 +183,13 @@
    "H3",
    "B3",
    "B4",
+   "K0",
    "D0",
    "L2",
    "L0",
    "L1",
    "P0",
    "S0",
-   "C0",
    "A0",
    "T2",
    "B2",
@@ -193,6 +198,7 @@
    "A3",
    "C3",
    "GA",
+   "D1",
    "G1",
    "G2",
    "G3",
@@ -201,10 +207,11 @@
    "K1",
    "K2",
    "K3",
+   "K4",
    "L3",
    "L4",
    "L5",
-   "S1",
+   "LC",
    "X0",
    "Y0",
    "Y1",
@@ -215,15 +222,22 @@
    "OP"
   ],
   "moved": {
-   "K0": 1.17,
-   "LC": 6.66
+   "C0": 1.8,
+   "S1": 1.25
   },
   "reaimed": [],
   "new": [
-   "D1",
-   "K4"
+   "P2",
+   "P3",
+   "P4",
+   "P5"
   ],
-  "removed": []
+  "removed": [],
+  "renamed": {
+   "S0": "Primary vestibule",
+   "C0": "Walk-in closet",
+   "S1": "Primary vestibule"
+  }
  },
  "sweeps": [
   {
@@ -460,7 +474,6 @@
     "L2",
     "L0",
     "L1",
-    "S0",
     "T2",
     "H0",
     "H4",
@@ -657,17 +670,21 @@
     5.0853,
     10.5
    ],
-   "floor": 0.0,
+   "floor": 0.042,
    "yaw": -41.260992,
    "pitch": -1.257417,
    "links": [
-    "S0"
+    "S0",
+    "P4",
+    "P5"
    ],
    "visible": [
     "S0",
-    "C0",
     "A0",
-    "A1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
     "S1"
    ],
    "outdoor": false,
@@ -676,7 +693,7 @@
   },
   {
    "id": "S0",
-   "label": "Open primary dressing area",
+   "label": "Primary vestibule",
    "room": "suite_vestibule",
    "p": [
     8.2283,
@@ -694,7 +711,6 @@
    ],
    "visible": [
     "H3",
-    "K0",
     "D0",
     "P0",
     "C0",
@@ -702,45 +718,42 @@
     "T2",
     "D1",
     "H0",
-    "K1",
     "K2",
-    "K3",
-    "S1",
-    "X0"
+    "P2",
+    "P3",
+    "P5",
+    "S1"
    ],
    "outdoor": false,
    "origin": "seed",
-   "clearance": 2.13
+   "clearance": 2.08
   },
   {
    "id": "C0",
-   "label": "Primary dressing storage",
+   "label": "Walk-in closet",
    "room": "wic",
    "p": [
-    3.906,
+    4.5,
     5.0853,
-    18.445
+    16.75
    ],
    "floor": 0.0,
    "yaw": -15.642246,
    "pitch": -12.704875,
    "links": [
-    "S0",
-    "S1"
+    "S0"
    ],
    "visible": [
     "H3",
     "D0",
-    "P0",
     "S0",
     "T2",
     "D1",
-    "L3",
-    "S1"
+    "K2"
    ],
    "outdoor": false,
-   "origin": "seed",
-   "clearance": 1.82
+   "origin": "seed-moved",
+   "clearance": 2.38
   },
   {
    "id": "A0",
@@ -760,11 +773,13 @@
    "visible": [
     "P0",
     "S0",
+    "P2",
+    "P5",
     "S1"
    ],
    "outdoor": false,
    "origin": "seed",
-   "clearance": 1.34
+   "clearance": 1.95
   },
   {
    "id": "T2",
@@ -798,11 +813,12 @@
     "K1",
     "K2",
     "K3",
-    "K4"
+    "K4",
+    "S1"
    ],
    "outdoor": false,
    "origin": "approach",
-   "clearance": 2.06
+   "clearance": 1.87
   },
   {
    "id": "B2",
@@ -845,7 +861,6 @@
     "T2"
    ],
    "visible": [
-    "P0",
     "T2",
     "B2"
    ],
@@ -1208,7 +1223,6 @@
     "L2",
     "L0",
     "L1",
-    "S0",
     "T2",
     "D1",
     "H4",
@@ -1249,6 +1263,7 @@
     "L0",
     "L1",
     "S0",
+    "C0",
     "T2",
     "D1",
     "H0",
@@ -1289,7 +1304,6 @@
     "D0",
     "L0",
     "L1",
-    "S0",
     "T2",
     "D1",
     "H0",
@@ -1372,7 +1386,6 @@
     "L2",
     "L0",
     "L1",
-    "C0",
     "D1",
     "H0",
     "H4",
@@ -1512,31 +1525,141 @@
    "clearance": 2.39
   },
   {
+   "id": "P2",
+   "label": "Primary bedroom",
+   "room": "primary",
+   "p": [
+    9.5,
+    5.0853,
+    2.25
+   ],
+   "floor": 0.042,
+   "yaw": -160.0,
+   "pitch": 0.0,
+   "links": [
+    "P3",
+    "P5"
+   ],
+   "visible": [
+    "P0",
+    "S0",
+    "A0",
+    "P3",
+    "P4",
+    "P5",
+    "S1"
+   ],
+   "outdoor": false,
+   "origin": "fill",
+   "clearance": 1.81
+  },
+  {
+   "id": "P3",
+   "label": "Primary bedroom",
+   "room": "primary",
+   "p": [
+    3.25,
+    5.0853,
+    1.5
+   ],
+   "floor": 0.0,
+   "yaw": 160.0,
+   "pitch": 0.0,
+   "links": [
+    "P2"
+   ],
+   "visible": [
+    "P0",
+    "S0",
+    "P2",
+    "P4",
+    "P5"
+   ],
+   "outdoor": false,
+   "origin": "fill",
+   "clearance": 1.38
+  },
+  {
+   "id": "P4",
+   "label": "Primary bedroom",
+   "room": "primary",
+   "p": [
+    3.25,
+    5.0853,
+    11.25
+   ],
+   "floor": 0.0,
+   "yaw": 20.0,
+   "pitch": 0.0,
+   "links": [
+    "P0"
+   ],
+   "visible": [
+    "P0",
+    "P2",
+    "P3",
+    "P5"
+   ],
+   "outdoor": false,
+   "origin": "fill",
+   "clearance": 1.22
+  },
+  {
+   "id": "P5",
+   "label": "Primary bedroom",
+   "room": "primary",
+   "p": [
+    9.25,
+    5.0853,
+    6.25
+   ],
+   "floor": 0.042,
+   "yaw": -165.0,
+   "pitch": 0.0,
+   "links": [
+    "P0",
+    "P2"
+   ],
+   "visible": [
+    "P0",
+    "S0",
+    "A0",
+    "P2",
+    "P3",
+    "P4",
+    "S1"
+   ],
+   "outdoor": false,
+   "origin": "fill",
+   "clearance": 1.62
+  },
+  {
    "id": "S1",
-   "label": "Open primary dressing area",
+   "label": "Primary vestibule",
    "room": "suite_vestibule",
    "p": [
-    7.25,
+    8.25,
     5.0853,
-    21.0
+    20.25
    ],
-   "floor": -0.003,
+   "floor": 0.0,
    "yaw": 10.0,
    "pitch": 0.0,
    "links": [
     "S0",
-    "C0",
     "A0"
    ],
    "visible": [
     "P0",
     "S0",
-    "C0",
-    "A0"
+    "A0",
+    "T2",
+    "P2",
+    "P5"
    ],
    "outdoor": false,
    "origin": "door",
-   "clearance": 1.27
+   "clearance": 1.38
   },
   {
    "id": "X0",
@@ -1554,7 +1677,6 @@
     "B2"
    ],
    "visible": [
-    "S0",
     "B2"
    ],
    "outdoor": false,

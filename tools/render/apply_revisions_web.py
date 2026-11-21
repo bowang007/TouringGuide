@@ -27,6 +27,26 @@ The kitchen stop K0 moves to the west end of the work aisle, clear of the dining
 concept had it (NODE_MOVES); place_sweeps.py keeps a stop where the scene has it. The sweep that faces the closet
 is `LC` (place_sweeps.py); it joins the tour when apply_sweeps.py runs, which is the next step of the sequence
   apply_relayout.py -> apply_revisions_web.py -> apply_sweeps.py -> extract_scene.py -> tools/web/dimension_plan.py
+
+Primary suite and the Bedroom 3 bathroom's shower window (sixth round; all numbers from bl/revision_spec.py SUITE_*,
+BATH_*, PRIMARY_BATH_*, BED3_BATH_WIN_*): the 8 ft zone between the primary bedroom and the primary bath, one open
+dressing area until the fifth round, is divided as on the architect's sheet.
+  * measurements.json: room M05 becomes the walk-in closet (it keeps its tag), the vestibule is the new room M14;
+    door D18 is the closet's pocket door; D10 (bedroom / vestibule), D09 (suite entry, a sliding panel on the hall
+    side) and D08 (bath door) get their new extents; W13 and the skylight W20 follow BATH_WIN_Z and
+    PRIMARY_BATH_SKY, W11 its new sill and head; notes of the primary bedroom, the primary bath and the Bedroom 3
+    bathroom;
+  * scene.objects, IN PLACE (index and name stay; reshape() refuses an object that is not where the spec has it):
+    the wall between bedroom and closet and the header beside it, the three pieces of the suite entry wall, the
+    three pieces of the bath's north wall around D08, the bath's west wall around W13, the wall below and above
+    W11 with its frame and pane, and the two old door leaves, which take the place of their successors (the suite
+    entry's hinged leaf becomes the sliding panel, the bath door's leaf moves with its door);
+  * scene.objects, APPENDED (by name, updated in place on a re-run): the three pieces of the closet's new east
+    wall and the pocket door's leaf;
+  * tour stops S0 and C0 are named after the two rooms; the change list `owner_changes_6`, and the entries of
+    earlier rounds that the round overtakes; `layout_revision` entries of the concept's open dressing area and
+    bath layout are marked as superseded. The Design view A0 is hand-edited in design.json (SUPERSEDED reports
+    words of the earlier bath).
 """
 import argparse
 import os
@@ -47,15 +67,17 @@ CHANGES = [
     'Foyer: two skylights on the entry roof\'s east slope (hall section and vaulted entry)',
     'Primary bedroom: the 7 ft rear window becomes a two-panel sliding door to the garden (landing outside)',
     'Bedroom 2 (next to the primary): rear window runs to the ceiling (sill 2\'-0" since the third round)',
-    'Primary bathroom: tall west window in clear glass, between vanity and shower, sill 2\'-0" since the third round '
-    '(an evergreen screen in the fenced side yard outside)',
+    'Primary bathroom: tall west window in clear glass, sill 2\'-0" since the third round (an evergreen screen in the '
+    'fenced side yard outside). It stood between the vanity and the shower of the earlier layout; the sixth round '
+    'moves it to the architect\'s position and widens it to 3\'-0"',
     'Kitchen skylight: 3\'-6" x 4\'-0" on the continuous east roof plane over the sink / dishwasher '
     '(the concept unit straddled the garage-gable ridge)',
     'Dining: table in line with the island, no island stools (warm oak under a brass lantern since the third round; '
     f'moved to the island\'s west end, {DINING_TABLE} for six, in the fifth round)',
 ]
 CHANGES_2 = [
-    'Primary bathroom: a 2\'-0" x 2\'-6" skylight over the shower',
+    'Primary bathroom: a 2\'-0" x 2\'-6" skylight over the shower (in the sixth round it moves with the shower to the '
+    'room\'s north-west corner)',
     'The foyer-side wall of Bedroom 4 (office) and Bedroom 3 lines up with the shared bath\'s east wall: both '
     'rooms and the closets between them are 1\'-2 3/4" wider; foyer and covered porch 5\'-9 1/4" wide; '
     'foyer 18\'-6" long as on the plan; the 3\'-0" front door stays centred',
@@ -65,7 +87,9 @@ CHANGES_3 = [
     'Bedroom 2 rear window and the primary bathroom window: a 2\'-0" sill instead of glass to the floor (heads stay '
     'at the 8 ft ceiling)',
     'Bedroom 4: the bed is turned across the room, headboard on the north wall, so the room\'s length stays open',
-    'Kitchen, primary bathroom, shared bathroom and garage door restyled from the owner\'s style images (styles/)',
+    'Kitchen, primary bathroom, shared bathroom and garage door restyled from the owner\'s style images (styles/); '
+    'the primary bathroom\'s finishes of this round (green shower tile, patterned floor) are superseded by the sixth '
+    'round, the oak trough vanity stays',
 ]
 CHANGES_4 = [
     'Laundry closet with a stacked front-load washer and dryer behind a 2\'-6" x 6\'-8" door opening. It was first '
@@ -79,8 +103,10 @@ GARAGE_W, GARAGE_D = 39.195 - 21.578, 52.335 - 31.418   # relayout.X_GARAGE / Z_
 
 
 # H1 stands in the plan's foyer (z 28.7 .. 47.2); H2, north of it between the shared bath and the kitchen,
-# is the hall
-NODE_NAMES = {'H1': 'Foyer', 'H2': 'Hall'}
+# is the hall. S0 and C0 are the stops of the primary suite's vestibule and walk-in closet (sixth round; the concept
+# called them "Open primary dressing area" and "Primary dressing storage"). place_sweeps.py gives a new sweep the
+# label of the nearest of these stops.
+NODE_NAMES = {'H1': 'Foyer', 'H2': 'Hall', 'S0': 'Primary vestibule', 'C0': 'Walk-in closet'}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # The laundry closet in Bedroom 4's north-east corner (bl/revision_spec.py LAUNDRY_*; Blender side:
@@ -104,7 +130,38 @@ NODE_MOVES = {'K0': (27.6, 26.9)}
 # after Bedroom 4, which the closet stands next to
 HIGHLIGHTS = ['E0', 'L0', 'D0', 'K0', 'P0', 'B2', 'B3', 'B4', LAUNDRY_NODE, 'A0', 'A1', 'A3', 'S0', 'C0', 'C3', 'G0']
 # design.json is edited by hand: words of a layout the owner has replaced, reported when a view still has them
-SUPERSEDED = ('kitchen\'s south-west corner', 'behind one door', 'table for four')
+# (the kitchen-corner laundry closet and the small dining table of the fourth round; the primary bath and the open
+# dressing area as they were until the fifth)
+SUPERSEDED = ('kitchen\'s south-west corner', 'behind one door', 'table for four',
+              'Sage tile', 'sage-green', 'encaustic', 'between the vanity and the shower', 'dressing area')
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Sixth round (2026-11-20): the primary suite as the architect's sheet divides it, and the taller shower window of the
+# Bedroom 3 bathroom (bl/revision_spec.py; Blender side: bl/revisions.suite_rooms, bath_door, bath_window,
+# primary_bath_skylight, bedroom3_bath_window).
+PRIMARY_BEDROOM, PRIMARY_BATH, BEDROOM_3_BATH = 'M01', 'M03', 'M09'
+SUITE_CLOSET_ROOM = 'M05'           # the walk-in closet keeps the tag of the open dressing area it replaces
+SUITE_VESTIBULE_ROOM = 'M14'        # new: the next free M tag
+SUITE_CLOSET_DOOR = 'D18'           # new: the next free D tag
+BATH_DOOR, SUITE_ENTRY, BED_OPENING = 'D08', 'D09', 'D10'
+SUITE_CLOSET_NODE, SUITE_VESTIBULE_NODE = 'C0', 'S0'
+SUITE_CLOSET_NAMES = ('Primary dressing + storage', 'Walk-in closet')   # room M05 before / after the round
+# existing SCENE objects the round reshapes in place, besides RV.suite_existing_walls(): the bath's north wall around
+# D08 (west of the door, header, east of it), the bath's west wall around W13, the wall below / above W11 and its
+# frame, and the two old leaves
+BATH_NORTH_WALLS = ('Ensuite north / closet south', 'Ensuite entry', 'Shared bathroom north / walk-in south')
+BATH_WEST_WALLS = ('Primary bathroom west wall — north solid', 'Primary bathroom west wall — below privacy window',
+                   'Primary bathroom west wall — south solid')
+BED3_BATH_WIN_WALLS = ('Ensuite privacy window sill wall', 'Ensuite privacy window head wall')
+BED3_BATH_WIN_PARTS = ('Ensuite privacy window frame', 'Ensuite privacy window mullion',
+                       'Ensuite privacy window glazing')
+BED3_BATH_WIN_RAIL = 0.1            # bl/revisions.bedroom3_bath_window: this much above the sill / below the head keeps
+#                                     its section when the frame is stretched onto the new opening
+BED3_BATH_WIN_GLASS_IN = 0.01       # ... and the pane ends this far inside the opening's jambs
+SUITE_ENTRY_OLD_LEAF = 'Primary suite entrance door — south hinged, open inward'
+BATH_DOOR_OLD_LEAF = 'Primary bathroom privacy door — shown open'
+FACES = ('x0', 'x1', 'y0', 'y1', 'z0', 'z1')
+SAME = 1e-4                         # ft: a face this near its new place has been moved already (a re-run)
 
 
 def ft(v):
@@ -129,7 +186,8 @@ def size_labels(meas):
     f = rooms['M11']
     return {
         'P0': wd('M01'), 'B2': wd('M02'), 'A0': wd('M03') + ' · skylight over the shower', 'A1': wd('M04'),
-        'C0': wd('M05'), 'B4': wd(BEDROOM_4, ' overall, L-shaped + separate reach-in closet'), 'B3': wd('M08'),
+        SUITE_CLOSET_NODE: wd(SUITE_CLOSET_ROOM), SUITE_VESTIBULE_NODE: wd(SUITE_VESTIBULE_ROOM),
+        'B4': wd(BEDROOM_4, ' overall, L-shaped + separate reach-in closet'), 'B3': wd('M08'),
         'A3': wd('M09'), 'C3': wd('M10'), 'L0': f'{ft(LIVING_W)} living-room width · R',
         'E0': f"3′0″ entrance · {ft(f['width_ft'])} × {ft(f['depth_ft'])} foyer · P",
         'K0': '3′6″ × 4′ skylight · dining table at the island\'s west end',
@@ -255,6 +313,294 @@ def changes_5(bed4, cut):
     ]
 
 
+# ------------------------------------------------------------------------------------------- sixth round: SCENE objects
+def box_of(o):
+    """(x0, x1, y0, y1, z0, z1) of a SCENE box that is not turned."""
+    p, s = o['p'], o['s']
+    return (p[0] - s[0] / 2, p[0] + s[0] / 2, p[1] - s[1] / 2, p[1] + s[1] / 2, p[2] - s[2] / 2, p[2] + s[2] / 2)
+
+
+def named(objs, name, group):
+    """Indices of the SCENE boxes of `group` called `name`."""
+    return [i for i, o in enumerate(objs)
+            if o.get('name') == name and o.get('group') == group and o.get('shape') == 'box']
+
+
+def reshape(objs, name, at=None, group='walls', **faces):
+    """Move faces of an existing SCENE box IN PLACE: `faces` (x0=..., z1=...) are the faces the round moves, `at` the
+    faces the spec says it must already have (within HOST_TOL; else the scene is not the one bl/revision_spec.py
+    describes and the change is refused). Index, name and look stay, and so does every axis whose faces are where
+    they should be already, so a re-run writes nothing new. Returns the object's index."""
+    found = named(objs, name, group)
+    if len(found) != 1:
+        raise SystemExit('sixth round: expected one %s box named %r in the scene, found %d' % (group, name, len(found)))
+    o = objs[found[0]]
+    old = dict(zip(FACES, box_of(o)))
+    off = ['%s %.4f (spec %.4f)' % (f, old[f], v) for f, v in (at or {}).items() if abs(old[f] - v) > HOST_TOL]
+    if off or abs(o.get('rot') or 0) > 1e-6:
+        raise SystemExit('sixth round: %r is not where bl/revision_spec.py expects it: %s'
+                         % (name, ', '.join(off) or 'it is turned'))
+    for k, ax in enumerate('xyz'):
+        lo, hi = faces.get(ax + '0', old[ax + '0']), faces.get(ax + '1', old[ax + '1'])
+        if abs(lo - old[ax + '0']) < SAME and abs(hi - old[ax + '1']) < SAME:
+            continue
+        if hi - lo < 0.01:
+            raise SystemExit('sixth round: %r would be %.4f ft long along %s' % (name, hi - lo, ax))
+        o['p'][k], o['s'][k] = r4((lo + hi) / 2), r4(hi - lo)
+    return found[0]
+
+
+def suite_walls(objs):
+    """The walls of the primary suite. Existing pieces are reshaped in place: the wall between bedroom and closet runs
+    on to the closet's new east wall and the header over the bedroom opening starts there; the suite entry's wall
+    pieces close on the narrower opening; the bath's north wall opens for D08 at its new place. Each piece keeps the
+    faces across its thickness and its height, only its ends along the wall move. The closet's new east wall (north
+    of the door, the header, the pocket) is appended. Returns (indices reshaped, indices appended)."""
+    done, new = [], []
+    for name, box in RV.suite_existing_walls().items():
+        run = 'x' if box[1] - box[0] >= box[5] - box[4] else 'z'
+        full = dict(zip(FACES, box))
+        done.append(reshape(objs, name, at={f: v for f, v in full.items() if f[0] != run},
+                            **{f: v for f, v in full.items() if f[0] == run}))
+    d0, d1 = RV.BATH_DOOR_X
+    zn, zs = RV.PRIMARY_BATH_NORTH_WALL_Z
+    west, header, east = BATH_NORTH_WALLS
+    line = {'z0': zn, 'z1': zs}
+    done.append(reshape(objs, west, at=dict(line, y0=0.0), x1=d0))
+    done.append(reshape(objs, header, at=dict(line, y0=RV.BATH_DOOR_HEAD), x0=d0, x1=d1))
+    done.append(reshape(objs, east, at=dict(line, y0=0.0), x0=d1))
+    for name, x0, x1, y0, y1, z0, z1 in RV.suite_closet_walls():
+        new.append(upsert(objs, dict({'name': name, 'p': [r4((x0 + x1) / 2), r4((y0 + y1) / 2), r4((z0 + z1) / 2)],
+                                      's': [r4(x1 - x0), r4(y1 - y0), r4(z1 - z0)]}, **WALL_LOOK, rot=0, **BOX_LOOK),
+                          key='name'))
+    return done, new
+
+
+def move_leaf(objs, name, leaf):
+    """An existing door leaf of the scene (group 'door') takes the place of its successor `leaf` (a dict of
+    bl/revision_spec.py with `center`, `size` and `rot`), in place: the plan draws every box of that group, so the
+    old leaf may not stay where its door was. Returns the object's index."""
+    found = named(objs, name, 'door')
+    if len(found) != 1:
+        raise SystemExit('sixth round: expected one door leaf named %r in the scene, found %d' % (name, len(found)))
+    o = objs[found[0]]
+    o['p'], o['s'] = [r4(v) for v in leaf['center']], [r4(v) for v in leaf['size']]
+    o['rot'] = round(leaf['rot'], 6) or 0
+    return found[0]
+
+
+def suite_leaves(objs):
+    """Door leaves: the suite entry's old hinged leaf becomes the sliding panel parked on the hall face, the bath
+    door's leaf moves with its door (hinged east, open against the east wall); the closet's pocket leaf is new and
+    appended. Returns (indices moved, index appended)."""
+    moved = [move_leaf(objs, SUITE_ENTRY_OLD_LEAF, RV.suite_entry_panel()),
+             move_leaf(objs, BATH_DOOR_OLD_LEAF, RV.bath_door_leaf())]
+    leaf = RV.suite_closet_leaf()
+    box = {'name': leaf['name'], 'p': [r4(v) for v in leaf['center']], 's': [r4(v) for v in leaf['size']]}
+    new = upsert(objs, dict(box, **LEAF_LOOK, rot=round(leaf['rot'], 6) or 0, **BOX_LOOK), key='name')
+    return moved, new
+
+
+def bath_window_walls(objs):
+    """Primary bath west wall around W13 (BATH_WIN_Z): the solid walls north and south of the window end on its new
+    jambs and the wall below it, the concept's 5 ft sill wall, becomes the wall below the 2'-0" sill. (The concept's
+    header and frame pieces stay as they are: the glass runs to the ceiling, and nothing draws them.)"""
+    z0, z1 = RV.BATH_WIN_Z
+    north, below, south = BATH_WEST_WALLS
+    floor = {'y0': 0.0}
+    return [reshape(objs, north, at=floor, z1=z0), reshape(objs, below, at=floor, y1=RV.TALL_SILL, z0=z0, z1=z1),
+            reshape(objs, south, at=floor, z0=z1)]
+
+
+def bed3_bath_window(objs):
+    """Bedroom 3 bathroom, shower window W11 (BED3_BATH_WIN_*): the wall below ends at the new sill, the wall above
+    starts at the new head, and frame, mullions and pane are stretched onto the new opening as
+    bl/revisions.bedroom3_bath_window does it (the rails keep their section; the pane runs into the jamb sections).
+    Returns the pane's (width, height)."""
+    z0, z1 = RV.BED3_BATH_WIN_Z
+    (s, h), (so, ho) = RV.BED3_BATH_WIN_Y, RV.BED3_BATH_WIN_OLD_Y
+    line = {'z0': z0, 'z1': z1}
+    low, high = BED3_BATH_WIN_WALLS
+    reshape(objs, low, at=dict(line, y0=0.0), y1=s)
+    reshape(objs, high, at=line, y0=h)
+    a, b = so + BED3_BATH_WIN_RAIL, ho - BED3_BATH_WIN_RAIL
+
+    def up(y):          # the concept's height -> the new one: sill and head move, in between the frame stretches
+        if y <= a:
+            return y + s - so
+        if y >= b:
+            return y + h - ho
+        return s + BED3_BATH_WIN_RAIL + (y - a) * (h - s - 2 * BED3_BATH_WIN_RAIL) / (b - a)
+    pane = None
+    for o in objs:
+        if o.get('name') not in BED3_BATH_WIN_PARTS or o.get('shape') != 'box':
+            continue
+        _, _, y0, y1, _, _ = box_of(o)
+        if y0 >= so - HOST_TOL and y1 <= ho + HOST_TOL:         # still the concept's 5'-0" .. 7'-0" window
+            y0, y1 = up(y0), up(y1)
+            o['p'][1], o['s'][1] = r4((y0 + y1) / 2), r4(y1 - y0)
+        if o.get('group') == 'glass':
+            g0, g1 = z0 + BED3_BATH_WIN_GLASS_IN, z1 - BED3_BATH_WIN_GLASS_IN
+            o['p'][2], o['s'][2] = r4((g0 + g1) / 2), r4(g1 - g0)
+            pane = (o['s'][2], o['s'][1])
+    if pane is None:
+        raise SystemExit('sixth round: the scene has no pane %r' % BED3_BATH_WIN_PARTS[2])
+    return pane
+
+
+# ------------------------------------------------------------------------------------------- sixth round: the schedule
+def room_row(rid, name, clear, node, note):
+    """A room of the schedule from its clear rectangle (x0, x1, z0, z1): width along x, depth along z."""
+    x0, x1, z0, z1 = clear
+    return {'id': rid, 'kind': 'room', 'basis': 'P', 'name': name, 'bounds_ft': [r4(x0), r4(x1), r4(z0), r4(z1)],
+            'width_ft': r4(x1 - x0), 'depth_ft': r4(z1 - z0), 'area_sqft': round((x1 - x0) * (z1 - z0), 2),
+            'note': note, 'node': node}
+
+
+def suite_rooms(rooms):
+    """Rooms M05 (walk-in closet, in place of the open dressing area) and M14 (vestibule), and the notes of the
+    primary bedroom, the primary bath and the Bedroom 3 bathroom. Returns the rows that changed, by id."""
+    by_id = {r['id']: r for r in rooms}
+    old = by_id.get(SUITE_CLOSET_ROOM)
+    if old is None or old['name'] not in SUITE_CLOSET_NAMES:
+        raise SystemExit('measurements.json: room %s is %r, expected the primary suite\'s dressing area or walk-in '
+                         'closet' % (SUITE_CLOSET_ROOM, old and old['name']))
+    taken = by_id.get(SUITE_VESTIBULE_ROOM)
+    if taken is not None and taken['name'] != 'Primary vestibule':
+        raise SystemExit('measurements.json: room tag %s is taken by %r' % (SUITE_VESTIBULE_ROOM, taken['name']))
+    for need in (PRIMARY_BEDROOM, PRIMARY_BATH, BEDROOM_3_BATH):
+        if need not in by_id:
+            raise SystemExit('measurements.json has no room %s' % need)
+    hx0, hx1, hz0, hz1 = RV.SUITE_ATTIC_HATCH
+    hatch = ' × '.join(str(round(v * 12)) for v in sorted((hx1 - hx0, hz1 - hz0), reverse=True))
+    bx0, bx1 = RV.SUITE_BED_OPENING_X
+    sx0, sx1, sz0, sz1 = RV.BATH_SHOWER
+    vx0, vx1, _, _ = RV.BATH_VANITY
+    (ws, wh), (wz0, wz1) = RV.BED3_BATH_WIN_Y, RV.BED3_BATH_WIN_Z
+    door = f'{ft(RV.SUITE_CLOSET_DOOR_W)} × {ft(RV.SUITE_CLOSET_DOOR_HEAD)}'
+    closet = room_row(
+        SUITE_CLOSET_ROOM, 'Walk-in closet', RV.SUITE_CLOSET_CLEAR, SUITE_CLOSET_NODE,
+        'Clear interior size; excludes walls. An enclosed room off the primary suite\'s vestibule, behind the sliding '
+        f'pocket door {SUITE_CLOSET_DOOR} ({door}) in its east wall. Hanging rods and shelves on the north, west and '
+        'south walls, with a drawer and shelf tower on the west wall; no window; flush ceiling light.')
+    vestibule = room_row(
+        SUITE_VESTIBULE_ROOM, 'Primary vestibule', RV.SUITE_VESTIBULE_CLEAR, SUITE_VESTIBULE_NODE,
+        'Clear interior size; excludes walls. The passage of the primary suite: open to the bedroom over its full '
+        f'width ({BED_OPENING}, {ft(bx1 - bx0)}, no door), entered from the hall through {SUITE_ENTRY} in its east '
+        f'wall, with the walk-in closet\'s pocket door {SUITE_CLOSET_DOOR} in its west wall and the bathroom door '
+        f'{BATH_DOOR} at its south end. Attic access hatch ({hatch} in) in the ceiling.')
+    upsert(rooms, closet)
+    upsert(rooms, vestibule)
+    by_id[PRIMARY_BEDROOM]['note'] = (
+        'Clear interior size; excludes walls. King bed with a low headboard on the west wall, centred between the two '
+        'west windows (W15 and W14, both kept), with a nightstand under each; the rear sliding door W01 opens to the '
+        f'garden. Open to the vestibule at the south-east corner ({BED_OPENING}, {ft(bx1 - bx0)} wide, no door).')
+    by_id[PRIMARY_BATH]['note'] = (
+        'Clear interior size; excludes walls. Laid out as on the architect\'s sheet: a '
+        f'{ft(nominal(sx1 - sx0))} × {ft(nominal(sz1 - sz0))} curbless shower in the north-west corner under the '
+        f'skylight W20, the toilet in the south-west corner, a {ft(vx1 - vx0)} double vanity along the south wall, '
+        f'the door {BATH_DOOR} at the east end of the north wall and the window W13 on the west wall, its mullion on '
+        'the shower\'s glass line.')
+    by_id[BEDROOM_3_BATH]['note'] = (
+        f'Clear interior size; excludes walls. The shower window W11 on the west wall is {ft(wz1 - wz0)} wide and runs '
+        f'from a {ft(ws)} sill to a {ft(wh)} head ({ft(wh - ws)} tall), in obscured glass.')
+    return {r['id']: r for r in (closet, vestibule, by_id[PRIMARY_BEDROOM], by_id[PRIMARY_BATH], by_id[BEDROOM_3_BATH])}
+
+
+def entry_offset():
+    """How far south of the sheet's position the suite entry is built (ft, centre to centre), 0 when it is there."""
+    (b0, b1), (s0, s1) = RV.SUITE_ENTRY_Z, RV.SUITE_ENTRY_SHEET_Z
+    off = (b0 + b1) / 2 - (s0 + s1) / 2
+    return off if abs(off) > 0.05 else 0.0
+
+
+def suite_doors(doors):
+    """Doors D08 (bath), D09 (suite entry), D10 (bedroom / vestibule) at their new extents and the closet's pocket
+    door D18 (new)."""
+    by_id = {d['id']: d for d in doors}
+    for need in (BATH_DOOR, SUITE_ENTRY, BED_OPENING):
+        if need not in by_id:
+            raise SystemExit('measurements.json has no door %s' % need)
+    name = 'Walk-in closet pocket door'
+    taken = by_id.get(SUITE_CLOSET_DOOR)
+    if taken is not None and taken['name'] != name:
+        raise SystemExit('measurements.json: door tag %s is taken by %r' % (SUITE_CLOSET_DOOR, taken['name']))
+
+    def span(d, c, a, b, head, kind):
+        d.update(c=r4(c), start=r4(a), end=r4(b), width=r4(b - a), height=head, sill=0, head=head, type=kind)
+    d0, d1 = RV.BATH_DOOR_X
+    span(by_id[BATH_DOOR], RV.BATH_DOOR_C, d0, d1, RV.BATH_DOOR_HEAD,
+         f'Hinged privacy door on the {RV.BATH_DOOR_HINGE} jamb, opening into the bathroom; shown open '
+         f'{RV.BATH_DOOR_OPEN_DEG:g} degrees, against the bathroom\'s east wall')
+    e0, e1 = RV.SUITE_ENTRY_Z
+    off = entry_offset()
+    side = {'east': 'hall', 'west': 'vestibule'}[RV.SUITE_ENTRY_PANEL_SIDE]
+    parked = 'south' if RV.SUITE_ENTRY_PANEL_OPEN_Z0 > RV.SUITE_ENTRY_PANEL_CLOSED_Z0 else 'north'
+    span(by_id[SUITE_ENTRY], RV.SUITE_ENTRY_C, e0, e1, RV.SUITE_ENTRY_HEAD,
+         f'Sliding panel on the {side} side of the wall, parked {parked} of the opening; shown open'
+         + (f'. The opening stands {ft(abs(off))} {"south" if off > 0 else "north"} of its place on the architect\'s '
+            'sheet, where this model has Bedroom 2\'s entry alcove on the hall side' if off else ''))
+    b0, b1 = RV.SUITE_BED_OPENING_X
+    span(by_id[BED_OPENING], sum(RV.SUITE_NORTH_WALL_Z) / 2, b0, b1, RV.SUITE_BED_OPENING_HEAD,
+         'Open connection between the bedroom and the vestibule beneath the retained header; no door')
+    c0, c1 = RV.SUITE_CLOSET_DOOR_Z
+    pocket = {'id': SUITE_CLOSET_DOOR, 'name': name, 'axis': RV.SUITE_CLOSET_DOOR_AXIS}
+    span(pocket, RV.SUITE_CLOSET_DOOR_C, c0, c1, RV.SUITE_CLOSET_DOOR_HEAD,
+         f'Sliding pocket door; the leaf slides {RV.SUITE_CLOSET_DOOR_POCKET} into the wall; shown open')
+    pocket.update(node=SUITE_CLOSET_NODE, kind='door', basis='P')
+    upsert(doors, pocket)
+    if by_id[BATH_DOOR]['axis'] != RV.BATH_DOOR_AXIS or by_id[SUITE_ENTRY]['axis'] != RV.SUITE_ENTRY_AXIS \
+            or by_id[BED_OPENING]['axis'] != 'x':
+        raise SystemExit('measurements.json: doors %s / %s / %s do not run along the walls bl/revision_spec.py puts '
+                         'them in' % (BATH_DOOR, SUITE_ENTRY, BED_OPENING))
+    return pocket
+
+
+def nominal(v):
+    """Feet to the nearest inch (a nominal size: the shower's rectangle is measured to its glass lines)."""
+    return round(v * 12) / 12
+
+
+def changes_6(rows):
+    """The sixth round (2026-11-20) in the owner's terms, with the numbers of the spec and the schedule."""
+    closet, vest = rows[SUITE_CLOSET_ROOM], rows[SUITE_VESTIBULE_ROOM]
+    (ws, wh), (wso, who), (wz0, wz1) = RV.BED3_BATH_WIN_Y, RV.BED3_BATH_WIN_OLD_Y, RV.BED3_BATH_WIN_Z
+    sx0, sx1, sz0, sz1 = RV.BATH_SHOWER
+    vx0, vx1, _, _ = RV.BATH_VANITY
+    bz0, bz1 = RV.BATH_WIN_Z
+    kx0, kx1, kz0, kz1 = RV.PRIMARY_BATH_SKY
+    off = entry_offset()
+    return [
+        'Front bedroom suite bathroom (tour: Bedroom 3 bathroom): the window in the shower is vertically larger, '
+        f'from a {fi(ws)} sill to a {fi(wh)} head ({fi(wh - ws)} tall; it was {fi(who - wso)} tall above a {fi(wso)} '
+        f'sill). Its {fi(wz1 - wz0)} width, the obscured glass and the black frame stay',
+        'Primary walk-in closet: a small room with a door, as on the last page of sizes.pdf (sheet SKA002). '
+        f'{fi(closet["width_ft"])} x {fi(closet["depth_ft"])} clear behind a new wall, entered from the suite\'s '
+        f'vestibule through a sliding pocket door ({fi(RV.SUITE_CLOSET_DOOR_W)} x {fi(RV.SUITE_CLOSET_DOOR_HEAD)}, the '
+        f'leaf slides {RV.SUITE_CLOSET_DOOR_POCKET} into the wall, shown open), with hanging rods and shelves on three '
+        'sides. The open dressing area with its wardrobes is gone',
+        f'Primary suite as on the sheet: a vestibule between the closet and the hall, {fi(vest["width_ft"])} x '
+        f'{fi(vest["depth_ft"])} clear, open to the bedroom over its full width (no door), with the attic access hatch '
+        f'in its ceiling. The suite entry from the hall is a {fi(RV.SUITE_ENTRY_W)} opening with a sliding panel on '
+        'the hall side, shown open'
+        + (f'; it stands {fi(abs(off))} {"south" if off > 0 else "north"} of its place on the sheet, where this model '
+           'has Bedroom 2\'s entry alcove on the hall side' if off else ''),
+        'Primary bedroom as on the sheet: king bed on the west wall, centred between the two west windows, with a '
+        'nightstand on each side; both west windows are kept (the sheet draws only the north one), and so is the rear '
+        'sliding door',
+        f'Primary bathroom laid out as on the sheet: a {fi(nominal(sx1 - sx0))} x {fi(nominal(sz1 - sz0))} curbless '
+        f'shower in the north-west corner, the toilet in the south-west corner, a {fi(vx1 - vx0)} double vanity along '
+        f'the south wall, the door at the east end of the north wall. The west window is at the sheet\'s position, '
+        f'{fi(bz1 - bz0)} wide from the {fi(RV.TALL_SILL)} sill to the ceiling, its mullion on the shower\'s glass '
+        f'line, and the {fi(kx1 - kx0)} x {fi(kz1 - kz0)} skylight moved with the shower',
+        'Primary bathroom in the style of the owner\'s image "primary bathroom wall style" (styles/): natural stacked '
+        'stone on the vanity wall, behind the floating oak vanity with its two wooden troughs and the oak-framed '
+        'mirrors, under a dark timber beam with enamel lamps; grey-green board wainscot with cream plaster above on '
+        'the other walls; plain cream tile in the shower; a quiet grey stone floor; brushed nickel fittings. The '
+        'green shower tile and the blue patterned floor are gone',
+    ]
+
+
 def laundry_view():
     """The Design window's view of the closet (tools/render/data/hero_cameras.json key LC)."""
     x0, x1, z0, z1 = RV.LAUNDRY_CLEAR
@@ -319,7 +665,8 @@ def main():
     w = win['W13']
     z0, z1 = RV.BATH_WIN_Z
     w.update(start=z0, end=z1, width=round(z1 - z0, 4), sill=RV.TALL_SILL, head=8.0, height=round(8.0 - RV.TALL_SILL, 4),
-             type='Tall clear glazing from a 2\'-0" sill to the ceiling, with a transom at 6 ft')
+             type=f'Tall clear glazing from a 2\'-0" sill to the ceiling, with a transom at {RV.BATH_WIN_TRANSOM_Y:g} '
+                  'ft and a mullion on the shower\'s glass line: the north lite is inside the shower')
     x0, x1, k0, k1 = RV.KITCHEN_SKY
     w = win['W16']
     w.update(start=x0, end=x1, width=round(x1 - x0, 4), height=round(k1 - k0, 4), c=9.4,
@@ -343,6 +690,7 @@ def main():
                  kind='skylight', basis='P', p=[round((sx0 + sx1) / 2, 3), 9.9, round((sz0 + sz1) / 2, 3)])
     if 'W20' not in win:
         meas['windows'].append(entry)
+        win['W20'] = entry
     bed4 = cut = None
     for r in meas['rooms']:
         if r['id'] == BEDROOM_4:
@@ -361,10 +709,20 @@ def main():
     room = laundry_room()
     upsert(meas['rooms'], room)
     upsert(meas['doors'], laundry_door())
+    suite = suite_rooms(meas['rooms'])  # sixth round: walk-in closet, vestibule, the notes of three rooms
+    pocket = suite_doors(meas['doors'])
     scene = sitedata.load_scene()
-    host = cut_host_wall(scene['objects'])
+    objs = scene['objects']
+    host = cut_host_wall(objs)
     for obj in laundry_objects():       # appended on a freshly relaid scene, updated in place on a re-run
-        upsert(scene['objects'], obj, key='name')
+        upsert(objs, obj, key='name')
+    walls, new_walls = suite_walls(objs)
+    leaves, new_leaf = suite_leaves(objs)
+    walls += bath_window_walls(objs)
+    w = win['W11']                      # the Bedroom 3 bathroom's shower window: taller, same width
+    sill, head = RV.BED3_BATH_WIN_Y
+    pane = bed3_bath_window(objs)
+    w.update(sill=sill, head=head, height=round(head - sill, 4), panes=[{'width': pane[0], 'height': pane[1]}])
     dr = scene.setdefault('design_revision', {})
     vaults = dr.get('vaults', {})
     if 'bedrooms_3_4' in vaults:
@@ -374,9 +732,16 @@ def main():
     dr['owner_changes_3'] = {'date': '2026-11-19', 'changes': CHANGES_3}
     dr['owner_changes_4'] = {'date': '2026-11-19', 'changes': CHANGES_4}
     dr['owner_changes_5'] = {'date': '2026-11-20', 'changes': changes_5(bed4, cut)}
-    ids = scene.get('layout_revision', {}).get('dimension_review', {}).get('room_ids')
-    if isinstance(ids, list) and LAUNDRY_ROOM not in ids:
-        ids.append(LAUNDRY_ROOM)
+    dr['owner_changes_6'] = {'date': '2026-11-20', 'changes': changes_6(suite)}
+    lr = scene.get('layout_revision', {})
+    ids = lr.get('dimension_review', {}).get('room_ids')
+    for rid in (LAUNDRY_ROOM, SUITE_VESTIBULE_ROOM):
+        if isinstance(ids, list) and rid not in ids:
+            ids.append(rid)
+    for key in ('primary_suite_internal_layout', 'primary_bathroom'):   # the concept's own record of the two layouts
+        if isinstance(lr.get(key), dict):
+            lr[key]['superseded'] = ('Sixth round (2026-11-20): the suite follows the architect\'s sheet; see '
+                                     'design_revision.owner_changes_6 and the dimension schedule')
     scene.setdefault('tour', {})['highlights'] = list(HIGHLIGHTS)
     labels = size_labels(meas)
     for n in scene['tour']['nodes'] + scene.get('rooms', []):
@@ -397,22 +762,39 @@ def main():
             au['note'] = next(r['note'] for r in meas['rooms'] if r['id'] == 'M11')
         if au.get('id') == BEDROOM_4:       # the About sheet's room table: Bedroom 4's reduced area
             au['area_sqft'], au['note'] = bed4['area_sqft'], bed4['note']
+        if au.get('id') in (PRIMARY_BEDROOM, PRIMARY_BATH, BEDROOM_3_BATH):
+            au['note'] = suite[au['id']]['note']
     upsert(scene.setdefault('audit', []), dict(room))
+    for rid in (SUITE_CLOSET_ROOM, SUITE_VESTIBULE_ROOM):
+        upsert(scene['audit'], dict(suite[rid]))
     design = sitedata.load_design()
     notes = update_design(design)
     for name, changed in (('measurements', sitedata.save_measurements(meas)), ('scene', sitedata.save_scene(scene)),
                           ('design', sitedata.save_design(design))):
         print('updated' if changed else 'unchanged', sitedata.rel(sitedata.path(name)))
     print('windows:', [w['id'] for w in meas['windows']])
-    first = min(i for i, o in enumerate(scene['objects']) if o['name'].startswith('Laundry closet'))
+    own = [i for i, o in enumerate(objs) if o['name'].startswith('Laundry closet')]
     print('laundry closet: room %s %s x %s clear, doors %s, scene objects %d..%d (%d) appended and wall %d cut, '
           'design view %s, sweep %s%s'
-          % (room['id'], ft(room['width_ft']), ft(room['depth_ft']), LAUNDRY_DOOR, first, len(scene['objects']) - 1,
-             len(scene['objects']) - first, host, LAUNDRY_VIEW, LAUNDRY_NODE,
+          % (room['id'], ft(room['width_ft']), ft(room['depth_ft']), LAUNDRY_DOOR, own[0], own[-1], len(own), host,
+             LAUNDRY_VIEW, LAUNDRY_NODE,
              '' if any(n.get('id') == LAUNDRY_NODE for n in scene['tour']['nodes'])
              else ' (not in the tour yet: run apply_sweeps.py)'))
     print('bedroom 4: room %s %s x %s overall, %.2f sq ft without the closet corner %s x %s'
           % (bed4['id'], ft(bed4['width_ft']), ft(bed4['depth_ft']), bed4['area_sqft'], ft(cut[0]), ft(cut[1])))
+    closet, vest = suite[SUITE_CLOSET_ROOM], suite[SUITE_VESTIBULE_ROOM]
+    print('primary suite: room %s %s %s x %s, room %s %s %s x %s, pocket door %s %s wide; scene walls %s reshaped and '
+          '%s appended, leaves %s moved and %d appended'
+          % (closet['id'], closet['name'], ft(closet['width_ft']), ft(closet['depth_ft']), vest['id'], vest['name'],
+             ft(vest['width_ft']), ft(vest['depth_ft']), pocket['id'], ft(pocket['width']), walls, new_walls, leaves,
+             new_leaf))
+    doors = {d['id']: d for d in meas['doors']}
+    print('               %s' % ', '.join('%s %s %.3f..%.3f' % (i, doors[i]['axis'], doors[i]['start'], doors[i]['end'])
+                                         for i in (BATH_DOOR, SUITE_ENTRY, BED_OPENING, SUITE_CLOSET_DOOR)))
+    print('               W13 z %.3f..%.3f, W20 x %.3f..%.3f z %.3f..%.3f, W11 sill %.3f head %.3f (pane %.3f x %.3f)'
+          % (win['W13']['start'], win['W13']['end'], win['W20']['start'], win['W20']['end'],
+             win['W20']['p'][2] - win['W20']['height'] / 2, win['W20']['p'][2] + win['W20']['height'] / 2, sill, head,
+             pane[0], pane[1]))
     for line in notes:
         print('note:', line)
 

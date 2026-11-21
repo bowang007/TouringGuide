@@ -11,22 +11,86 @@ OFFICE_CEILING = (0.0, 15.265, 28.54, 36.90)
 # 4. primary bedroom sliding door (the old window W01 opening)
 SLIDER_X = (2.45, 9.10)
 SLIDER_HEAD = 7.0
-# 6. primary bathroom window: between the vanity front (z 22.76) and the shower wet wall (z 25.23)
-BATH_WIN_Z = (22.85, 24.85)
+# 6. primary bathroom window W13. Sixth round (2026-11-20): at the architect's position (sheet SKA002: 3'-0" wide,
+#    read off the 300 dpi sheet as z 22.89..25.89), with a mullion on the shower's south glass line (BATH_WIN_MULLION_Z):
+#    the north lite is inside the shower, the south lite in the room. (Rounds one to five: z 22.85..24.85, between a
+#    vanity on the north wall and a shower in the south-west corner, the layout the owner replaced.)
+BATH_WIN_Z = (22.89, 25.89)
 # owner's change 2026-11-19 (third round): Bedroom 2's rear window and the primary bath window no longer run to the
 # floor; both stop at a 2'-0" sill and keep their heads at the 8 ft ceiling
 TALL_SILL = 2.0
-# the concept bath window opening (warped to the new plan) that the bath's wall finish is built around
+# the concept bath window opening the shell builds (sill 5'-0", head 7'-0"); bl/revisions.bath_window removes it.
+# (Until the fifth round the bath's wall finish was built around this hole and re-cut; since the sixth round the room
+# is fitted out after the warp, straight around BATH_WIN_Z, and nothing reads this number any more.)
 BATH_OLD_HOLE_Y = (5.0, 7.0)
-# owner's change 2026-11-19: a skylight over the shower (x 0.36..4.97, z 25.27..28.30), clear of the rain
-# head (x <= 2.44) and on the single west roof plane, 2'-0" x 2'-6"
-PRIMARY_BATH_SKY = (2.7, 4.7, 25.55, 28.05)
+# owner's change 2026-11-19: a skylight "over the shower", 2'-0" x 2'-6" (W20). Sixth round: it moves with the shower
+# into the north-west corner (BATH_SHOWER), on the single west roof plane of the bedroom wing, clear of the rain head
+# (x <= 1.70) and of the shower's glass. (Rounds two to five: x 2.7..4.7, z 25.55..28.05, over the old shower.)
+PRIMARY_BATH_SKY = (2.2, 4.2, 21.5, 24.0)
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Sixth round (2026-11-20), the owner: "Refer to the sizes and floor plans for the primary bedroom, bathroom and the
+# walk in closet to make it more accurate", and, asked directly: "follow the sheet (shower north-west, toilet
+# south-west, double vanity on the south wall, door at the east end of the north wall; skylight moves with the shower;
+# west window to the sheet's position, 3 ft wide)". The primary bath (room M03, sweep A0) on sheet SKA002, read off the
+# 300 dpi sheet (75 px per foot in the suite crop). Until the fifth round the room was mirrored north-south (vanity on
+# the north wall, shower in the south-west corner, door D08 0.98 ft further west).
+# bl/revisions.py (bath_door, bath_window, primary_bath_skylight, primary_bath_fit_out) and
+# bl/zones/baths_primary.py read these numbers; the web data (apply_revisions_web.py) should read them too.
+PRIMARY_BATH_CLEAR = (0.225, 9.725, 21.195, 28.362)   # x0, x1, z0, z1 between the wall faces: 9'-6" x 7'-2"
+PRIMARY_BATH_NORTH_WALL_Z = (20.835, 21.195)          # the wall the door is in: vestibule / closet face, bath face
+# door D08: the opening in the north wall, hinged on the EAST jamb, swinging into the bath, shown open at 90 degrees
+# against the east wall. (The shell builds the concept opening at x 5.914..8.516.)
+BATH_DOOR_X = (6.89, 9.45)                # west jamb, east jamb: 2'-6 3/4"
+BATH_DOOR_OLD_X = (5.914, 8.516)          # the opening as the shell builds it (bl/revisions.bath_door checks it)
+BATH_DOOR_HEAD = 6.67
+BATH_DOOR_AXIS = 'x'                      # the opening runs along x in the wall z = BATH_DOOR_C
+BATH_DOOR_C = (PRIMARY_BATH_NORTH_WALL_Z[0] + PRIMARY_BATH_NORTH_WALL_Z[1]) / 2      # the wall's centre line, z 21.015
+BATH_DOOR_HINGE = 'east'
+BATH_DOOR_SWING = 'south'                 # into the bath
+BATH_DOOR_OPEN_DEG = 90.0                 # 0 = closed, 90 = square to the wall = parallel to the east wall
+BATH_DOOR_LINER = 0.03                    # painted jamb liner: this far into the opening (and into the wall) on each side
+BATH_DOOR_LINER_PROUD = (0.035, 0.085)    # liners / head trim proud of the wall: vestibule face (the house's casing), bath
+#                                           face (in front of the bath's 0.065 ft wainscot and its plaster)
+BATH_DOOR_HINGE_GAP = 0.01
+BATH_DOOR_HINGE_PIN = 0.012
+BATH_DOOR_LEAF_W = BATH_DOOR_X[1] - BATH_DOOR_X[0] - 2 * BATH_DOOR_LINER - 2 * BATH_DOOR_HINGE_GAP     # 2.48: a 2'-6" leaf
+BATH_DOOR_LEAF_T = 0.115                  # 1 3/8" flush slab like the other interior doors
+BATH_DOOR_LEAF_Y = (0.045, 6.625)         # as the shell's leaf: clear of the bath's tile floor (y 0.028) and the saddle
+BATH_DOOR_HINGE_Y = (0.75, 3.30, 5.85)
+BATH_DOOR_LEVER = (0.23, 3.0)             # lever handle: inset from the free edge, height
+BATH_DOOR_SADDLE_Y = 0.04                 # oak saddle across the opening (the bath's tile floor is 0.028 above the oak)
+# shower in the north-west corner, 5'-0" x 3'-0": x0, x1 (centre line of the east glass), z0, z1 (centre line of the
+# south glass = the window mullion)
+BATH_SHOWER = (0.225, 5.225, 21.195, 24.21)
+BATH_WIN_MULLION_Z = BATH_SHOWER[3]       # W13's mullion: the shower's south glass meets the west wall on it
+BATH_WIN_TRANSOM_Y = 6.0                  # W13's transom (third round)
+# recessed niche in the shower's north wall (the wall between bath and walk-in closet, 0.36 thick):
+# x0, x1, y0, y1, depth into the wall from its bath face
+BATH_NICHE = (2.55, 3.95, 4.03, 5.23, 0.25)      # its sill on a tile joint (two 24 in courses above the floor)
+# toilet in the south-west corner, its back to the south wall, facing north; the sheet's dashed box (x 0.225..3.225)
+# is its clear floor space
+BATH_TOILET_X = 1.48
+BATH_TOILET_CLEAR_X = (0.225, 3.225)
+# double vanity along the south wall: 6'-6" x 1'-9" (x0, x1, z0, z1 to the wall's face), basins centred at
+BATH_VANITY = (3.225, 9.725, 26.62, 28.362)
+BATH_BASINS_X = (4.57, 8.40)
 # Repair, not a design change: the garage's west wall (x 21.218..21.578) starts at z 31.238 and the kitchen / garage
 # wall (z 31.058..31.418) at x 21.398, each on the other's centre line, which leaves a 0.18 x 0.18 ft notch, floor to
 # ceiling, in the outside corner where the foyer's east wall turns into the kitchen's south wall (beside the
 # refrigerator's end panel; the two baseboards bridge it with nothing behind them). x0, x1, z0, z1 of the infill
 # (bl/revisions.foyer_corner builds it from the two walls as built and checks them against these numbers):
 FOYER_CORNER_INFILL = (21.218, 21.398, 31.058, 31.238)
+# Sixth round (2026-11-20), the owner: "the bathroom in the front bedroom suite, the window in the shower is too small,
+# make it vertically larger". Window W11 (tour: Bedroom 3 bathroom; the shell's "Ensuite privacy window") on the west
+# wall, inside the shower. Its width and place stay (3'-0", the jambs as built on the architect's plan), and so do the
+# frosted glazing and the black frame with a centre mullion; the sill drops from 5'-0" to 3'-0" and the head rises from
+# 7'-0" to 7'-6" (heights confirmed by the owner, above the house's floor datum y = 0; the bath's tile floor is 0.1 ft
+# higher). bl/revisions.bedroom3_bath_window reshapes the wall, the frame and the pane; bl/zones/baths.py (build_suite3)
+# builds the wall tile, the tiled jamb returns and the quartz sill around the opening from the same heights.
+BED3_BATH_WIN_Z = (38.089, 41.087)      # north jamb, south jamb
+BED3_BATH_WIN_Y = (3.0, 7.5)            # sill, head of the opening (the frame stands inside it)
+BED3_BATH_WIN_OLD_Y = (5.0, 7.0)        # the concept window the shell builds (bl/shell.py)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Fourth round, as corrected by the owner on 2026-11-20: the laundry closet. (The first attempt, 2026-11-19, built it in
@@ -159,3 +223,173 @@ def laundry_units():
     x1 = x0 + LAUNDRY_UNIT_D
     h, tr = LAUNDRY_UNIT_H, LAUNDRY_STACK_TRIM
     return {'washer': (x0, x1, 0.0, h, z0, z1), 'dryer': (x0, x1, h + tr, 2 * h + tr, z0, z1)}
+
+
+def bath_door_leaf(open_deg=None):
+    """The leaf of the primary bath door D08 at `open_deg` (default BATH_DOOR_OPEN_DEG; 0 = closed, 90 = square to
+    the north wall, lying along the east wall), hinged on the east jamb and swinging south into the bath.
+
+    Like laundry_leaf(): the leaf turns about its hinge pins, which stand on the joint between its hinge edge and the
+    east jamb liner, BATH_DOOR_HINGE_PIN proud of its bath-side face; closed, that face is flush with the liners'
+    bath-side edge. Returns a dict: `name`, the pin axis `pivot` (x, z), unit vectors in plan `along` (hinge -> free
+    edge) and `through` (bath-side face -> vestibule-side face), `corner` (x, z) = the leaf's hinge-edge / bath-face
+    corner, `rot` (radians about +Y, the SCENE object / ctx.box_c convention), the leaf box as `center` (x, y, z) +
+    `size` (width, height, thickness) and its axis-aligned bounds `aabb` (x0, x1, y0, y1, z0, z1)."""
+    a = math.radians(BATH_DOOR_OPEN_DEG if open_deg is None else open_deg)
+    px = BATH_DOOR_X[1] - BATH_DOOR_LINER - BATH_DOOR_HINGE_GAP / 2
+    pz = PRIMARY_BATH_NORTH_WALL_Z[1] + BATH_DOOR_LINER_PROUD[1] + BATH_DOOR_HINGE_PIN
+    along = (-math.cos(a), math.sin(a))             # closed: west, toward the other jamb; open: south, into the bath
+    through = (-math.sin(a), -math.cos(a))          # closed: north, into the wall; open: west, into the room
+    u0, v0 = BATH_DOOR_HINGE_GAP / 2, BATH_DOOR_HINGE_PIN
+    w, th = BATH_DOOR_LEAF_W, BATH_DOOR_LEAF_T
+    y0, y1 = BATH_DOOR_LEAF_Y
+
+    def at(u, v):
+        return px + along[0] * (u0 + u) + through[0] * (v0 + v), pz + along[1] * (u0 + u) + through[1] * (v0 + v)
+    cx, cz = at(w / 2, th / 2)
+    cs = [at(u, v) for u in (0.0, w) for v in (0.0, th)]
+    xs, zs = [c[0] for c in cs], [c[1] for c in cs]
+    return {'name': 'Primary bath door leaf (open)', 'pivot': (px, pz), 'corner': at(0.0, 0.0), 'along': along,
+            'through': through, 'rot': math.atan2(-along[1], along[0]), 'center': (cx, (y0 + y1) / 2, cz),
+            'size': (w, y1 - y0, th), 'aabb': (min(xs), max(xs), y0, y1, min(zs), max(zs))}
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Sixth round (2026-11-20): the primary suite's 8 ft zone between the bedroom and the bath, divided as on sheet SKA002.
+# The owner: "The walk in closet in the primary bedroom is not correct, you should refer to the floor plan of sizes.pdf
+# last page for that, there should be a door since it's a small room for walk in closet". Until the fifth round the
+# zone was ONE open dressing area with fitted wardrobes. Read off the sheet at 300 and 1200 dpi (x from the west
+# wall's inside face 0.225, z from the closet's north face 12.835):
+#   * WALK-IN CLOSET "(E) W.I.C": an enclosed room, clear 6'-1" x 8'-0", behind a new 5 in east wall.
+#   * Its door: a sliding POCKET door in that wall. The sheet draws a full jamb at z 15.39..15.58, a split jamb at
+#     z 18.07..18.27 and the leaf inside a pocket sleeve z 18.27..20.60 with its nose out to z 17.80. So the clear
+#     opening is the 2'-6" between the two jambs, centred on the closet (z 16.835), and the leaf slides SOUTH into the
+#     wall. (The wall hatch and the wall's face lines run through every door opening on this sheet, the bath's hinged
+#     door included, so they do not show where an opening is; the jambs and the pocket do. The hanging rods the sheet
+#     draws along the closet's north and south walls end 2 in off this wall at z 13.75 and z 19.9: a door at the
+#     wall's south end would open onto the south rod.)
+#   * VESTIBULE: clear 4'-7" x 8'-0", open to the bedroom over its whole width (no door; the existing header at
+#     6'-8" stays), with the "(E) 30X22 ATTIC ACCESS" hatch in its ceiling.
+#   * SUITE ENTRY (door D09) in the vestibule's east wall: about 2'-8" clear with a SLIDING panel on the hall side
+#     that parks south of the opening. The sheet draws the opening at z 13.56..16.20 (SUITE_ENTRY_SHEET_Z), beside
+#     its hall alcove. In this model that stretch of the wall backs onto Bedroom 2's entry alcove (x 11.668..17.058,
+#     z 12.835..14.75, the concept's layout, behind the framed opening D12 in the wall z 14.75..15.11): the hall only
+#     begins at z 15.11 on that side. The opening is therefore built as far north as the hall allows (SUITE_ENTRY_Z),
+#     and the panel parks on the wall between it and the shared bath's north wall. Moving it to the sheet's place
+#     needs Bedroom 2's entry re-planned first (its door on the line z 12.475..12.835, the alcove given to the hall).
+# bl/revisions.py (suite_rooms, suite_fit_out) and bl/zones/primary_suite.py read these numbers; the web data
+# (apply_revisions_web.py) should read them too. Everything is SCENE feet on the architect's plan.
+SUITE_ZONE_Z = (12.835, 20.835)                          # the 8'-0" between the bedroom's south wall and the bath's north wall
+SUITE_CEILING = 8.0
+SUITE_CLOSET_CLEAR = (0.225, 6.308, 12.835, 20.835)      # x0, x1, z0, z1 inside the walk-in closet: 6'-1" x 8'-0"
+SUITE_CLOSET_WALL_X = (6.308, 6.725)                     # the new east wall of the closet (5 in): closet face, vestibule face
+SUITE_VESTIBULE_CLEAR = (6.725, 11.308, 12.835, 20.835)  # 4'-7" x 8'-0"
+# the wall between bedroom and closet (shell piece 1836, was x 0..5.922) runs on to the new wall's vestibule face;
+# the header over the bedroom opening (shell piece 1901, was x 5.922..11.488) starts there
+SUITE_NORTH_WALL = 'Retained wall over primary closet'
+SUITE_NORTH_HEADER = 'Retained overhead header at open primary bedroom connection'
+SUITE_NORTH_WALL_Z = (12.475, 12.835)
+SUITE_NORTH_WALL_OLD_X1 = 5.922
+# door D10, the open connection bedroom <-> vestibule (no leaf): x0, x1 in the wall z = 12.655, head
+SUITE_BED_OPENING_X = (SUITE_CLOSET_WALL_X[1], SUITE_VESTIBULE_CLEAR[1])    # 6.725..11.308 = 4'-7"
+SUITE_BED_OPENING_HEAD = 6.67
+# the closet's pocket door (a new door: the schedule's next free id)
+SUITE_CLOSET_DOOR_W = 2.5
+SUITE_CLOSET_DOOR_HEAD = 6.67
+SUITE_CLOSET_DOOR_AXIS = 'z'                             # the opening runs along z in the wall x = SUITE_CLOSET_DOOR_C
+SUITE_CLOSET_DOOR_C = (SUITE_CLOSET_WALL_X[0] + SUITE_CLOSET_WALL_X[1]) / 2          # 6.5165
+_SCZ = (SUITE_ZONE_Z[0] + SUITE_ZONE_Z[1]) / 2           # 16.835: the closet's centre line
+SUITE_CLOSET_DOOR_Z = (_SCZ - SUITE_CLOSET_DOOR_W / 2, _SCZ + SUITE_CLOSET_DOOR_W / 2)   # 15.585..18.085: strike jamb, pocket jamb
+SUITE_CLOSET_DOOR_POCKET = 'south'                       # the leaf slides south, into the wall z 18.085..20.835
+SUITE_CLOSET_DOOR_LINER = 0.03          # painted jamb liners: this far into the opening (and into the wall) on each side
+SUITE_CLOSET_DOOR_LINER_PROUD = 0.035   # liners and head trim stand this far off both wall faces (the house's casing)
+SUITE_CLOSET_LEAF_W = 2.75              # 2'-9" leaf for the 2'-6" opening (sheet: 2.78), flush slab
+SUITE_CLOSET_LEAF_T = 0.115             # 1 3/8"
+SUITE_CLOSET_LEAF_Y = (0.02, 6.60)
+SUITE_CLOSET_SLOT = 0.0695              # half width of the pocket slot between the split jambs (leaf + 0.012 each side)
+# Shown open, the leaf standing this far out of its pocket (the sheet draws it 0.27 ft out), which leaves 2.17 ft
+# between its edge and the strike jamb's liner. The brief asked for "about one third out (about 0.8 ft)"; that would
+# leave 1.67 ft, and place_sweeps.py floods the walkable floor with a 0.9 ft body radius on a 0.25 ft grid, so a
+# passage under about 2.05 ft cuts the closet off the tour.
+SUITE_CLOSET_LEAF_SHOWN = 0.30
+SUITE_CLOSET_PULL = (0.14, 2.95, 3.55)  # flush pull on both faces: its centre's inset from the leading edge, y0, y1
+# door D09, the suite entry: opening in the wall x 11.308..11.668 (shell pieces 3153 north, 3155 header, 3154 south)
+SUITE_ENTRY_WALL_X = (11.308, 11.668)                    # vestibule face, hall face
+SUITE_ENTRY_SHEET_Z = (13.56, 16.20)                     # where the sheet draws it (see the note above): NOT built
+SUITE_ENTRY_OLD_Z = (14.752, 18.888)                     # the concept's 4.1 ft opening with a hinged leaf
+SUITE_ENTRY_W = 2.667                                    # 2'-8"
+SUITE_ENTRY_Z = (15.21, 15.21 + SUITE_ENTRY_W)           # 15.21..17.877: north jamb 0.10 off Bedroom 2's south wall (z 15.11)
+SUITE_ENTRY_HEAD = 6.67
+SUITE_ENTRY_AXIS = 'z'
+SUITE_ENTRY_C = (SUITE_ENTRY_WALL_X[0] + SUITE_ENTRY_WALL_X[1]) / 2                  # 11.488
+SUITE_ENTRY_LINER = 0.03
+SUITE_ENTRY_LINER_PROUD = 0.035
+SUITE_ENTRY_PANEL_SIDE = 'east'                          # the panel hangs on the hall face
+SUITE_ENTRY_PANEL_W = 2.92             # covers the opening with 0.10 (north) and 0.15 (south) when closed
+SUITE_ENTRY_PANEL_T = 0.13             # 1 1/2" flush panel
+SUITE_ENTRY_PANEL_Y = (0.04, 6.82)      # its top covers the head trim; the track sits right above it
+SUITE_ENTRY_PANEL_GAP = 0.075          # between the hall wall face and the panel (clears the baseboard and the liners)
+SUITE_ENTRY_PANEL_CLOSED_Z0 = SUITE_ENTRY_Z[0] - 0.10    # 15.11: against Bedroom 2's south wall
+SUITE_ENTRY_PANEL_OPEN_Z0 = SUITE_ENTRY_Z[1] - 0.07      # 17.807: parked south, its edge 0.07 inside the south jamb
+SUITE_ENTRY_TRACK_Y = (6.84, 6.99)     # slim black top track on the hall face (kept under 7 ft: check_holes.py casts its
+#                                        ceiling rays up from 7 ft through everything in the `openings` collection)
+SUITE_ENTRY_TRACK_Z = (15.115, 20.74)  # from Bedroom 2's wall to the shared bath wall's baseboard
+SUITE_ENTRY_PULL = (0.22, 2.75, 4.25)  # bar pull on the hall face: inset from the leading (north) edge, y0, y1
+# Repair at the hall face of the suite entry wall (not a design change): Bedroom 2's doorless entry D12 (header shell
+# piece 'Bedroom 2 entry', z 14.75..15.11) has no west jamb; its opening runs to this wall's hall face, but the
+# header stopped 0.113 ft short of it (x 11.781), a slot from the head to the ceiling. Until the fifth round the old
+# suite entry's casing stood on that corner; now the wall runs past it. The header is carried to the wall, and the
+# wall's hall-side baseboard, which the shell builds in two pieces with a 0.04 ft joint at z 14.93, is closed.
+SUITE_BED2_HEADER = 'Bedroom 2 entry'                    # shell piece 1902: its west end goes to SUITE_ENTRY_WALL_X[1]
+SUITE_BED2_HEADER_OLD_X0 = 11.781
+# attic access hatch in the vestibule's ceiling (sheet: "(E) 30X22 ATTIC ACCESS"): x0, x1, z0, z1
+SUITE_ATTIC_HATCH = (8.65, 10.49, 13.33, 15.82)
+
+
+def suite_closet_walls():
+    """The three pieces of the walk-in closet's new east wall [(name, x0, x1, y0, y1, z0, z1)]: north of the door,
+    the header over it, and the pocket wall south of it (the leaf slides into that one)."""
+    x0, x1 = SUITE_CLOSET_WALL_X
+    z0, z1 = SUITE_ZONE_Z
+    d0, d1 = SUITE_CLOSET_DOOR_Z
+    return [('Primary closet east wall north of the door', x0, x1, 0.0, SUITE_CEILING, z0, d0),
+            ('Primary closet east wall door header', x0, x1, SUITE_CLOSET_DOOR_HEAD, SUITE_CEILING, d0, d1),
+            ('Primary closet east wall door pocket', x0, x1, 0.0, SUITE_CEILING, d1, z1)]
+
+
+def suite_existing_walls():
+    """Existing shell / SCENE wall objects the round reshapes: {name: (x0, x1, y0, y1, z0, z1)} as they are afterwards."""
+    ex0, ex1 = SUITE_ENTRY_WALL_X
+    e0, e1 = SUITE_ENTRY_Z
+    n0, n1 = SUITE_NORTH_WALL_Z
+    top = SUITE_CEILING
+    return {SUITE_NORTH_WALL: (0.0, SUITE_CLOSET_WALL_X[1], 0.0, top, n0, n1),
+            SUITE_NORTH_HEADER: (SUITE_CLOSET_WALL_X[1], 11.488, SUITE_BED_OPENING_HEAD, top, n0, n1),
+            'Aligned primary-suite east wall — north': (ex0, ex1, 0.0, top, 12.655, e0),
+            'Aligned primary-suite entry header': (ex0, ex1, SUITE_ENTRY_HEAD, top, e0, e1),
+            'Aligned primary-suite east wall — south': (ex0, ex1, 0.0, top, e1, 21.015)}
+
+
+def suite_closet_leaf(shown=None):
+    """The closet's pocket door leaf with `shown` ft of it out of the pocket (default SUITE_CLOSET_LEAF_SHOWN; the
+    leaf's width = closed, 0 = flush with the pocket jamb): dict with `name`, `center` (x, y, z), `size` (along x,
+    height, along z), `rot` 0 and `aabb` (x0, x1, y0, y1, z0, z1)."""
+    s = SUITE_CLOSET_LEAF_SHOWN if shown is None else shown
+    z0 = SUITE_CLOSET_DOOR_Z[1] - s                     # leading edge
+    z1 = z0 + SUITE_CLOSET_LEAF_W
+    y0, y1 = SUITE_CLOSET_LEAF_Y
+    x0, x1 = SUITE_CLOSET_DOOR_C - SUITE_CLOSET_LEAF_T / 2, SUITE_CLOSET_DOOR_C + SUITE_CLOSET_LEAF_T / 2
+    return {'name': 'Primary closet pocket door leaf (open)', 'center': ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2),
+            'size': (x1 - x0, y1 - y0, z1 - z0), 'rot': 0.0, 'aabb': (x0, x1, y0, y1, z0, z1)}
+
+
+def suite_entry_panel(closed=False):
+    """The suite entry's sliding panel on the hall face, parked open south of the opening (or closed): dict with
+    `name`, `center`, `size` (along x, height, along z), `rot` 0 and `aabb`."""
+    z0 = SUITE_ENTRY_PANEL_CLOSED_Z0 if closed else SUITE_ENTRY_PANEL_OPEN_Z0
+    z1 = z0 + SUITE_ENTRY_PANEL_W
+    y0, y1 = SUITE_ENTRY_PANEL_Y
+    x0 = SUITE_ENTRY_WALL_X[1] + SUITE_ENTRY_PANEL_GAP
+    x1 = x0 + SUITE_ENTRY_PANEL_T
+    return {'name': 'Primary suite entry sliding panel (open)', 'center': ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2),
+            'size': (x1 - x0, y1 - y0, z1 - z0), 'rot': 0.0, 'aabb': (x0, x1, y0, y1, z0, z1)}

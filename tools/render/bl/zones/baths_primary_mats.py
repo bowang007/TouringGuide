@@ -4,20 +4,25 @@ Built with the library's graph helper (materials_pbr._G: world-space planar / tr
 UVs) so they follow the same conventions as the shared library. Each builder falls back to a flat
 Principled material if anything fails (e.g. a texture download), so the zone always builds.
 
-  sage_subway   glossy handmade-look sage-green 3x12in subway tile, running bond, light grout (shower)
-  vgroove       sage-grey painted V-groove panelling, 4in boards (wainscot)
-  sage_paint    the same paint without grooves (wainscot cap)
-  plaster       warm cream lime plaster above the wainscot
-  stone         stacked natural-stone veneer (Poly Haven rustic_stone_wall_02) with TRUE displacement
-                (world-space, so the relief lines up with the colour after the warp) - feature wall
-  oak           solid oak slab (Poly Haven oak_wood_planks, glued boards, honey oil finish)
-  timber        reclaimed timber (Poly Haven weathered_brown_planks) for the shelf over the WC
-  brass         aged / brushed brass (fixtures, mirror frames, sconces, towel warmer)
-  opal          lit white opal glass (sconce shades)
-  encaustic     8in blue-and-cream encaustic cement tile, quatrefoil medallion pattern (floor)
-  shower_mosaic 2x2in cream mosaic with light grout (shower floor)
-  jute          jute / sisal bath mat
-  wicker        coiled seagrass (laundry basket)
+The room is fitted out AFTER the warp, in plan feet (see baths_primary.py), so world-space patterns
+are laid out on the built room: tile courses start at the floor, the floor grid is centred on the room.
+
+  stone         stacked natural stone, warm brown-tan with light sandy mortar (Poly Haven
+                rustic_stone_wall_02) with TRUE displacement: the vanity (south) wall
+  shower_tile   honed cream stone-look porcelain, 24x48in stack bond, quiet joints: the shower's walls
+  shower_mosaic 2x2in cream mosaic (shower floor)
+  sill          honed cream limestone (shower threshold, niche sill, window sill of the shower lite)
+  floor_stone   quiet warm-grey honed stone, 24x24in, fine joints (floor)
+  vgroove       muted grey-green painted tongue-and-groove boards (wainscot); sage_paint: its cap rail
+  plaster       warm cream lime plaster above the wainscot and on the ceiling
+  oak           solid oak slab (vanity, mirror frames, window stool)
+  timber        reclaimed timber (shelf);  beam: rough dark hewn timber (wall beam, ceiling beam)
+  nickel        brushed nickel (taps, shower set, glass fittings, towel bar)
+  enamel        cream vitreous enamel (lamp shades);  bulb / filament: clear lamp bulb
+  jute          flat-woven cotton / jute mat, cream with thin dark stripes
+  striped       terry towel with woven stripes
+  galvanised    dull zinc (plant pot);  cactus, sedum: plant greens;  stoneware, amber, green_glass: shelf
+  botanical     small botanical drawing (framed print on the shelf), generated with numpy
 """
 import math
 
@@ -25,6 +30,7 @@ import bpy
 
 PFX = 'Z_baths_primary_'
 IN = 0.0254
+FT = 0.3048
 
 
 def _lin(c):
@@ -50,6 +56,12 @@ def _flat(name, rgb, rough=0.5, metal=0.0, **extra):
             pass
     m.diffuse_color = tuple(rgb) + (1,)
     return m
+
+
+def flat(name, hexcol, rough=0.5, metal=0.0, **extra):
+    """Plain Principled material PFX+name (small props)."""
+    full = PFX + name
+    return bpy.data.materials.get(full) or _flat(full, hexlin(hexcol), rough, metal, **extra)
 
 
 def _make(name, build, fallback):
@@ -81,47 +93,100 @@ def _out(g, shader, disp=None):
     return g.m
 
 
-def _inside(g, sd, e):
-    """1 inside (signed distance sd < 0), 0 outside, antialiased over +-e."""
-    return g.sub(1.0, g.ss(sd, -e, e))
-
-
 # ------------------------------------------------------------------------------------- tiles
-def sage_subway():
-    """Glossy sage-green 3x12in subway, 1/2 running bond from the floor, 1/16in light grout. Every tile
-    has its own tone and a slightly wavy handmade glaze, so reflections ripple across the wall."""
+def shower_tile(a0_ft=0.0, floor_ft=0.028):
+    """Honed cream stone-look porcelain, 24x48in, stack bond with the long side horizontal, 1/16in joints in the
+    tile's own tone. Matte and quiet: a soft cloudy body, no veins. a0_ft puts a vertical joint at that plan
+    coordinate along the wall; the courses start at the floor (floor_ft)."""
+    cream = hexlin('#e3d8c4')
+
     def build(g, P):
         a, b, A, B = g.planar()
-        tw, th = 12 * IN, 3 * IN
-        tid, d, la, lb = P._grid(g, a, b, tw, th, offset=0.5)
+        tid, d, _, _ = P._grid(g, a, b, 48 * IN, 24 * IN, a0=a0_ft * FT, b0=floor_ft * FT)
         _, rc = g.white(tid)
         r0, r1, r2 = g.sep(rc)
-        base = hexlin('#7f8a72')
-        col = g.vscale(base, g.remap(r0, 0.0, 1.0, 0.91, 1.07))
-        col = g.cmix(col, g.vm('MULTIPLY', col, (0.95, 1.03, 1.02)), r1)          # greener / greyer tiles
-        n, _ = g.noise(g.vec(a, b, g.mul(r2, 9.0)), 7.0, detail=3.0)
-        col = g.vscale(col, g.remap(n, 0.3, 0.7, 0.955, 1.04))                    # glaze pooling
-        # glaze breaks lighter on the pillowed edges
-        rim = g.sub(1.0, g.ss(d, 0.0012, 0.004))
-        col = g.cmix(col, g.vm('MULTIPLY', col, (1.12, 1.12, 1.10)), g.mul(rim, 0.6))
-        grout = g.sub(1.0, g.ss(d, 0.0007, 0.00095))
-        col = g.cmix(col, hexlin('#d9d5ca'), grout)
-        wav, _ = g.noise(g.vec(g.mul(a, 1.0), b, g.mul(r1, 13.0)), 5.0, detail=2.0)
-        height = g.add(g.ss(d, 0.0005, 0.0045), g.mul(wav, 0.22))
-        nrm = g.normal(height=height, dist=0.0016)
-        rough = g.lerp(g.add(0.05, g.mul(n, 0.05)), 0.85, grout)
-        return _out(g, g.bsdf(col, rough, 0.0, nrm, **{'Coat Weight': 0.35, 'Coat Roughness': 0.04}))
-    return _make('sage_subway', build, (hexlin('#7f8a72'), 0.08))
+        qx, qy, qz = g.mad(r0, 7.0, a), g.mad(r1, 5.0, b), g.mul(r2, 3.0)       # every tile from another part of the slab
+        n1, _ = g.noise(g.vec(g.mul(qx, 1.1), g.mul(qy, 2.4), qz), 1.0, detail=5.0, rough=0.6, distortion=0.3)
+        n2, _ = g.noise(g.vec(g.mul(qx, 0.5), g.mul(qy, 1.1), g.add(qz, 5.0)), 1.0, detail=3.0)
+        speck, _ = g.noise(g.frame()['P'], 380.0, detail=1.0)
+        col = g.vscale(cream, g.remap(n2, 0.3, 0.7, 0.955, 1.03))
+        col = g.cmix(col, hexlin('#d3c4ab'), g.mul(g.ss(n1, 0.55, 0.78), 0.35))
+        col = g.vscale(col, g.mul(g.remap(r2, 0.0, 1.0, 0.985, 1.015), g.remap(speck, 0.3, 0.7, 0.99, 1.01)))
+        grout = g.sub(1.0, g.ss(d, 0.0007, 0.001))
+        col = g.cmix(col, hexlin('#c9bda7'), grout)
+        rough = g.lerp(g.add(0.5, g.mul(g.sub(n2, 0.5), 0.1)), 0.85, grout)
+        height = g.add(g.ss(d, 0.0006, 0.0022), g.mul(n1, 0.03))
+        nrm = g.normal(height=height, dist=0.0007)
+        return _out(g, g.bsdf(col, rough, 0.0, nrm))
+    return _make('shower_tile', build, (cream, 0.55))
 
 
-SAGE = '#a5aa97'          # wainscot paint (soft sage-grey, like the reference)
+def sill():
+    """Honed cream limestone, one piece (threshold strips, niche sill, the shower lite's window sill)."""
+    cream = hexlin('#ddd1bb')
+
+    def build(g, P):
+        fr = g.frame()
+        n1, _ = g.noise(fr['P'], 9.0, detail=4.0, rough=0.6)
+        n2, _ = g.noise(fr['P'], 240.0, detail=2.0)
+        col = g.vscale(cream, g.mul(g.remap(n1, 0.3, 0.7, 0.95, 1.04), g.remap(n2, 0.3, 0.7, 0.985, 1.015)))
+        nrm = g.normal(height=n2, dist=0.0002)
+        return _out(g, g.bsdf(col, g.add(0.42, g.mul(g.sub(n1, 0.5), 0.1)), 0.0, nrm))
+    return _make('sill', build, (cream, 0.45))
+
+
+def shower_mosaic():
+    """2x2in cream porcelain mosaic, light grout, per-tile tone (shower floor)."""
+    def build(g, P):
+        a, b, A, B = g.planar()
+        tw = 2.0 * IN
+        tid, d, _, _ = P._grid(g, a, b, tw, tw)
+        _, rc = g.white(tid)
+        r0, r1, _ = g.sep(rc)
+        col = g.vscale(hexlin('#ddd3c0'), g.remap(r0, 0.0, 1.0, 0.93, 1.05))
+        col = g.cmix(col, g.vm('MULTIPLY', col, (0.98, 1.0, 0.97)), r1)
+        grout = g.sub(1.0, g.ss(d, 0.0013, 0.0018))
+        col = g.cmix(col, hexlin('#bdb39f'), grout)
+        nrm = g.normal(height=g.ss(d, 0.0013, 0.0045), dist=0.0012)
+        return _out(g, g.bsdf(col, g.lerp(0.45, 0.85, grout), 0.0, nrm))
+    return _make('shower_mosaic', build, (hexlin('#ddd3c0'), 0.5))
+
+
+def floor_stone(cx_ft=4.975, cz_ft=24.78):
+    """Quiet warm-grey honed stone floor: 24x24in, square grid centred on the room (cx_ft, cz_ft), fine joints a
+    shade darker. No pattern: a faint cloud in each tile and a slight tone step from tile to tile."""
+    grey = hexlin('#7a7166')
+
+    def build(g, P):
+        a, b, A, B = g.planar()
+        tw = 24 * IN
+        tid, d, _, _ = P._grid(g, a, b, tw, tw, a0=(cx_ft - 1.0) * FT, b0=(-cz_ft - 1.0) * FT)
+        _, rc = g.white(tid)
+        r0, r1, r2 = g.sep(rc)
+        s = g.sample('plastered_wall_04', g.mad(r0, 9.0, a), g.mad(r1, 9.0, b), A, B, 2.6, maps=('diffuse', 'nor_gl'))
+        col = g.grade(s['color'], s['mean'], grey, 1.15, sat=0.5) if s else grey
+        fr = g.frame()
+        n, _ = g.noise(fr['P'], 2.2, detail=3.0)
+        sp, _ = g.noise(fr['P'], 420.0, detail=1.0)
+        col = g.vscale(col, g.mul(g.mul(g.remap(n, 0.3, 0.7, 0.95, 1.04), g.remap(sp, 0.25, 0.75, 0.975, 1.02)),
+                                  g.remap(r2, 0.0, 1.0, 0.955, 1.04)))
+        grout = g.sub(1.0, g.ss(d, 0.0008, 0.0012))
+        col = g.cmix(col, hexlin('#57534d'), grout)
+        rough = g.lerp(g.add(0.52, g.mul(g.sub(n, 0.5), 0.12)), 0.9, grout)
+        nrm = g.normal(s['pert'] if s else None, 0.25, height=g.ss(d, 0.0006, 0.0024), dist=0.0008)
+        return _out(g, g.bsdf(col, rough, 0.0, nrm))
+    return _make('floor_stone', build, (grey, 0.55))
+
+
+# ------------------------------------------------------------------------------- wainscot, plaster
+SAGE = '#99988a'          # wainscot paint: muted grey-green, low saturation (the style image's panelling)
 
 
 def vgroove():
-    """Painted tongue-and-groove V-groove panelling: 4in boards running up the wall, 1/8in V joints."""
+    """Painted tongue-and-groove panelling: 4 1/2in boards running up the wall, 1/8in V joints, brushed paint."""
     def build(g, P):
         a, b, A, B = g.planar()
-        pitch = 4.0 * IN
+        pitch = 4.5 * IN
         s = g.div(a, pitch)
         bid = g.floor(s)
         t = g.sub(s, bid)
@@ -129,16 +194,16 @@ def vgroove():
         _, rc = g.white(g.vec(bid, 3.1, 7.7))
         r0, _, _ = g.sep(rc)
         fr = g.frame()
-        n1, _ = g.noise(fr['P'], 330.0, detail=3.0, rough=0.55)
+        n1, _ = g.noise(g.vec(g.mul(a, 60.0), g.mul(b, 4.0), g.mul(r0, 9.0)), 1.0, detail=3.0, rough=0.55)   # brush marks
         n2, _ = g.noise(fr['P'], 2.5, detail=2.0)
-        base = g.vscale(hexlin(SAGE), g.mul(g.remap(r0, 0.0, 1.0, 0.985, 1.015), g.remap(n2, 0.3, 0.7, 0.99, 1.01)))
-        groove = g.ss(dist, 0.0004, 0.0032)
-        col = g.vscale(base, g.lerp(0.55, 1.0, groove))
-        height = g.add(g.mul(groove, 1.0), g.mul(n1, 0.02))
-        nrm = g.normal(height=height, dist=0.0022)
-        rough = g.add(0.42, g.mul(g.sub(n2, 0.5), 0.06))
+        base = g.vscale(hexlin(SAGE), g.mul(g.remap(r0, 0.0, 1.0, 0.975, 1.02), g.remap(n2, 0.3, 0.7, 0.985, 1.015)))
+        groove = g.ss(dist, 0.0004, 0.0034)
+        col = g.vscale(base, g.lerp(0.5, 1.0, groove))
+        height = g.add(g.mul(groove, 1.0), g.mul(n1, 0.035))
+        nrm = g.normal(height=height, dist=0.0024)
+        rough = g.add(0.5, g.mul(g.sub(n2, 0.5), 0.06))
         return _out(g, g.bsdf(col, rough, 0.0, nrm))
-    return _make('vgroove', build, (hexlin(SAGE), 0.45))
+    return _make('vgroove', build, (hexlin(SAGE), 0.5))
 
 
 def sage_paint():
@@ -146,15 +211,15 @@ def sage_paint():
         fr = g.frame()
         n1, _ = g.noise(fr['P'], 330.0, detail=3.0, rough=0.55)
         n2, _ = g.noise(fr['P'], 2.5, detail=2.0)
-        col = g.vscale(hexlin(SAGE), g.remap(n2, 0.3, 0.7, 0.99, 1.01))
+        col = g.vscale(hexlin(SAGE), g.remap(n2, 0.3, 0.7, 0.985, 1.015))
         nrm = g.normal(height=n1, dist=0.0001)
-        return _out(g, g.bsdf(col, 0.42, 0.0, nrm))
-    return _make('sage_paint', build, (hexlin(SAGE), 0.45))
+        return _out(g, g.bsdf(col, 0.5, 0.0, nrm))
+    return _make('sage_paint', build, (hexlin(SAGE), 0.5))
 
 
 def plaster():
     """Warm cream lime plaster: soft trowel mottling (Poly Haven plastered_wall_04, triplanar)."""
-    target = hexlin('#e7dcc8')
+    target = hexlin('#e6dac4')
 
     def build(g, P):
         s = g.tri('plastered_wall_04', 2.4)
@@ -162,41 +227,54 @@ def plaster():
         n, _ = g.noise(fr['P'], 1.6, detail=3.0)
         if s:
             col = g.grade(s['color'], s['mean'], target, 0.65, sat=0.35)
-            rough = g.rough_from(s, 0.82, 0.25)
+            rough = g.rough_from(s, 0.84, 0.25)
             pert = s['pert']
         else:
-            col, rough, pert = target, 0.82, None
-        col = g.vscale(col, g.remap(n, 0.3, 0.7, 0.975, 1.02))
-        nrm = g.normal(pert, 0.35)
+            col, rough, pert = target, 0.84, None
+        col = g.vscale(col, g.remap(n, 0.3, 0.7, 0.97, 1.025))
+        nrm = g.normal(pert, 0.4)
         return _out(g, g.bsdf(col, rough, 0.0, nrm))
     return _make('plaster', build, (target, 0.85))
 
 
 # ------------------------------------------------------------------------------------- stone
-STONE_SIZE = 2.2          # m: real width of the rustic_stone_wall_02 scan (stones 3-9cm tall, 11-43cm long)
-STONE_MID = 0.52          # displacement map value of the mortar bed
-STONE_DISP = 0.07         # m per unit of the map above the mortar bed (stone faces ~2cm proud)
+STONE_SIZE = 2.3          # m: height of one repeat of the rustic_stone_wall_02 scan (2.2 m: stones 3-9cm tall, 11-43cm long)
+STONE_STRETCH = 0.85      # ... and its width as a fraction of that: the stones a little shorter, so the wall reads as
+#                           the style image's small stacked rubble (4-12in long, 1 1/2-4in tall), not as long ledge stone
+STONE_MID = 0.62          # displacement map value of the mortar bed: everything below it is flat, light sandy mortar,
+#                           so the joints are pointed nearly flush and show between the stones, as in the image
+STONE_DISP = 0.075        # m per unit of the map above the mortar bed (stone faces ~1.4cm proud, the proudest 2.8cm)
 
 
 def stone():
-    """Stacked natural stone, warm brown-grey: colour, roughness and normal from the scan, plus TRUE
-    displacement (material displacement 'BOTH') from its height map in world space, clamped at the
+    """Stacked natural stone, warm brown-tan, in a light sandy lime mortar: colour, roughness and normal from the
+    scan, plus TRUE displacement (material displacement 'BOTH') from its height map in world space, clamped at the
     mortar bed so the relief only comes forward of the mesh plane."""
-    target = hexlin('#8e7b66')
+    target = hexlin('#86694b')
+    mortar = hexlin('#b7a481')
 
     def build(g, P):
         a, b, A, B = g.planar()
-        s = g.sample('rustic_stone_wall_02', a, b, A, B, STONE_SIZE,
+        s = g.sample('rustic_stone_wall_02', g.add(a, 0.31), g.add(b, 0.47), A, B, STONE_SIZE, stretch=STONE_STRETCH,
                      maps=('diffuse', 'rough', 'nor_gl', 'displacement'))
         if not s:
             raise RuntimeError('rustic_stone_wall_02 unavailable')
-        col = g.grade(s['color'], s['mean'], target, 1.08, sat=0.95)
+        col = g.grade(s['color'], s['mean'], target, 1.12, sat=1.15)
         h, _, _ = g.sep(s['displacement'])
-        # mortar slightly lighter and duller than the stones
-        mort = g.sub(1.0, g.ss(h, STONE_MID + 0.02, STONE_MID + 0.12))
-        col = g.cmix(col, g.vm('MULTIPLY', col, (1.12, 1.10, 1.06)), g.mul(mort, 0.5))
-        rough = g.rough_from(s, 0.78, 0.6, lo=0.45)
-        nrm = g.normal(s['pert'], 0.9)
+        # every stone its own shade: a slow noise stretched along the courses moves whole stones lighter / darker,
+        # warmer / greyer, as in a wall laid from one quarry's mixed stone
+        n, _ = g.noise(g.vec(g.mul(a, 2.2), g.mul(b, 9.0), 0.0), 1.0, detail=2.0)
+        n2, _ = g.noise(g.vec(g.mul(a, 3.1), g.mul(b, 11.0), 4.0), 1.0, detail=1.0)
+        col = g.vscale(col, g.remap(n, 0.3, 0.7, 0.84, 1.14))
+        col = g.cmix(col, g.vm('MULTIPLY', col, (1.09, 0.98, 0.84)), g.ss(n2, 0.5, 0.7))          # ochre stones
+        col = g.cmix(col, g.vm('MULTIPLY', col, (0.93, 0.96, 1.0)), g.mul(g.ss(n2, 0.42, 0.25), 0.6))    # greyer ones
+        # the mortar bed: light sandy lime, only where the height map lies at its floor (the joints)
+        mort = g.sub(1.0, g.ss(h, STONE_MID + 0.012, STONE_MID + 0.085))
+        fr = g.frame()
+        mn, _ = g.noise(fr['P'], 55.0, detail=3.0)
+        col = g.cmix(col, g.vscale(mortar, g.remap(mn, 0.3, 0.7, 0.9, 1.08)), g.mul(mort, 0.8))
+        rough = g.lerp(g.rough_from(s, 0.8, 0.6, lo=0.5), 0.95, mort)
+        nrm = g.normal(s['pert'], 1.0)
         hh = g.mx(h, STONE_MID)
         dn = g.new('ShaderNodeDisplacement', space='WORLD')
         g.put(dn.inputs['Height'], hh)
@@ -213,16 +291,17 @@ def stone():
     return _make('stone', build, (target, 0.8))
 
 
-def stone_relief_ft():
-    """Typical stone-face offset in front of the stone mesh plane (ft): map value ~0.82."""
-    return (0.82 - STONE_MID) * STONE_DISP / 0.3048
+def stone_relief_ft(v=0.82):
+    """Stone-face offset in front of the stone mesh plane (ft) at map value v: 0.82 is a typical face, 1.0 the
+    proudest stones."""
+    return (v - STONE_MID) * STONE_DISP / 0.3048
 
 
 # --------------------------------------------------------------------------------------- wood
 def oak():
     """Solid oak slab of glued boards with knots, honey oil finish (Poly Haven oak_wood_planks, 1.2m).
     Grain along world X on tops (the vanity runs east-west) and along each vertical face."""
-    target = hexlin('#97775a')          # natural honey oak (was #9a744f: read orange under the bath's warm WB)
+    target = hexlin('#97775a')          # natural honey oak
 
     def build(g, P):
         a, b, A, B = g.planar()
@@ -237,7 +316,7 @@ def oak():
 
 
 def timber():
-    """Reclaimed timber beam (weathered_brown_planks), mid brown, matte wax."""
+    """Reclaimed timber board (weathered_brown_planks), mid brown, matte wax: the shelf."""
     target = hexlin('#6e543c')
 
     def build(g, P):
@@ -252,169 +331,218 @@ def timber():
     return _make('timber', build, (target, 0.6))
 
 
+def beam():
+    """Old hewn oak beam: dark, dry and rough. The plank scan is stretched along the beam (one long grain, no board
+    joints in sight), darkened, with checks (long drying cracks) and adze facets as bump."""
+    target = hexlin('#5b4633')
+
+    def build(g, P):
+        a, b, A, B = g.planar()
+        s = g.sample('weathered_brown_planks', g.add(a, 0.13), g.add(g.mul(b, 0.42), 0.31), A, B, 1.1, stretch=3.2)
+        if not s:
+            raise RuntimeError('weathered_brown_planks unavailable')
+        col = g.grade(s['color'], s['mean'], target, 1.25, sat=0.9)
+        n, _ = g.noise(g.vec(g.mul(a, 1.2), g.mul(b, 22.0), 0.0), 1.0, detail=3.0, rough=0.6)      # long fibres
+        ck, _ = g.noise(g.vec(g.mul(a, 2.0), g.mul(b, 55.0), 3.0), 1.0, detail=2.0, rough=0.5)     # checks
+        check = g.sub(1.0, g.ss(g.absf(g.sub(ck, 0.5)), 0.0, 0.018))
+        fac, _ = g.noise(g.vec(g.mul(a, 9.0), g.mul(b, 14.0), 7.0), 1.0, detail=1.0)               # adze facets
+        col = g.vscale(col, g.mul(g.remap(n, 0.3, 0.7, 0.85, 1.15), g.lerp(1.0, 0.5, check)))
+        height = g.add(g.add(g.mul(n, 0.5), g.mul(fac, 0.7)), g.mul(check, -1.0))
+        nrm = g.normal(s['pert'], 1.2, height=height, dist=0.004)
+        return _out(g, g.bsdf(col, g.rough_from(s, 0.82, 0.3, lo=0.6), 0.0, nrm))
+    return _make('beam', build, (target, 0.85))
+
+
 # -------------------------------------------------------------------------------------- metal
-BRASS = '#b8955a'
+NICKEL = '#c3c1bc'
 
 
-def brass():
-    """Aged satin brass: warm, slightly uneven tone, fine brushed roughness variation."""
+def nickel():
+    """Brushed nickel: a warm silver, satin, with a fine brushed break-up of the highlight."""
     def build(g, P):
         fr = g.frame()
         n1, _ = g.noise(fr['P'], 18.0, detail=3.0)
         n2, _ = g.noise(g.vec(g.mul(fr['px'], 900.0), g.mul(fr['py'], 900.0), g.mul(fr['pz'], 40.0)), 1.0, detail=2.0)
-        col = g.vscale(hexlin(BRASS), g.remap(n1, 0.3, 0.7, 0.9, 1.05))
-        rough = g.add(0.27, g.add(g.mul(g.sub(n1, 0.5), 0.12), g.mul(g.sub(n2, 0.5), 0.08)))
+        col = g.vscale(hexlin(NICKEL), g.remap(n1, 0.3, 0.7, 0.95, 1.04))
+        rough = g.add(0.3, g.add(g.mul(g.sub(n1, 0.5), 0.1), g.mul(g.sub(n2, 0.5), 0.1)))
         return _out(g, g.bsdf(col, rough, 1.0, None))
-    return _make('brass', build, (hexlin(BRASS), 0.3, 1.0))
+    return _make('nickel', build, (hexlin(NICKEL), 0.32, 1.0))
 
 
-def opal(strength=5.0):
-    """Lit white opal glass shade (warm 3000K glow, like the sconce lamps; the balance scales emission
-    at render time)."""
-    name = PFX + 'opal'
+def galvanised():
+    """Dull hot-dip zinc with its spangle (plant pot)."""
+    def build(g, P):
+        fr = g.frame()
+        d = g.voronoi(fr['P'], 55.0).outputs['Distance']
+        n, _ = g.noise(fr['P'], 30.0, detail=3.0)
+        col = g.vscale(hexlin('#8f918f'), g.mul(g.remap(d, 0.0, 0.6, 0.82, 1.1), g.remap(n, 0.3, 0.7, 0.92, 1.06)))
+        rough = g.add(0.48, g.mul(g.sub(n, 0.5), 0.2))
+        return _out(g, g.bsdf(col, rough, 0.85, None))
+    return _make('galvanised', build, (hexlin('#8f918f'), 0.5, 0.85))
+
+
+# ----------------------------------------------------------------------------------- lamps
+def enamel():
+    """Cream vitreous enamel on steel (lamp shades): glossy, slightly uneven, a darker rolled rim comes from the
+    geometry."""
+    def build(g, P):
+        fr = g.frame()
+        n, _ = g.noise(fr['P'], 14.0, detail=2.0)
+        col = g.vscale(hexlin('#e9e2d0'), g.remap(n, 0.3, 0.7, 0.97, 1.02))
+        nrm = g.normal(height=n, dist=0.0006)
+        return _out(g, g.bsdf(col, 0.16, 0.0, nrm, **{'Coat Weight': 0.6, 'Coat Roughness': 0.05}))
+    return _make('enamel', build, (hexlin('#e9e2d0'), 0.18))
+
+
+def bulb():
+    """Clear lamp-bulb glass: thin-glass shader (never refractive), a touch warm."""
+    name = PFX + 'bulb'
     m = bpy.data.materials.get(name)
     if m is not None:
         return m
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    nt = m.node_tree
-    b = nt.nodes.get('Principled BSDF')
-    b.inputs['Base Color'].default_value = (0.92, 0.9, 0.86, 1)
-    b.inputs['Roughness'].default_value = 0.25
     try:
-        b.inputs['Coat Weight'].default_value = 0.6
-        bb = nt.nodes.new('ShaderNodeBlackbody')
-        bb.inputs['Temperature'].default_value = 3000.0
-        nt.links.new(bb.outputs[0], b.inputs['Emission Color'])
-        b.inputs['Emission Strength'].default_value = strength
-    except (KeyError, TypeError):
-        pass
-    m.diffuse_color = (0.92, 0.9, 0.86, 1)
-    return m
+        from .. import materials
+        return materials.thin_glass(name, tint=(1.0, 0.97, 0.92), f0=0.05)
+    except Exception:
+        return _flat(name, (0.9, 0.88, 0.82), 0.05)
 
 
-# ------------------------------------------------------------------------------------- floors
-INK = '#33456a'
-CREAM = '#ebe5d6'
-
-
-def encaustic():
-    """8in encaustic cement tile, indigo on cream (the reference floor): an eight-petal centre flower in a
-    scalloped medallion ring, pointed leaves around it, ring-and-dot motifs on the edge midpoints and
-    corner rosettes (an ink disc with a cream quatrefoil inside a ring) that read as whole circles
-    where four tiles meet. Matte sealed cement with a faint mottle, slightly worn ink, 1/16in grout."""
-    def build(g, P):
-        a, b, A, B = g.planar()
-        tw = 8.0 * IN
-        tid, d, la, lb = P._grid(g, a, b, tw, tw)
-        _, rc = g.white(tid)
-        r0, r1, r2 = g.sep(rc)
-        px = g.sub(g.div(la, tw), 0.5)
-        py = g.sub(g.div(lb, tw), 0.5)
-        qx, qy = g.absf(px), g.absf(py)
-        u = g.mx(qx, qy)
-        w = g.mn(qx, qy)
-        r = g.f('SQRT', g.add(g.mul(qx, qx), g.mul(qy, qy)))
-        phi = g.f('ARCTAN2', w, g.mx(u, 1e-5))                   # 0 (axis) .. pi/4 (diagonal)
-        e = 0.005
-
-        def sq(x):
-            return g.mul(x, x)
-        # centre: eight petals (long on the axes, shorter on the diagonals), outlined, ink core, cream eye
-        c4 = g.absf(g.f('COSINE', g.mul(phi, 4.0)))
-        lenf = g.sub(1.0, g.mul(phi, 0.28 / (math.pi / 4)))
-        rp = g.mul(g.add(0.05, g.mul(0.17, g.f('POWER', g.mx(c4, 1e-4), 0.55))), lenf)
-        ink = g.sub(_inside(g, g.sub(r, rp), e), _inside(g, g.sub(r, g.sub(g.mul(rp, 0.62), 0.006)), e))
-        ink = g.mx(ink, _inside(g, g.sub(r, 0.045), e))
-        ink = g.mul(ink, g.sub(1.0, _inside(g, g.sub(r, 0.022), e)))
-        # scalloped medallion ring
-        scal = g.add(0.285, g.mul(0.012, g.f('COSINE', g.mul(phi, 8.0))))
-        ink = g.mx(ink, _inside(g, g.sub(g.absf(g.sub(r, scal)), 0.011), e))
-        # corner rosette: ink disc, cream quatrefoil, ink eye, outer ring
-        cx, cy = g.sub(0.5, qx), g.sub(0.5, qy)
-        rcn = g.f('SQRT', g.add(sq(cx), sq(cy)))
-        psi = g.f('ARCTAN2', cy, g.mx(cx, 1e-5))
-        cf = g.add(0.04, g.mul(0.13, g.f('POWER', g.mx(g.absf(g.f('COSINE', g.mul(psi, 2.0))), 1e-4), 0.7)))
-        ink = g.mx(ink, g.mul(_inside(g, g.sub(rcn, 0.205), e), g.sub(1.0, _inside(g, g.sub(rcn, cf), e))))
-        ink = g.mx(ink, _inside(g, g.sub(rcn, 0.035), e))
-        ink = g.mx(ink, _inside(g, g.sub(g.absf(g.sub(rcn, 0.235)), 0.008), e))
-        # edge midpoints: half ring + half dot (ring-and-dot across the joint)
-        de = g.f('SQRT', g.add(sq(g.sub(0.5, u)), sq(w)))
-        ink = g.mx(ink, _inside(g, g.sub(g.absf(g.sub(de, 0.075)), 0.016), e))
-        ink = g.mx(ink, _inside(g, g.sub(de, 0.025), e))
-        # pointed leaves between the edge motifs and the corner rosettes
-        lf = g.add(g.div(g.absf(g.sub(u, 0.36)), 0.032), sq(g.div(g.sub(w, 0.17), 0.085)))
-        ink = g.mx(ink, _inside(g, g.sub(lf, 1.0), 0.1))
-        ink = g.clamp01(ink)
-        # cement: faint mottle, per-tile tone, slightly faded / worn ink
-        fr = g.frame()
-        m1, _ = g.noise(fr['P'], 14.0, detail=4.0)
-        m2, _ = g.noise(fr['P'], 160.0, detail=2.0)
-        cream = g.vscale(hexlin(CREAM), g.mul(g.remap(m1, 0.3, 0.7, 0.965, 1.025), g.remap(r0, 0.0, 1.0, 0.975, 1.02)))
-        inkc = g.vscale(hexlin(INK), g.mul(g.remap(r1, 0.0, 1.0, 0.9, 1.1), g.remap(m1, 0.3, 0.7, 0.9, 1.12)))
-        wear = g.mul(g.ss(m2, 0.64, 0.8), 0.3)
-        col = g.cmix(cream, inkc, g.mul(ink, g.sub(1.0, wear)))
-        grout = g.sub(1.0, g.ss(d, 0.0007, 0.00095))
-        col = g.cmix(col, hexlin('#c9c3b5'), grout)
-        height = g.add(g.ss(d, 0.0005, 0.0018), g.mul(m2, 0.03))
-        nrm = g.normal(height=height, dist=0.0008)
-        rough = g.lerp(g.add(0.5, g.mul(g.sub(m1, 0.5), 0.12)), 0.9, grout)
-        return _out(g, g.bsdf(col, rough, 0.0, nrm, **{'Coat Weight': 0.08, 'Coat Roughness': 0.35}))
-    return _make('encaustic', build, (hexlin(CREAM), 0.55))
-
-
-def shower_mosaic():
-    """2x2in cream porcelain mosaic, light grout, per-tile tone (shower floor)."""
-    def build(g, P):
-        a, b, A, B = g.planar()
-        tw = 2.0 * IN
-        tid, d, _, _ = P._grid(g, a, b, tw, tw)
-        _, rc = g.white(tid)
-        r0, r1, _ = g.sep(rc)
-        col = g.vscale(hexlin('#e3ddcf'), g.remap(r0, 0.0, 1.0, 0.93, 1.05))
-        col = g.cmix(col, g.vm('MULTIPLY', col, (0.97, 1.0, 0.97)), r1)
-        grout = g.sub(1.0, g.ss(d, 0.0013, 0.0018))
-        col = g.cmix(col, hexlin('#c3beb2'), grout)
-        nrm = g.normal(height=g.ss(d, 0.0013, 0.0045), dist=0.0012)
-        return _out(g, g.bsdf(col, g.lerp(0.4, 0.85, grout), 0.0, nrm))
-    return _make('shower_mosaic', build, (hexlin('#e3ddcf'), 0.5))
-
-
+# ------------------------------------------------------------------------------------- textiles
 def jute():
-    target = hexlin('#9f8358')
+    """Flat-woven cotton / jute mat: natural cream, pairs of thin charcoal stripes across it every 7in, a coarse
+    weave (Poly Haven hessian_230)."""
+    target = hexlin('#cbbd9f')
 
     def build(g, P):
         s = g.tri('hessian_230', 0.16, '1k')
         fr = g.frame()
         n, _ = g.noise(fr['P'], 3.0, detail=3.0)
         if s:
-            col = g.grade(s['color'], s['mean'], target, 1.2, sat=0.75)
+            col = g.grade(s['color'], s['mean'], target, 1.2, sat=0.6)
             pert = s['pert']
         else:
             col, pert = target, None
-        # chunky braided rows across the mat
-        wv = g.f('SINE', g.mul(fr['px'], 2 * math.pi / 0.022))
-        col = g.vscale(col, g.mul(g.remap(n, 0.3, 0.7, 0.93, 1.05), g.remap(wv, -1.0, 1.0, 0.86, 1.04)))
-        nrm = g.normal(pert, 1.2, height=g.mad(wv, 0.5, 0.5), dist=0.003, bump=0.8)
-        return _out(g, g.bsdf(col, 0.95, 0.0, nrm, **{'Sheen Weight': 0.4, 'Sheen Roughness': 0.5}))
+        wv = g.f('SINE', g.mul(fr['py'], 2 * math.pi / 0.016))                    # weft rows
+        col = g.vscale(col, g.mul(g.remap(n, 0.3, 0.7, 0.94, 1.05), g.remap(wv, -1.0, 1.0, 0.9, 1.04)))
+        t = g.fract(g.div(fr['px'], 7.0 * IN))                                    # stripes across the mat's length
+        st = g.mx(g.sub(1.0, g.ss(g.absf(g.sub(t, 0.42)), 0.022, 0.03)), g.sub(1.0, g.ss(g.absf(g.sub(t, 0.58)), 0.022, 0.03)))
+        col = g.cmix(col, hexlin('#4a463d'), g.mul(st, 0.85))
+        nrm = g.normal(pert, 1.2, height=g.mad(wv, 0.5, 0.5), dist=0.002, bump=0.7)
+        return _out(g, g.bsdf(col, 0.95, 0.0, nrm, **{'Sheen Weight': 0.35, 'Sheen Roughness': 0.5}))
     return _make('jute', build, (target, 0.95))
 
 
-def wicker():
-    """Coiled seagrass rope (horizontal coils 1.2cm apart with a twist), warm straw."""
-    target = hexlin('#a68457')
+def fringe():
+    return flat('fringe', '#d3c6aa', 0.95)
 
+
+def striped(name='striped', base='#b5a98a', stripe='#3f3e36', pitch_in=1.5, duty=0.36, axis='z'):
+    """Terry towel with woven stripes: `stripe` bands of `duty` x `pitch_in` every pitch_in inches along world
+    `axis` ('z' = up the hanging towel, 'x' / 'y' = across a folded one, Blender axes)."""
     def build(g, P):
         fr = g.frame()
-        a, b, A, B = g.planar()
-        coil = g.div(fr['pz'], 0.012)
-        t = g.fract(coil)
-        prof = g.f('SINE', g.mul(t, math.pi))
-        tw = g.f('SINE', g.mul(g.add(g.div(a, 0.006), g.mul(t, 3.0)), math.pi))
-        n, _ = g.noise(fr['P'], 40.0, detail=3.0)
-        col = g.vscale(target, g.mul(g.remap(prof, 0.0, 1.0, 0.62, 1.05), g.remap(tw, -1.0, 1.0, 0.9, 1.06)))
-        col = g.vscale(col, g.remap(n, 0.3, 0.7, 0.9, 1.08))
-        h = g.add(g.mul(prof, 1.0), g.mul(tw, 0.15))
-        nrm = g.normal(height=h, dist=0.003)
-        return _out(g, g.bsdf(col, 0.8, 0.0, nrm, **{'Sheen Weight': 0.3, 'Sheen Roughness': 0.5}))
-    return _make('wicker', build, (target, 0.8))
+        p = {'x': fr['px'], 'y': fr['py'], 'z': fr['pz']}[axis]
+        t = g.fract(g.div(p, pitch_in * IN))
+        band = g.mul(g.ss(t, 0.5 - duty / 2 - 0.03, 0.5 - duty / 2 + 0.03),
+                     g.sub(1.0, g.ss(t, 0.5 + duty / 2 - 0.03, 0.5 + duty / 2 + 0.03)))
+        n1, _ = g.noise(fr['P'], 330.0, detail=3.0, rough=0.6)                    # pile
+        n2, _ = g.noise(fr['P'], 28.0, detail=2.0)
+        col = g.cmix(hexlin(base), hexlin(stripe), band)
+        col = g.vscale(col, g.remap(n2, 0.3, 0.7, 0.93, 1.04))
+        nrm = g.normal(height=g.add(n1, g.mul(band, 0.4)), dist=0.002, bump=0.6)
+        return _out(g, g.bsdf(col, 1.0, 0.0, nrm, **{'Sheen Weight': 0.8, 'Sheen Roughness': 0.45}))
+    return _make(name, build, (hexlin(base), 1.0))
+
+
+# --------------------------------------------------------------------------------------- plants
+def cactus():
+    """Barrel cactus skin: dull grey-green, paler on the rib crests where the spines sit (the ribs' crests face
+    outward; 'pointiness' is not available without bevel, so the tone follows a fine noise)."""
+    def build(g, P):
+        fr = g.frame()
+        n, _ = g.noise(fr['P'], 26.0, detail=3.0)
+        sp, _ = g.noise(fr['P'], 420.0, detail=1.0)
+        col = g.vscale(hexlin('#6e7b5c'), g.remap(n, 0.3, 0.7, 0.85, 1.12))
+        col = g.cmix(col, hexlin('#c9c2a4'), g.mul(g.ss(sp, 0.62, 0.7), 0.7))     # spine clusters
+        nrm = g.normal(height=sp, dist=0.0015)
+        return _out(g, g.bsdf(col, 0.7, 0.0, nrm))
+    return _make('cactus', build, (hexlin('#6e7b5c'), 0.7))
+
+
+def sedum():
+    return flat('sedum', '#8e9c7a', 0.55, Subsurface_Weight=0.15)
+
+
+# ------------------------------------------------------------------------------------ the print
+def botanical(w=300, h=390, seed=5):
+    """A small botanical drawing for the framed print on the shelf: three sprigs in grey-green and sepia ink on
+    cream paper, generated with numpy (no third-party image). Mapped with the object's generated coordinates
+    (the print is a thin box: its two long axes)."""
+    name = PFX + 'botanical'
+    m = bpy.data.materials.get(name)
+    if m is not None:
+        return m
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    paper = np.array([0.90, 0.86, 0.76], np.float32)
+    img = np.ones((h, w, 3), np.float32) * paper
+    img *= (1.0 + 0.03 * (rng.random((h, w, 1)).astype(np.float32) - 0.5))
+
+    def ink(mask, col, k=0.9):
+        nonlocal img
+        img = img * (1 - k * mask[..., None]) + np.array(col, np.float32) * (k * mask[..., None])
+
+    def seg(x0, y0, x1, y1, wd):
+        dx, dy = x1 - x0, y1 - y0
+        t = np.clip(((xx - x0) * dx + (yy - y0) * dy) / (dx * dx + dy * dy + 1e-6), 0, 1)
+        d = np.hypot(xx - (x0 + t * dx), yy - (y0 + t * dy))
+        return np.clip(wd + 0.6 - d, 0, 1)
+
+    def leaf(cx, cy, ang, ln, wd):
+        c, s = math.cos(ang), math.sin(ang)
+        u = (xx - cx) * c + (yy - cy) * s
+        v = -(xx - cx) * s + (yy - cy) * c
+        t = np.clip(u / ln, 0, 1)
+        half = wd * np.clip(np.sin(np.pi * t), 0.0, 1.0) ** 0.8
+        body = np.clip(half + 0.7 - np.abs(v), 0, 1) * (u > 0) * (u < ln)
+        vein = np.clip(0.9 - np.abs(v), 0, 1) * (u > 0) * (u < ln)
+        return body, vein
+    green, sepia = (0.36, 0.42, 0.30), (0.33, 0.26, 0.18)
+    for sx, base_y, top_y, lean in ((0.30, 0.90, 0.20, -0.10), (0.52, 0.92, 0.12, 0.04), (0.74, 0.90, 0.26, 0.12)):
+        n = 9
+        pts = [(w * (sx + lean * (k / n) ** 1.5), h * (base_y + (top_y - base_y) * k / n)) for k in range(n + 1)]
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            ink(seg(x0, y0, x1, y1, 0.9), sepia, 0.8)
+        for k in range(2, n + 1):
+            x0, y0 = pts[k]
+            for side in (-1, 1):
+                ang = -math.pi / 2 + side * (0.95 - 0.04 * k) + lean
+                body, vein = leaf(x0, y0, ang, w * (0.13 - 0.007 * k), w * (0.032 - 0.0015 * k))
+                ink(body, green, 0.62)
+                ink(vein * body, sepia, 0.35)
+    for k in range(5):                                         # a caption line of 'handwriting'
+        x0 = w * (0.3 + 0.08 * k)
+        ink(seg(x0, h * 0.965, x0 + w * 0.055, h * 0.965, 0.5), sepia, 0.5)
+    arr = np.concatenate([np.clip(img, 0, 1), np.ones((h, w, 1), np.float32)], 2)
+    im = bpy.data.images.new(name + '_img', w, h, alpha=False)
+    im.pixels.foreach_set(np.ascontiguousarray(arr[::-1]).ravel())
+    im.pack()
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    b = nt.nodes.get('Principled BSDF')
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    sep = nt.nodes.new('ShaderNodeSeparateXYZ')
+    nt.links.new(tc.outputs['Generated'], sep.inputs[0])
+    com = nt.nodes.new('ShaderNodeCombineXYZ')
+    nt.links.new(sep.outputs['X'], com.inputs['X'])            # the print box is built wide along its local x
+    nt.links.new(sep.outputs['Z'], com.inputs['Y'])
+    tex = nt.nodes.new('ShaderNodeTexImage')
+    tex.image = im
+    tex.extension = 'EXTEND'
+    nt.links.new(com.outputs[0], tex.inputs['Vector'])
+    nt.links.new(tex.outputs['Color'], b.inputs['Base Color'])
+    b.inputs['Roughness'].default_value = 0.9
+    m.diffuse_color = (0.9, 0.86, 0.76, 1)
+    return m

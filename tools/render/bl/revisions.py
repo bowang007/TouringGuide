@@ -34,6 +34,25 @@ Fourth round (2026-11-19, corrected by the owner on 2026-11-20):
     hangs the picture and the hook rail on the closet's bedroom faces. (The first attempt built the closet in the
     kitchen's south-west corner; the owner rejected it and nothing of it is left.)
 
+Sixth round (2026-11-20), the primary bath on the architect's sheet (revision_spec.BATH_* / PRIMARY_BATH_*; until
+the fifth round the room was mirrored north-south):
+12. bath_door: door D08 moves to the east end of the north wall, hinged on the east jamb, its leaf open against the
+    east wall; the recess for the shower niche is cut into the same wall. bath_window (6): W13 at the sheet's place,
+    3'-0" wide, with a mullion on the shower's south glass line. primary_bath_skylight (9): W20 over the shower in the
+    north-west corner. primary_bath_fit_out: the room's finishes and fixtures, built after the warp in plan feet by
+    bl/zones/baths_primary.build_room.
+13. suite_rooms / suite_fit_out (revision_spec.SUITE_*): the 8 ft zone between the primary bedroom and the bath is
+    divided as on the sheet. The walk-in closet is an enclosed room (6'-1" x 8'-0") behind a new 5 in wall with a
+    sliding pocket door centred on it (the leaf slides south and stands 0.30 ft out of its pocket); the vestibule
+    (4'-7" x 8'-0") is open to the bedroom and carries the attic access hatch; the suite entry (D09) is a 2'-8"
+    opening with a sliding panel on the hall side, parked south. Geometry: bl/zones/primary_suite_rooms.py; the
+    bedroom's furniture as drawn, the vestibule and the closet's fit-out: bl/zones/primary_suite.fit_out, in plan
+    feet. The suite entry stands 1.66 ft south of the sheet's place (revision_spec.SUITE_ENTRY_SHEET_Z): this
+    model's Bedroom 2 keeps its entry alcove where the sheet has hall.
+14. bedroom3_bath_window (revision_spec.BED3_BATH_WIN_*): the Bedroom 3 bathroom's shower window W11 is taller,
+    sill 3'-0", head 7'-6" (was 5'-0" / 7'-0"); width, place, frosted glazing and frame as before; the tile around
+    it, the tiled jamb returns and the quartz sill are the baths zone's (bl/zones/baths.py, build_suite3).
+
 Repairs to the conversion run first: ceiling_seam and floor_seam close seams the slab warp opened; floor_overlap
 and ceiling_overlap end two slabs on one line where they overlapped in one plane (coplanar faces of two objects
 shade each other: a dark stripe on the floor across Bedroom 4 and the foyer, a dark rectangle on the foyer's
@@ -595,6 +614,67 @@ def bedroom2_tall_window(ctx):
     return {'removed header': gone, 'wall below cut to the sill': len(low), 'sills lowered': len(sills), 'stretched': k}
 
 
+def bedroom3_bath_window(ctx):
+    """Sixth round (2026-11-20): the Bedroom 3 bathroom's shower window W11 (the shell's "Ensuite privacy window", on
+    the west wall inside the shower) is vertically larger: sill 3'-0", head 7'-6" (revision_spec.BED3_BATH_WIN_Y)
+    instead of 5'-0" / 7'-0". Width, place, the frosted glazing and the frame (two rails, two jambs and a centre
+    mullion in black aluminium) stay.
+
+    * shell: the wall below the window is cut down to the new sill and the header above it up to the new head (both
+      keep paint inside, stucco outside and in the reveals);
+    * frame and pane: stretched onto the new opening, the rails keeping their section. The pane also runs into the two
+      jamb sections now: the shell's pane stops 0.03 to 0.04 ft short of them, a clear slit beside the frosted glass
+      that the old window showed only sky through and the taller one, from the bath's sweep, the side-yard fence.
+      The pane's origin goes to its centre, because lighting.add_window_portals puts a pane's light portal there;
+    * finish: the wall tile around the opening, the tiled jamb returns and the quartz sill are built by the baths zone
+      from the same heights (bl/zones/baths.py, build_suite3); here they are only checked against the opening as built
+      (a `--zones none` build has none).
+    Nothing else stands on this wall: the valve, the niche and the rain head's arm are on the shower's north wall."""
+    from .revision_spec import BED3_BATH_WIN_OLD_Y, BED3_BATH_WIN_Y, BED3_BATH_WIN_Z
+    z0, z1 = BED3_BATH_WIN_Z
+    (s, h), (s_old, h_old) = BED3_BATH_WIN_Y, BED3_BATH_WIN_OLD_Y
+
+    def one(pat):
+        obs = [ob for ob in find(pat, COLL_SHELL) if ob.type == 'MESH']
+        if len(obs) != 1:
+            raise RuntimeError(f'{pat!r}: {len(obs)} shell pieces, expected 1')
+        b = bbox(obs[0])
+        if max(abs(b[4] - z0), abs(b[5] - z1)) > 0.01:
+            raise RuntimeError(f'{obs[0].name!r} is not where the spec expects it: {[round(float(v), 3) for v in b]}')
+        return obs[0]
+    low, high = one(r'^\d+ Ensuite privacy window sill wall$'), one(r'^\d+ Ensuite privacy window head wall$')
+    if move_face(low, 'y', s_old, s) != 4 or move_face(high, 'y', h_old, h) != 4:
+        raise RuntimeError(f'wall below / above the window does not end at the concept sill {s_old} / head {h_old}')
+    frame = [ob for ob in find(r'^\d+ Ensuite privacy window (frame|mullion|glazing)$', COLL_OPEN) if ob.type == 'MESH']
+    for ob in frame:
+        map_y(ob, [(s_old, s), (s_old + 0.1, s + 0.1), (h_old - 0.1, h - 0.1), (h_old, h)])
+    panes = [ob for ob in frame if 'glazing' in ob.name and ob.parent is None]
+    jambs = [bbox(ob) for ob in frame if 'mullion' in ob.name]
+    jn, js = [b for b in jambs if b[4] < z0 < b[5]], [b for b in jambs if b[4] < z1 < b[5]]
+    for ob in panes:
+        b = bbox(ob)
+        if jn and b[4] > z0:                            # into the north jamb section, 0.01 ft past the opening's edge
+            move_face(ob, 'z', b[4], z0 + 0.01)
+        if js and b[5] < z1:
+            move_face(ob, 'z', b[5], z1 - 0.01)
+        w, _ = _world(ob)
+        ob.location = Vector([float(v) for v in (w.min(axis=0) + w.max(axis=0)) / 2])
+        bpy.context.view_layer.update()
+        _set_world(ob, w, np.array(ob.matrix_world))
+    out = {'opening z': (z0, z1), 'sill, head': (s, h), 'was': (s_old, h_old), 'frame pieces': len(frame),
+           'glass': [[round(float(v), 3) for v in bbox(ob)] for ob in panes]}
+    # the bath zone's finish around the opening
+    fin = {ob.name: bbox(ob) for ob in bpy.data.objects if ob.type == 'MESH' and re.match(r'A3 (tile west|window)', ob.name)}
+    across = [n for n, b in fin.items() if n.startswith('A3 tile west')
+              and b[4] < z1 - 0.01 and b[5] > z0 + 0.01 and b[2] < h - 0.01 and b[3] > s + 0.01]
+    off = [n for n, b in fin.items() if n.startswith('A3 window')
+           and (b[4] < z0 - 0.02 or b[5] > z1 + 0.02 or b[2] < s - 0.02 or b[3] > h + 0.02)]
+    if across or off:
+        raise RuntimeError(f'bath finish does not fit the opening: tile across it {across}, sill / returns off it {off}')
+    out['finish'] = {n: [round(float(v), 3) for v in b] for n, b in fin.items() if n.startswith('A3 window')}
+    return out
+
+
 def _copy(ob, name):
     c = ob.copy()
     c.data = ob.data.copy()
@@ -604,94 +684,168 @@ def _copy(ob, name):
     return c
 
 
-def _clamp(ob, z=None, y=None):
-    """Clamp vertex z (SCENE ft) to the range z and height to the range y; the rest of the mesh collapses onto it."""
-    w, mw = _world(ob)
-    if z is not None:
-        w[:, 1] = -np.clip(-w[:, 1] / FT, *z) * FT
-    if y is not None:
-        w[:, 2] = np.clip(w[:, 2] / FT, *y) * FT
-    _set_world(ob, w, mw)
+def bath_door(ctx):
+    """Sixth round (2026-11-20): the primary bath's door D08 at the architect's position (sheet SKA002;
+    revision_spec.BATH_DOOR_*). The shell builds the concept opening at x 5.914..8.516 with a leaf hinged on its east
+    jamb; the sheet has the opening hard against the bath's east wall, x 6.89..9.45.
 
+    * walls: the wall west of the opening (shell piece 1885) is carried east to the new west jamb, the header (1903)
+      is put over the new opening and the wall east of it (1845, which runs on as the shared bath's north wall) starts
+      at the new east jamb; all three are interior on every face, so every face gets the interior paint (the shell
+      gives the jamb ends exterior stucco);
+    * the shower niche (revision_spec.BATH_NICHE): a real recess in that wall's bath face. The wall is split around
+      it like the laundry closet's outlet box: west of it, east of it, below, above, and a 0.11 ft back toward the
+      walk-in closet (copies of the wall: same paint, same `scene_index`);
+    * the door like the house's other interior doors: painted jamb liners and head trim (proud of the vestibule face
+      like the house's casing, and of the bath's wainscot on the bath face), an oak saddle between the vestibule's oak
+      and the bath's stone floor, a flush slab leaf hinged on the EAST jamb and standing open at 90 degrees along the
+      bath's east wall (revision_spec.bath_door_leaf), three black butt hinges, a lever handle on each face;
+    * baseboards: the two runs on the vestibule face are cut / carried to the new liners, the bath-face run east of
+      the door is cut at the liner (the bath's own finish covers the bath face);
+    * the old leaf, its handle and the primary-suite zone's paint skins in the old jambs ('ps D08 ...') go: the
+      liners do their job at the new place."""
+    from . import laundry
+    from . import revision_spec as S
+    d0, d1 = S.BATH_DOOR_X
+    o0, o1 = S.BATH_DOOR_OLD_X
+    zn, zs = S.PRIMARY_BATH_NORTH_WALL_Z
+    head, ln = S.BATH_DOOR_HEAD, S.BATH_DOOR_LINER
+    pn, pb = S.BATH_DOOR_LINER_PROUD
+    c = COLL_OPEN
+    out = {}
 
-def _cut_finish(ob, z0, z1, y0, y1, below=None):
-    """Split a west-wall finish piece around the opening z0..z1 x y0..y1: the parts north and south of it and those
-    below and above it (each a copy clamped to its range; the part below stops at `below`, under the stool).
-    Returns the pieces; the original goes."""
-    b = bbox(ob)
-    if b[5] <= z0 + 0.005 or b[4] >= z1 - 0.005 or b[3] <= y0 + 0.005 or b[2] >= y1 - 0.005:
-        return [ob]
-    out = []
-    for tag, zr, yr in (('N', (b[4], z0), (b[2], b[3])), ('S', (z1, b[5]), (b[2], b[3])),
-                        ('below', (z0, z1), (b[2], min(b[3], y0 if below is None else below))),
-                        ('above', (z0, z1), (max(b[2], y1), b[3]))):
-        if zr[1] - zr[0] > 0.01 and yr[1] - yr[0] > 0.01:
-            c = _copy(ob, f'{ob.name} {tag}')
-            _clamp(c, zr, yr)
-            out.append(c)
-    remove([ob])
+    def shell_one(pat):
+        obs = [o for o in find(pat, COLL_SHELL) if o.type == 'MESH' and len(o.data.vertices) == 8]
+        if len(obs) != 1:
+            raise RuntimeError(f'{pat!r}: {len(obs)} shell pieces, expected 1')
+        return obs[0]
+    west, hdr = shell_one(r'^\d+ Ensuite north / closet south$'), shell_one(r'^\d+ Ensuite entry$')
+    east = shell_one(r'^\d+ Shared bathroom north / walk-in south$')
+    wb, hb, eb = bbox(west), bbox(hdr), bbox(east)
+    off = max(abs(wb[1] - o0), abs(hb[0] - o0), abs(hb[1] - o1), abs(eb[0] - o1), abs(wb[4] - zn), abs(wb[5] - zs),
+              abs(eb[4] - zn), abs(eb[5] - zs))
+    if off > 0.02:
+        raise RuntimeError(f'the door wall is not where the spec expects it: {[round(float(v), 3) for v in wb + hb + eb]}')
+    move_face(west, 'x', wb[1], d0)
+    move_face(east, 'x', eb[0], d1)
+    _reshape(hdr, d0, d1, head, hb[3], hb[4], hb[5])
+    for ob in (west, hdr, east):
+        _paint_all(ob)
+    out['opening x'] = [(round(float(wb[1]), 3), round(float(eb[0]), 3)), (d0, d1)]
+
+    # ---- the shower niche: a recess in the bath face of the wall west of the door
+    nx0, nx1, ny0, ny1, dep = S.BATH_NICHE
+    wb = bbox(west)
+    if wb[0] < nx0 - 0.3 and wb[1] > nx1 + 0.3 and wb[5] - wb[4] > dep + 0.05:
+        nm = 'Ensuite north / closet south'
+        _like(west, f'{nm} (east of the shower niche)', nx1, wb[1], wb[2], wb[3], wb[4], wb[5])
+        _like(west, f'{nm} (below the shower niche)', nx0, nx1, wb[2], ny0, wb[4], wb[5])
+        _like(west, f'{nm} (above the shower niche)', nx0, nx1, ny1, wb[3], wb[4], wb[5])
+        _like(west, f'{nm} (behind the shower niche)', nx0, nx1, ny0, ny1, wb[4], wb[5] - dep)
+        move_face(west, 'x', wb[1], nx0)
+        out['niche'] = [nx0, nx1, ny0, ny1, round(wb[5] - dep, 3)]
+    else:
+        out['niche'] = 'FAILED: the wall does not take the niche'
+
+    # ---- the old door and the paint skins in its jambs
+    out['removed'] = remove(find(r'^\d+ Primary bathroom privacy door', COLL_OPEN)) + remove(find(r'^ps D08 '))
+
+    # ---- baseboards on the wall's two faces (shell pieces named "skirting")
+    def runs(face_z):
+        return [o for o in find(r'^\d+ Painted skirting — (Ensuite north / closet south|Shared bathroom north / walk-in sou)',
+                                COLL_SHELL) if o.type == 'MESH' and abs((bbox(o)[4] + bbox(o)[5]) / 2 - face_z) < 0.08]
+    sk = {}
+    for side, face_z in (('vestibule', zn), ('bath', zs)):
+        for ob in runs(face_z):
+            b = bbox(ob)
+            if b[1] < (d0 + d1) / 2:                     # the run west of the door: up to the west liner
+                if side == 'vestibule' and abs(b[1] - (d0 - ln)) > 0.005:
+                    move_face(ob, 'x', b[1], d0 - ln)
+            elif b[0] < d1 + ln - 0.005:                 # the run east of it: from the east liner
+                move_face(ob, 'x', b[0], d1 + ln)
+            sk[side + ' ' + re.sub(r'^\d+ ', '', ob.name)[-24:]] = [round(float(v), 3) for v in bbox(ob)[:2]]
+    out['baseboards'] = sk
+
+    # ---- liners, head trim, saddle
+    box(ctx, 'Primary bath door jamb W', d0 - ln, d0 + ln, 0.0, head - 0.08, zn - pn, zs + pb, 'paint_trim', c)
+    box(ctx, 'Primary bath door jamb E', d1 - ln, d1 + ln, 0.0, head - 0.08, zn - pn, zs + pb, 'paint_trim', c)
+    box(ctx, 'Primary bath door head trim', d0 - ln, d1 + ln, head - 0.08, head + 0.06, zn - pn, zs + pb, 'paint_trim', c)
+    sd = box(ctx, 'Primary bath door saddle', d0 + ln, d1 - ln, -0.005, S.BATH_DOOR_SADDLE_Y, zn - pn, zs + pb,
+             'white_oak_veneer', c)
+    ctx.add_bevel(sd, 0.012, 2)
+
+    # ---- the leaf, open against the east wall, and its hardware
+    leaf = S.bath_door_leaf()
+    ctx.box_c(leaf['name'], leaf['center'], leaf['size'], leaf['rot'], 'door_slab', c, bevel=0.006, segments=2)
+    kit = laundry.Kit(ctx, c, None)
+    (ox, oz), (ax, az), (tx, tz) = leaf['corner'], leaf['along'], leaf['through']
+    px, pz = leaf['pivot']
+    w, _, th = leaf['size']
+
+    def pt(u, y, v):                                     # u along the leaf from its hinge edge, v through it from its bath face
+        return (ox + ax * u + tx * v, y, oz + az * u + tz * v)
+    r, hh = 0.021, 0.146                                 # 1/2 in barrels, 3 1/2 in high, on the pin axis
+    for i, yh in enumerate(S.BATH_DOOR_HINGE_Y):
+        kit.cyl(f'Primary bath door hinge {i}', (px, yh - hh, pz), (px, yh + hh, pz), r, 'black_metal', 20)
+        for k, ya in enumerate((yh - hh - 0.02, yh + hh)):
+            kit.cyl(f'Primary bath door hinge {i} tip {k}', (px, ya, pz), (px, ya + 0.02, pz), r * 0.7, 'black_metal', 16)
+    inset, yl = S.BATH_DOOR_LEVER
+    ul = w - inset
+    for tag, v0, sg in (('bath', 0.0, -1.0), ('room', th, 1.0)):       # one lever on each face, pointing to the hinge
+        kit.cyl(f'Primary bath door lever {tag} rose', pt(ul, yl, v0), pt(ul, yl, v0 + sg * 0.02), 0.085, 'black_metal', 32)
+        kit.cyl(f'Primary bath door lever {tag} neck', pt(ul, yl, v0), pt(ul, yl, v0 + sg * 0.17), 0.03, 'black_metal', 20)
+        kit.cyl(f'Primary bath door lever {tag} bar', pt(ul + 0.02, yl, v0 + sg * 0.15), pt(ul - 0.38, yl, v0 + sg * 0.15),
+                0.024, 'black_metal', 20)
+    out['leaf'] = [round(float(v), 3) for v in leaf['aabb']]
     return out
 
 
 def bath_window(ctx):
-    """Primary bath west window between the vanity and the shower: clear glass from a 2'-0" sill (TALL_SILL) to the
-    8 ft ceiling with a transom at 6 ft. The wall below the sill is a copy of the neighbouring wall (paint inside,
-    stucco outside); the room's west-wall finish ('A0 tile west ...', built by the baths zone around the concept
-    window) is cut around the new opening and closed where the concept window was; a stool and a linen roman shade."""
+    """Primary bath west window W13: clear glass from a 2'-0" sill (TALL_SILL, third round) to the 8 ft ceiling with a
+    transom at 6 ft. Sixth round: at the architect's position (revision_spec.BATH_WIN_Z, 3'-0" wide) and with a mullion
+    on the shower's south glass line (BATH_WIN_MULLION_Z): the north lite is inside the shower, the south lite in the
+    room. The concept window (sill 5'-0", head 7'-0") goes; the solid walls north and south of it end on the new
+    jambs, and the wall below the sill is a copy of the neighbouring wall (paint inside, stucco outside), so nothing
+    of the old opening is left inside or outside.
+
+    The room's finish around the opening (shower tile and tiled reveal, the shower lite's stone sill, wainscot and
+    plaster, the dry lite's oak stool and roman shade, the post that carries the shower glass on the mullion) is
+    built by the baths zone after the warp, from the same numbers (bl/zones/baths_primary.py)."""
+    from .revision_spec import BATH_WIN_MULLION_Z, BATH_WIN_TRANSOM_Y
     z0, z1 = BATH_WIN_Z
+    zm, yt = BATH_WIN_MULLION_Z, BATH_WIN_TRANSOM_Y
     s = TALL_SILL
     gone = remove(find(r'Primary bathroom west wall — (below|above) privacy window|Primary bathroom privacy-window|'
                        r'Primary bathroom operable awning|Primary bathroom obscured privacy glazing'))
     gone += remove(find(r'Painted skirting — Primary bathroom west wall — below'))
-    gone += remove(find(r'^A0 (linen|succulent)'))
-    north = find(r'Primary bathroom west wall — north solid')
-    for ob in north:
-        move_face(ob, 'z', 22.20, z0)
-    for ob in find(r'Primary bathroom west wall — south solid'):
-        move_face(ob, 'z', 24.89, z1)
-    if north:                               # stretch a copy of the north solid across the opening, up to the sill
-        apron = _copy(north[0], 'Primary bathroom west wall — below tall window')
-        w, mw = _world(apron)
-        z = -w[:, 1] / FT
-        w[:, 1] = -(z0 + (z - z.min()) / (z.max() - z.min()) * (z1 - z0)) * FT
-        w[:, 2] = np.minimum(w[:, 2], s * FT)
-        _set_world(apron, w, mw)
-    stool_t = 0.06
-    pieces = []
-    for ob in find(r'^A0 tile west'):
-        pieces += _cut_finish(ob, z0, z1, s, 8.0, below=s - stool_t)
-    face = max([bbox(p)[1] for p in pieces if bbox(p)[1] < 1.0] or [0.29])     # room face of the wall finish
-    closed = 0
-    h0, h1 = BATH_OLD_HOLE_Y
-    for ob in pieces:                       # beside the new opening, close the concept window's hole
-        b = bbox(ob)
-        if abs(b[3] - h0) < 0.02 and (b[5] <= z0 + 0.01 or b[4] >= z1 - 0.01) and b[4] < 25.0 and b[5] > 22.0:
-            closed += move_face(ob, 'y', h0, h1) > 0
-    xc, fd, fw = 0.0, 0.22, 0.12
+    north = [o for o in find(r'^\d+ Primary bathroom west wall — north solid$', COLL_SHELL) if o.type == 'MESH']
+    south = [o for o in find(r'^\d+ Primary bathroom west wall — south solid$', COLL_SHELL) if o.type == 'MESH']
+    if len(north) != 1 or len(south) != 1:
+        raise RuntimeError(f'west wall solids not found ({len(north)}, {len(south)})')
+    nb, sb = bbox(north[0]), bbox(south[0])
+    was = (round(float(nb[5]), 3), round(float(sb[4]), 3))
+    move_face(north[0], 'z', nb[5], z0)                  # the concept jambs (22.20 / 24.89 on the plan) -> the new jambs
+    move_face(south[0], 'z', sb[4], z1)
+    nb = bbox(north[0])
+    # the wall below the sill: a copy of the north solid stretched across the opening, up to the sill
+    _like(north[0], 'Primary bathroom west wall — below tall window', nb[0], nb[1], nb[2], s, z0, z1)
+    xc, fd, fw, mw = 0.0, 0.22, 0.12, 0.10
     c = COLL_OPEN
     box(ctx, 'Primary bath tall window head', xc - fd / 2, xc + fd / 2, 8.0 - fw, 8.0, z0, z1, 'black_aluminum', c)
     box(ctx, 'Primary bath tall window sill', xc - fd / 2, xc + fd / 2, s, s + 0.08, z0, z1, 'black_aluminum', c)
     box(ctx, 'Primary bath tall window jamb N', xc - fd / 2, xc + fd / 2, s, 8.0, z0, z0 + fw, 'black_aluminum', c)
     box(ctx, 'Primary bath tall window jamb S', xc - fd / 2, xc + fd / 2, s, 8.0, z1 - fw, z1, 'black_aluminum', c)
-    box(ctx, 'Primary bath tall window transom', xc - fd / 2, xc + fd / 2, 6.0, 6.1, z0, z1, 'black_aluminum', c)
+    box(ctx, 'Primary bath tall window mullion', xc - fd / 2, xc + fd / 2, s + 0.08, 8.0 - fw, zm - mw / 2, zm + mw / 2,
+        'black_aluminum', c)
     # clear glass: the side yard outside is fenced (6'-2") and screened by an evergreen (exterior_plants)
-    g = box(ctx, 'Primary bath tall window lower glass', xc - 0.015, xc + 0.015, s + 0.08, 6.0, z0 + fw, z1 - fw,
-            'glass_clear', c)
-    g.visible_shadow = True
-    g2 = box(ctx, 'Primary bath tall window upper glass', xc - 0.015, xc + 0.015, 6.1, 8.0 - fw, z0 + fw, z1 - fw,
-             'glass_clear', c)
-    g2.visible_shadow = True
-    # interior stool on the apron (its front lip with short horns on the wall finish) and a linen roman shade,
-    # inside-mounted under the head, drawn up to about 6'-4"
-    box(ctx, 'Primary bath window stool', fd / 2, face, s - stool_t, s, z0, z1, 'white_oak_veneer', c)
-    box(ctx, 'Primary bath window stool lip', face, face + 0.07, s - 0.075, s, z0 - 0.07, z1 + 0.07, 'white_oak_veneer', c)
-    box(ctx, 'Primary bath roman shade headrail', 0.13, 0.27, 7.74, 8.0 - fw, z0 + 0.02, z1 - 0.02, 'paint_trim', c)
-    box(ctx, 'Primary bath roman shade fabric', 0.215, 0.235, 6.62, 7.74, z0 + 0.03, z1 - 0.03, 'fabric_linen_white', c)
-    for i, yb in enumerate((6.30, 6.47)):
-        fold = box(ctx, f'Primary bath roman shade fold {i}', 0.20, 0.30 - 0.025 * i, yb, yb + 0.19, z0 + 0.03, z1 - 0.03,
-                   'fabric_linen_white', c)
-        ctx.add_bevel(fold, 0.06, 4)
-    return {'removed': gone, 'finish pieces': len(pieces), 'old hole closed': closed, 'finish face x': round(face, 3)}
+    lites = {}
+    for tag, a, b in (('north', z0 + fw, zm - mw / 2), ('south', zm + mw / 2, z1 - fw)):
+        box(ctx, f'Primary bath tall window {tag} transom', xc - fd / 2, xc + fd / 2, yt, yt + 0.1, a, b, 'black_aluminum', c)
+        for part, y0, y1 in (('lower', s + 0.08, yt), ('upper', yt + 0.1, 8.0 - fw)):
+            g = box(ctx, f'Primary bath tall window {tag} {part} glass', xc - 0.015, xc + 0.015, y0, y1, a, b, 'glass_clear', c)
+            g.visible_shadow = True
+        lites[tag] = (round(a, 3), round(b, 3))
+    return {'removed': gone, 'opening z': (z0, z1), 'was': was, 'mullion z': zm, 'sill': s, 'lites': lites}
 
 
 def kitchen_skylight(ctx):
@@ -710,7 +864,26 @@ def foyer_skylights(ctx):
 
 
 def primary_bath_skylight(ctx):
+    """Skylight W20 over the primary bath's shower (revision_spec.PRIMARY_BATH_SKY). Sixth round: it moved with the
+    shower into the room's north-west corner; the opening is cut into the shell as built, so nothing is left where it
+    was."""
     return skylight(ctx, 'Primary bath skylight', *PRIMARY_BATH_SKY, r'ceiling')
+
+
+def primary_bath_fit_out(ctx):
+    """Sixth round (2026-11-20): the primary bath is laid out on the architect's sheet (revision_spec.BATH_*) and
+    fitted out here, after the warp and in plan feet, by the baths zone (bl/zones/baths_primary.build_room): wall and
+    ceiling finishes, the shower, the vanity wall, the toilet, fixtures, lights. It runs after bath_door, bath_window
+    and primary_bath_skylight, which prepare the walls, the window and the shaft. The shell's shower floor slab (the
+    concept's shower in the south-west corner) goes. Without the baths zone (`--zones` without it) only the slab is
+    removed."""
+    out = {'old shower floor removed': remove(find(r'^\d+ Primary shower stone floor', COLL_SHELL))}
+    if bpy.data.collections.get('zone_baths_primary') is None:
+        out['fit-out'] = 'baths zone not built: skipped'
+        return out
+    from .zones import baths_primary
+    out.update(baths_primary.build_room(ctx))
+    return out
 
 
 def entry_vault_closure(ctx):
@@ -914,6 +1087,31 @@ def laundry_closet(ctx):
     return out
 
 
+def suite_rooms(ctx):
+    """Sixth round (2026-11-20), the owner: "The walk in closet in the primary bedroom is not correct, you should refer to
+    the floor plan of sizes.pdf last page for that, there should be a door since it's a small room for walk in closet".
+    The 8 ft zone between the primary bedroom and the primary bath, one open dressing area until now, is divided as
+    on sheet SKA002 (revision_spec.SUITE_*): the WALK-IN CLOSET, an enclosed room behind a new 5 in wall with a
+    sliding pocket door centred on it; the VESTIBULE, open to the bedroom (x 6.725..11.308), with the attic access
+    hatch in its ceiling; and the SUITE ENTRY (D09), a 2'-8" opening with a sliding panel on the hall side that parks
+    south of it. The geometry is in bl/zones/primary_suite_rooms.py (walls as copies of the existing wall, so they
+    bake as walls and carry the interior paint; jambs, leaves and hardware; baseboards on every new face). Runs after
+    bath_door, which carries the bath wall's vestibule-side baseboard across the place of the closet's new wall."""
+    from .zones import primary_suite_rooms
+    return primary_suite_rooms.build(ctx)
+
+
+def suite_fit_out(ctx):
+    """The primary suite's furniture on the architect's plan: the bedroom as the sheet draws it (king bed on the west
+    wall between the two windows, two nightstands, rug), the vestibule's mirror and lights, the walk-in closet's
+    hanging on three sides. bl/zones/primary_suite.py is written in plan feet and builds here, after the warp and
+    after suite_rooms; a build without that zone (`--zones none`, another zone's preview) skips it."""
+    if 'primary_suite' not in ctx.stats:
+        return 'zone primary_suite not built: skipped'
+    from .zones import primary_suite
+    return primary_suite.fit_out(ctx)
+
+
 # ---- repairs that run last (after every change above has cut or moved walls and slabs)
 def _bvh(colls, skip=None):
     from mathutils.bvhtree import BVHTree
@@ -1084,8 +1282,12 @@ def apply(ctx):
     bpy.context.view_layer.update()
     res = {}
     for f in (ceiling_seam, ceiling_overlap, floor_seam, floor_overlap, foyer_corner, bedroom4_flat, bay_to_floor, primary_slider,
-              bedroom2_tall_window, bath_window, kitchen_skylight, foyer_skylights, primary_bath_skylight, entry_vault_closure,
-              laundry_closet, floor_gaps, skirting_trim):
+              bedroom2_tall_window, bedroom3_bath_window,
+              bath_door, bath_window, kitchen_skylight, foyer_skylights, primary_bath_skylight, entry_vault_closure,
+              laundry_closet,
+              suite_rooms, suite_fit_out,
+              primary_bath_fit_out,
+              floor_gaps, skirting_trim):
         try:
             res[f.__name__] = f(ctx)
         except Exception as e:                       # report, keep building

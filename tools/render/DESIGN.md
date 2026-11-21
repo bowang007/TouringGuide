@@ -14,6 +14,7 @@ it where they say so. How to run things is in `README.md`.
 | Third | 2026-11-19 | The owner's style images; Bedroom 4 bed turned; 2 ft window sills; grounded baseboards | "Owner's style images" below |
 | Fourth | 2026-11-19 evening | Matterport-style tour; a laundry closet, built in the kitchen's south-west corner (the wrong place) | "Fourth round" below |
 | Fifth | 2026-11-20 | The laundry closet moved into Bedroom 4's north-east corner, opening onto the foyer; the dining table moved to the island's west end; the kitchen's south wall back to the third round's | "Fifth round" below |
+| Sixth | 2026-11-20 afternoon | The primary suite on the architect's sheet: the walk-in closet a room of its own behind a pocket door, a vestibule, a sliding suite entry, the bed on the west wall. The primary bath rebuilt to the sheet and restyled after the owner's wall image. A taller shower window in the Bedroom 3 bathroom. The owner's four answers: that window from a 3'-0" sill to a 7'-6" head; the bath laid out as on the sheet; the second west window of the primary bedroom (W14) kept although the sheet omits it; the stone on the vanity wall, not in the shower | "Sixth round" below |
 
 ## Design language (1077 W McKinley)
 
@@ -79,9 +80,9 @@ language above in four places:
   a brass pot filler; walnut open shelves on whitewashed brick. A fireclay farmhouse sink under a
   black grid window with brass sconces and linen cafe curtains. A white-oak island with a honed
   quartzite top, brass pendants, a Persian runner, and a warm oak dining set under a brass lantern.
-- **Primary bath** (`baths_primary.py`): a sage subway-tile shower with aged-brass fittings, a floating
-  solid-oak double vanity with carved basins, brass mirrors and sconces, a sage V-groove wainscot under
-  cream plaster, a stacked-stone wall and a blue-and-cream encaustic floor.
+- **Primary bath** (`baths_primary.py`): the floating solid-oak double vanity with two carved basins
+  (`styles/primary bathroom sink.jpg`). The rest of this round's bath was replaced in the sixth
+  round, which rebuilt the room after `styles/primary bathroom wall style.jpg`: see "Sixth round".
 - **Shared bath** (`baths_shared.py`): a rustic-oak wood-look tile wall with a lit niche behind the WC,
   warm Spanish-cream stone-look porcelain, a light-oak vanity with a travertine trough basin and a
   limestone-look floor.
@@ -112,7 +113,7 @@ neighbours.
    no touch pad, no minimap, no guided tour, no second renderer. Requirement: at rest PSNR ≥ 40 dB
    against the published file (measured 55 to 61 dB).
 2. **Many sweeps, short hops.** Sweeps are placed by a tool on the built model (rules below), about
-   4 ft apart with at least 1.2 ft of clearance: 43 instead of 27 (45 since the fifth round). Soft
+   4 ft apart with at least 1.2 ft of clearance: 43 instead of 27 (49 since the sixth round). Soft
    white rings on the floor mark the sweeps in view; a cursor ring lies on the surface under the
    mouse.
 3. **A click moves.** To the ring clicked, else to the sweep that best matches the clicked point or
@@ -164,12 +165,25 @@ outline); there is no double-click zoom, because a click always moves.
   `LAUNDRY['pitch']` (−14°). From 3 ft the stacked pair spans 79°, more than the page's 68° picture
   holds; from 4 ft it spans 67° and both units are in the opening view. The closet's rectangle and
   opening come from `bl/revision_spec.py`.
+- **The walk-in closet's stop** `C0` (`WALKIN`, `place_walkin`; sixth round) is the one seed that
+  does not keep its place: the concept's position lies under the closet's south rod. When it has
+  lost its clearance it goes to the most open reachable cell inside the closet
+  (`SUITE_CLOSET_CLEAR`), among equals the one nearest the pocket door's axis: (4.50, 16.75), with
+  2.4 ft all round. A 6 × 8 ft room hung on three sides leaves an aisle 3.5 ft wide; the usual
+  1.5 ft nudge left the camera at its edge, on a line to the vestibule that passed 0.2 ft from the
+  leaf's nose. The rule fires only when the stop fails, so a second run keeps C0.
 - **Keeping a layout** (`--keep`). A panorama stays valid only while its sweep does not move and
   nothing it sees changes. So after a local change the placement starts from the installed sweeps
   instead of the seeds, and only the sweeps that moved, are new or have a line of sight to a change
   are rendered again (README, "Add or move sweeps" and "Re-render a subset"). Kept sweeps are not
   held to the spacing rule among themselves: K0, moved by the scene, now stands 2.9 ft from K3, the
-  tour's shortest link.
+  tour's shortest link. A kept sweep's name follows the scene file (`kept_renames`): a renamed seed
+  takes its new label, and so do the kept sweeps that carried its old one (S1 had S0's).
+- **Opening views.** A seed keeps its authored view, a new sweep looks in its most open direction,
+  a kept sweep keeps what it had. `OPENING` in `apply_sweeps.py` overrides that at every install
+  with views chosen by eye on renders: G0 and H2, and since the sixth round C0 (the closet's
+  hanging wall), S1 (through the bath door at the stone wall), A0 (across the vanity), P5 (the
+  bed between the two windows) and A3 (the taller shower window).
 - **Link** = a straight line up to 11 ft that a person can walk (rays at four heights and three
   lateral offsets, bare floor under all three lines), dropped when a third sweep gives two shorter
   legs with less than 20 % detour. Links never pass through glass and must form one component.
@@ -177,8 +191,9 @@ outline); there is no double-click zoom, because a click always moves.
   a superset of the links. The page draws rings at the visible sweeps.
 - **Ids:** two characters, the first a letter. Seeds keep theirs. New ones are the region's letter plus
   the first free character: L living, D dining, K kitchen, G garage, F foyer, H halls, P primary
-  bedroom, S primary dressing, A baths, C closets, X / Y / Z = Bedroom 2 / 3 / 4. `LC`, `OP` (porch) and
-  `OD` (deck) are fixed. No new id reuses an old one.
+  bedroom, S the primary suite's vestibule and walk-in closet (one region, `primary_dressing`),
+  A baths, C closets, X / Y / Z = Bedroom 2 / 3 / 4. `LC`, `OP` (porch) and `OD` (deck) are fixed.
+  No new id reuses an old one.
 - **Angles:** `sweeps.json` and `assets/data/tour.json` hold degrees; nodes in `scene.json` hold
   radians, as they always did. Yaw 0 looks toward −z (north), positive clockwise seen from above.
 - The outdoor sweeps exist only while a walkable line through an open door joins them to an indoor
@@ -377,6 +392,191 @@ built-in).
   cover a label moves across its wall, away from that room (the closet is no bigger than its
   label).
 
+## Sixth round (2026-11-20 afternoon): the primary suite on the architect's sheet
+
+The owner: in "the bathroom in the front bedroom suite" the window in the shower "is too small,
+make it vertically larger"; "the walk in closet in the primary bedroom is not correct, you should
+refer to the floor plan of sizes.pdf last page for that, there should be a door since it's a small
+room"; "refer to the sizes and floor plans for the primary bedroom, bathroom and the walk in closet
+to make it more accurate"; and for the primary bathroom "apply the style in styles folder, there is
+a image of primary bathroom wall".
+
+### Asked before building
+
+Four points of the request could be built in more than one way. They went to the owner as direct
+questions, each with concrete options and one of them recommended, before the long render:
+
+| Question | Recommended | The owner's answer |
+|---|---|---|
+| How tall the Bedroom 3 bathroom's shower window becomes | sill 3'-0", head 7'-6" | as recommended |
+| Whether the primary bath is rebuilt to the sheet's layout | yes | yes: shower north-west, toilet south-west, double vanity on the south wall, door at the east end of the north wall; the skylight moves with the shower, the west window to the sheet's place, 3 ft wide |
+| Whether the primary bedroom's second west window (W14), which the sheet does not show, goes | remove it | **keep it** |
+| Where the stacked stone of the wall image goes | the two shower walls | **the vanity wall** (the south wall, behind the vanity and the mirrors); plain cream tile in the shower |
+
+Two of the four recommendations were wrong. The answers override everything else, the sheet
+included (W14); where the answers and the request are silent, the sheet decides.
+
+### Primary suite
+
+Numbers: `bl/revision_spec.py`, `SUITE_*` (SCENE feet on the architect's plan). The clear sizes of
+the primary bedroom (11'-1" × 12'-3") and the primary bath (9'-6" × 7'-2") already matched the
+sheet. The 8'-0" zone between them (z 12.835..20.835), one open area with wardrobes until the
+fifth round, is two rooms as on the sheet.
+
+- **Walk-in closet** (M05, sweep C0): an enclosed room without a window, clear 6'-1" × 8'-0"
+  (`SUITE_CLOSET_CLEAR`), behind a new 5 in wall (`SUITE_CLOSET_WALL_X`, x 6.308..6.725). Rods and
+  shelves on the north, west and south walls as the sheet draws them, a drawer and shelf tower in
+  the middle of the west wall, facing the door, and a flush ceiling light. The aisle is 3.5 ft
+  wide.
+- **Pocket door** (D18): clear opening 2'-6" × 6'-8", centred on the closet (`SUITE_CLOSET_DOOR_Z`,
+  z 15.585..18.085); the leaf slides south into the wall. The brief had the door at the wall's
+  south end, sliding north: it had taken the leaf, which the sheet draws open inside its pocket,
+  for the opening. At 1200 dpi the sheet shows a full jamb, a split jamb 2'-6" south of it, and
+  the leaf in a pocket sleeve beyond with its nose out. The leaf is shown 0.30 ft out of the
+  pocket (`SUITE_CLOSET_LEAF_SHOWN`; the sheet draws about 0.27), which leaves a 2.17 ft passage.
+  The brief's "about a third out" would leave 1.67 ft, and the sweep placement, which floods the
+  floor with a 0.9 ft body radius on a 0.25 ft grid, needs about 2.05 ft to reach the closet.
+- **Vestibule** (M14, sweeps S0 S1): clear 4'-7" × 8'-0" (`SUITE_VESTIBULE_CLEAR`), open to the
+  bedroom over its whole width under the existing header (D10, no door). The sheet's "(E) 30X22
+  ATTIC ACCESS" is a flush panel in a thin frame on the ceiling (`SUITE_ATTIC_HATCH`; nothing is
+  cut). One mirror on the closet wall.
+- **Suite entry** (D09): a 2'-8" opening with a flush sliding panel on a slim black track on the
+  hall face, shown open, parked south of the opening. **It stands 1'-8" south of its place on the
+  sheet** (`SUITE_ENTRY_Z` 15.21..17.877 against `SUITE_ENTRY_SHEET_Z` 13.56..16.20). On the sheet
+  that stretch of the wall faces the hall. In this model it backs onto Bedroom 2's entry alcove
+  (the concept's layout, z 12.835..14.75, behind the doorless opening D12), and the hall begins
+  at z 15.11: an opening at the sheet's place would lead into Bedroom 2. So the entry is built as
+  far north as the hall allows, 0.10 ft off Bedroom 2's wall. Following the sheet needs Bedroom
+  2's entry and closet re-planned, which the owner did not ask for. D09's entry in the Dimensions
+  sheet and the change list in the Design sheet say where it stands and why.
+- **Bedroom**, furnished as drawn: a king bed with its headboard on the west wall, centred on the
+  room (z 6.35) between the two west windows, a nightstand each side, a rug. Both west windows
+  stay: W15, and **W14 by the owner's decision**, although the sheet shows only W15. The bed as
+  drawn is 7.06 ft wide with its headboard and the pier between the windows 5.26 ft, so nothing
+  on that wall rises above the 2'-6" sills where glass is behind it: the headboard is 2'-4 1/2"
+  high, the nightstands 1'-4 3/4" with small dome lamps. No dresser on the east wall (it would
+  leave 2.4 ft at the bed's foot): 3.6 ft stay clear from the vestibule to the garden door.
+- **How it is built.** `revisions.suite_rooms` calls `bl/zones/primary_suite_rooms.build`: the
+  bedroom / closet wall is carried on to the new wall, the new wall is three copies of it (`_like`:
+  same `scene_index`, baked as a wall), the suite entry's three wall pieces are reshaped; then
+  jambs, the leaf and the panel with pulls, tracks and floor guides, and baseboards on every new
+  face. It raises when a wall is not where the spec expects it, and runs after `bath_door`, which
+  carries the bath wall's baseboard across the new wall's place. `revisions.suite_fit_out` calls
+  `bl/zones/primary_suite.fit_out` for the furniture and the closet's fit-out. Its audit (`notes`
+  on the `revisions:` line) must stay empty: nothing above the sills in front of window glass,
+  within 3 ft of the bedroom's east wall, in a door opening or in a wall.
+- **Names and a repair.** New wall and door parts are called `Primary closet ...` and
+  `Primary suite entry ...`; the SCENE's "Walk-in closet ..." pieces belong to Bedroom 3's closet.
+  On the hall face of the suite wall, Bedroom 2's entry header stopped 0.113 ft short of the
+  wall, a slot from 6'-8" to the ceiling that the old door's casing had hidden; it now runs to
+  the wall (`SUITE_BED2_HEADER`).
+
+### Primary bath
+
+Numbers: `BATH_*` and `PRIMARY_BATH_*`. Until the fifth round the room was mirrored north to
+south. Two things changed at once.
+
+**Layout, as on the sheet.**
+
+- Door D08 at the east end of the north wall (`BATH_DOOR_X`, x 6.89..9.45): a 2'-6" leaf hinged
+  on the east jamb, open 90° against the east wall, over an oak saddle.
+- Shower, 5'-0" × 3'-0", in the north-west corner (`BATH_SHOWER`): curbless, frameless glass on
+  its east side (the door and a short fixed return) and its south side (one fixed panel), a rain
+  head and a hand shower on the north wall, a niche recessed into that wall (`BATH_NICHE`;
+  `bath_door` splits the wall around it). The drain is linear, along the north wall; the sheet
+  draws a point drain.
+- Toilet in the south-west corner, facing north (`BATH_TOILET_X`), 22 in clear of the shower
+  glass.
+- Double vanity along the south wall, 6'-6" × 1'-9" (`BATH_VANITY`, basins at `BATH_BASINS_X`):
+  the floating solid-oak slab with two carved basins of the owner's sink image, kept.
+- Window W13 at the sheet's place, 3'-0" wide (`BATH_WIN_Z`, z 22.89..25.89), with the owner's
+  vertical size of the third round: 2'-0" sill to the ceiling, transom at 6 ft, clear glass. Its
+  mullion stands on the shower's south glass line (`BATH_WIN_MULLION_Z`, z 24.21), 0.2 ft north
+  of the window's centre where the sheet has it, because a glass panel cannot end on glass. The
+  north lite is inside the shower (stone sill, tiled reveal); the south lite has the oak stool
+  and the roman shade.
+- Skylight W20 (second round: "over the shower") moved with the shower (`PRIMARY_BATH_SKY`).
+  It is cut into the shell as built, so nothing is left where it was.
+- Finishes take room: tile and wainscot 0.065 ft on a wall, the stone up to 0.15 ft. The vanity
+  slab therefore shows 6.44 ft of its 6'-6", and the toilet's tank stands 0.19 ft off the
+  structural wall.
+
+**Style, after `styles/primary bathroom wall style.jpg`** (rustic, warm, low saturation), with the
+stone where the owner put it. Materials are `Z_baths_primary_*` (`baths_primary_mats.py`).
+
+- South (vanity) wall: stacked natural stone over the full width and height, in true displacement
+  (Poly Haven Rustic Stone Wall 02; `STONE_SIZE`, `STONE_STRETCH` and `STONE_MID` set the size of
+  the stones and the flush sandy mortar bed). On it two oak-framed mirrors, and above them a
+  rough dark timber beam with an enamel lamp over each basin.
+- Shower: plain honed cream stone-look tile, 24 × 48 in, on its two solid walls and a cream mosaic
+  floor. No stone, nothing glazed.
+- Other walls: muted grey-green tongue-and-groove wainscot to 3'-8" with a cap rail, warm cream
+  plaster above and on the ceiling, one timber beam across the ceiling.
+- Floor: quiet warm-grey stone, 24 × 24 in, no pattern. Fittings in brushed nickel. A timber shelf
+  on iron brackets with bottles, a botanical print and a trailing plant; striped towels, a cactus
+  in a zinc pot, a fringed mat.
+- What differs from the image: the room is lit by daylight with the lamps as warm accents, the
+  image by one lamp at dusk; the stone's courses are more regular; the floor is lighter; the
+  window frames stay black, like the house's.
+
+The room is fitted out by `baths_primary.build_room` after the warp (see "Which plan" in the code
+contract), so its patterns are laid out on the built room: tile courses start at the floor and the
+niche's sill sits on a joint, the floor grid is centred on the room.
+
+### Bedroom 3 bathroom: the taller shower window
+
+W11 on the west wall keeps its 3'-0" width, its frosted glass and its black two-lite frame. Sill
+3'-0", head 7'-6" (`BED3_BATH_WIN_Y`; 5'-0" and 7'-0" before), measured from the house's floor
+datum; the bath's tile floor is 0.1 ft higher. `revisions.bedroom3_bath_window` moves the wall
+below and the header above, stretches frame and pane, and checks the bath zone's tile, jamb
+returns and sill against the opening.
+
+- Two old defects showed in the taller window and are repaired in it. The shell's pane stops 0.03
+  to 0.04 ft short of each jamb section, a clear slit beside the frosted glass; the pane now runs
+  into the jambs. (Every other window still has the slit, harmless where it shows sky.) And the
+  quartz sill, named "stool", was moved by the warp as loose furniture and stood 0.18 ft off the
+  opening; as `A3 window return sill` it is reshaped with the wall.
+- The window has no shade and got none: privacy rests on the obscured glass, with the sill now at
+  hip height in the shower.
+- On the west facade its head stands 6 in above the heads of the bedroom windows beside it. That
+  is the size the owner confirmed.
+
+### Sweeps, pins, renders
+
+- 49 sweeps, 58 links. Placed with `--keep`: 43 stay; C0 moves to the middle of the closet's aisle
+  and S1 in front of the new bath door; P2 to P5 are new, on the bedroom floor the bed left
+  uncovered when it moved to the west wall. Every room of the suite has a sweep. The suite's
+  links: T2-S0 through the suite entry, S0-P0, S0-C0 through the pocket door, S0-S1, S1-A0 through
+  the bath door.
+- The nine suite sweeps got new pins, solved from probes of the new rooms with all other pins
+  fixed (README, "Re-render a subset"): an enclosed closet and a re-furnished bedroom do not fit
+  the exposure of the rooms they replace.
+- Rendered again: 32 of the 49 panoramas; the hero stills (the cameras of `primary` and `A0`
+  were re-aimed); the bake; all 32 exterior frames, because the two changed west windows (W11,
+  W13) and the moved skylight show on the facade and on the roof.
+
+### Process notes
+
+- **Ask before a long render, and offer a recommended answer to each question.** A choice the
+  request leaves open (how tall, which wall, the sheet or the tour as it stands) goes to the owner
+  as a direct question with concrete options before the render: a round costs about two and a
+  half hours of rendering, and the fifth round was the price of not asking. A recommendation speeds
+  the answer; it is a guess, not a decision. This time two of four were wrong (W14, the wall the
+  stone goes on), and both would have been built wrong without the question.
+- **Read a door off the sheet by its jambs and its pocket**, not by the leaf, which is drawn open,
+  or by the wall hatch, which runs through every opening on this sheet. Read at 1200 dpi before
+  writing a number into a brief.
+- **Where the model cannot follow the sheet, say so in the tour**, not only in notes: D09's type
+  in the Dimensions sheet and the round's change list state the 1'-8" and its reason. Both
+  texts are computed from the spec, so they go when the entry moves.
+- **A room that must sit on the sheet's lines is fitted out after the warp**, in plan feet. The
+  warp moves loose pieces in clusters and decides by name what is loose; that is fine for
+  furniture in a room and wrong for a glass line that has to meet a mullion.
+- **A door that moves keeps its SCENE leaf**: the old leaf box is moved in place, because the plan
+  draws every box of group `door` and objects are never removed. `tools/web/dimension_plan.py`:
+  a door tag with a room label on both sides of its wall (D18, between the closet and the
+  vestibule) slides along the wall to the nearer end of those labels.
+
 ## How to build and review
 
 ```bash
@@ -411,9 +611,9 @@ graph in a production run), so a fixture that should read brighter needs a highe
 | `lighting.py` | core (exterior zone may tune the sun/sky constants) | Sky and sun, window portals, `can()`, `point_light()`, `emitter()` |
 | `materials.py` | materials | `get(key)` library. KEYS are a stable contract. |
 | `assets.py` | core | CC0 Poly Haven fetch and cache: `model()`, `texture()`, `hdri()`, `write_manifest()` |
-| `zones/<zone>.py` | one zone agent each | `build(ctx) -> dict` that adds everything inside its zone |
+| `zones/<zone>.py` | one zone agent each | `build(ctx) -> dict` that adds everything inside its zone (the primary suite and the primary bath: after the warp, see "Which plan") |
 | `warp.py` | core | Carries the built house from the concept plan onto the architect's plan |
-| `revision_spec.py`, `revisions.py`, `laundry.py` | core | The owner's changes: numbers, geometry after the warp, the laundry closet's contents |
+| `revision_spec.py`, `revisions.py`, `laundry.py`, `zones/primary_suite_rooms.py` | core | The owner's changes: numbers, geometry after the warp, the laundry closet's contents, the primary suite's walls and doors |
 
 Rules:
 
@@ -425,6 +625,19 @@ Rules:
   `bl/laundry.py`, `bedrooms.bed4_closet_faces`) works in new-plan feet. A zone that needs a new-plan
   number converts it back with the inverse of the `relayout` map (see `_rect_centre` in
   `kitchen_dining_dining.py` and `_b4_desk_x` in `bedrooms.py`).
+  Since the sixth round two whole rooms are built after the warp, in plan feet: the primary suite
+  (`primary_suite.fit_out`, called by `revisions.suite_fit_out`) and the primary bath
+  (`baths_primary.build_room`, called by `revisions.primary_bath_fit_out`). Their `build()` /
+  `build_primary()` only register the zone before the warp, which is how the revision knows
+  that it was asked for; without it the fit-out is skipped. When editing them:
+  - a number in the code is a position on the sheet and in the built model: no map, no inverse;
+  - walls, doors, windows and the skylight come from `bl/revision_spec.py` (`SUITE_*`, `BATH_*`,
+    `PRIMARY_BATH_*`); read them from there and move them there, never as a literal in the zone;
+  - the warp no longer sees these pieces, so its name rules (fitted or loose) do not apply; the
+    bake's name rules do, and the bath marks its wall finishes with `tg_class = 'wall'`;
+  - order matters: `bath_door`, `bath_window`, `primary_bath_skylight`, then `suite_rooms`,
+    `suite_fit_out`, `primary_bath_fit_out`, all before `floor_gaps` and `skirting_trim`;
+  - keep `primary_suite.fit_out`'s audit empty, and check positions on the built model.
 - **Collections.** Put every object in `ctx.coll('zone_<zone>')`, or a child of it.
 - **Your files only.** Edit only your own `zones/<zone>.py`, plus any helper files under
   `zones/<zone>_*.py`. If you need a change in a core module, explain it in your final report;
@@ -452,7 +665,8 @@ Rules:
   Prefer instancing (shared mesh data / geometry-nodes instances) for grass, leaves and repeated
   items. Keep each zone under ~2M triangles unless it's a hero element.
 - **Camera clearance.** Every sweep needs at least 1.2 ft of clear space around it. The 20 seed stops
-  keep their place, so no furniture may swallow one; the other sweeps are placed after the build
+  keep their place (all but C0, which the placement moves to the middle of the walk-in closet's
+  aisle), so no furniture may swallow one; the other sweeps are placed after the build
   (`place_sweeps.py`), so moving furniture means placing them again (`--keep`) and rendering again
   whatever sees the change.
 - **Names matter to the bake.** `bake_web.py` classes objects by collection, `scene_index` and name
@@ -469,13 +683,15 @@ what replaces them.
 |---|---|---|
 | `kitchen_dining` | kitchen, dining | K0, K1, K2, K3, K4, D0, D1 (also seen from H2, H4, L2) |
 | `living` | living | L0, L1, L2, L3, L4, L5 |
-| `primary_suite` | primary, primary_dressing | P0, S0, S1, C0 |
+| `primary_suite` | primary, primary_dressing (the vestibule and the walk-in closet) | P0, P2, P3, P4, P5, S0, S1, C0 |
 | `bedrooms` | bed2, bed3, bed3_bay, bed4, bed4_closet, suite3_wic | B2, X0, B3, Y0, Y1, Y2, Y3, B4, Z0, C3 |
-| `baths` | ensuite, shared_bath, suite3_bath | A0, A1, A3 |
+| `baths` | ensuite, shared_bath, suite3_bath | A0 (also seen from S1), A1, A3 |
 | `hall_entry_garage` | front_hall, common_hall, garage, porch (inside face of the entry) | E0, H1, GA, LC, H0, H2, H3, H4, T2, G0, G1, G2, G3 |
 | `exterior` | everything outside the walls: grounds, garden, deck, fences, driveway, trees, garage door (both faces), exterior lights, distant context | OP, OD, and every sweep's window views |
 
 Boundaries: living owns the living region north of z=14.5; `kitchen_dining` owns the open area
 from z=14.5 southward. Halls own circulation only and leave the room zones alone. The laundry closet
 is not a zone's: `bl/revisions.py` and `bl/laundry.py` build it after the warp (collection
-`heg_laundry` under `zone_hall_entry_garage`), and `LC` is the sweep to review it from.
+`heg_laundry` under `zone_hall_entry_garage`), and `LC` is the sweep to review it from. The primary
+suite's walls and doors and the primary bath's door, window and skylight are revisions too; the two
+zones furnish what the revisions leave.

@@ -18,7 +18,8 @@ Coordinates are feet: x runs west -> east, z rear (north, garden) -> street (sou
 What it draws: the floor footprint, room fills, walls cut at 4 ft (dark) and floor-level pieces
 below the cut such as sills and the bay base (light), door leaves, window and skylight symbols,
 room labels with clear sizes in feet-inches (a door tag that would cover a room's label moves
-across its wall, away from that room: the laundry closet is no bigger than its label), chains of
+across its wall, away from that room: the laundry closet is no bigger than its label; with a label
+on both sides, as between the walk-in closet and the vestibule, it slides along the wall), chains of
 clear interior dimensions on all four sides (found by scanning the walls), overall outside-face
 dimensions, and one hit rect per room, window, skylight and door:
     <rect ... class="review-hit" data-measure="M01" tabindex="0" role="button" aria-label="..."/>
@@ -305,14 +306,30 @@ def build(scene, meas):
             svg.line(X(c), X(a), X(c), X(b), stroke=LEAF_LINE, stroke_width=1, stroke_dasharray='3 3')
         # The tag sits on the opening. Where that would cover a room's label (a closet as small as its own label,
         # with the door in the wall beside it), it moves across the wall to the side away from that room.
-        cx, cy = (r[0] + r[2]) / 2, (r[1] + r[3]) / 2
+        cx, cy = ox, oy = (r[0] + r[2]) / 2, (r[1] + r[3]) / 2
         w, h = tag_size(d['id'], 10)
+
+        def covered(x, y):
+            return [(lx, ly, lw, lh) for lx, ly, lw, lh, _, _ in room_labels
+                    if abs(x - lx) < (w + lw) / 2 and abs(y - ly) < (h + lh) / 2]
         for lx, ly, lw, lh, _, _ in room_labels:
             if abs(cx - lx) < (w + lw) / 2 and abs(cy - ly) < (h + lh) / 2:
                 if d['axis'] == 'x':
                     cy = ly + (1 if cy >= ly else -1) * ((h + lh) / 2 + 3)
                 else:
                     cx = lx + (1 if cx >= lx else -1) * ((w + lw) / 2 + 3)
+        if covered(cx, cy):
+            # A label on each side of the wall, both in line with the door (the walk-in closet and the vestibule
+            # beside it): there is no free side, so the tag stays on the wall line and slides along it, to the
+            # nearer end of the labels in its way.
+            hit = covered(ox, oy)
+            if d['axis'] == 'x':
+                ends = (min(lx - (w + lw) / 2 for lx, _, lw, _ in hit) - 3, max(lx + (w + lw) / 2 for lx, _, lw, _ in hit) + 3)
+                spots = [(x, oy) for x in sorted(ends, key=lambda x: abs(x - ox))]
+            else:
+                ends = (min(ly - (h + lh) / 2 for _, ly, _, lh in hit) - 3, max(ly + (h + lh) / 2 for _, ly, _, lh in hit) + 3)
+                spots = [(ox, y) for y in sorted(ends, key=lambda y: abs(y - oy))]
+            cx, cy = next((p for p in spots if not covered(*p)), (cx, cy))
         t = tag(cx, cy, d['id'], 10)
         hits.append((d, r, t))
 

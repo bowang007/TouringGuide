@@ -187,12 +187,25 @@ export function createViewer(opts) {
     const dx = r.at[0] - s.p[0], dz = r.at[1] - s.p[2];
     return Math.hypot(dx, dz) > 0.5 ? Math.atan2(dx, -dz) : undefined;
   }
+  // A sweep is one of a room's when it belongs to the room or stands in it.
+  const sweepOf = (room, s) => s.room === room.id || standsIn.get(s.id) === room;
+  // A measured room (one with a `tag`, its number in the schedule) is bounded by the clear faces of its
+  // own walls; the open spaces (living, kitchen, hall, garage: no tag) are rectangles that reach over
+  // their neighbours. So a plan point inside a measured room lies beyond a wall, or beyond a doorway,
+  // from a sweep that stands in another room and is not one of this room's: true for such a pair. The
+  // dollhouse and the floor plan then do not let the dot of that sweep catch a click beside it (the
+  // floor of the primary bath just inside its door is a foot from the sweep that stands in the
+  // vestibule). A sweep in a doorway stands in no room and is walled off from neither side.
+  function walledOff(x, z, s) {
+    const room = roomAt(x, z), other = standsIn.get(s.id);
+    return !!room && !!room.tag && !!other && other !== room && !sweepOf(room, s);
+  }
   // The sweep a plan point leads to: the nearest of the sweeps of the point's room (the ones that belong
   // to it and the ones that stand in it); the room's own sweep when it has none of either; the nearest
   // sweep of all for a point outside every room.
   function nearestSweep(x, z) {
     const room = roomAt(x, z);
-    let list = room ? sweeps.filter((s) => s.room === room.id || standsIn.get(s.id) === room) : [];
+    let list = room ? sweeps.filter((s) => sweepOf(room, s)) : [];
     if (!list.length && room && sweepMap.has(room.sweep)) return sweepMap.get(room.sweep);
     if (!list.length) list = sweeps;
     return list.reduce((a, b) => Math.hypot(a.p[0] - x, a.p[2] - z) <= Math.hypot(b.p[0] - x, b.p[2] - z) ? a : b, list[0]) || null;
@@ -606,7 +619,7 @@ export function createViewer(opts) {
   // ---- public --------------------------------------------------------------------------------
   const viewer = {
     canvas, engine, tour, util, caps, panos, size, pointers, keys, query,
-    sweeps, sweep, roomOf, roomAt, lookInto, path, nearestSweep,
+    sweeps, sweep, roomOf, roomAt, lookInto, path, nearestSweep, walledOff,
     on, emit, report,
     register, controllers, setMode, setEngineState, start,
     setEngineMode, setBackground, render, project, ray, ndc, pick,

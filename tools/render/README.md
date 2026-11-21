@@ -10,7 +10,7 @@ This folder builds everything the site shows from the measured model of the hous
 
 | Output | Script | Published as |
 |---|---|---|
-| 45 panoramas, 8192×4096 (43 indoor sweeps, the front porch, the rear deck) | `render_panos.py` | `assets/panos/{8k,4k,2k}/<ID>.webp`, `assets/thumbs/`, by `tools/web/publish_panos.py` |
+| 49 panoramas, 8192×4096 (47 indoor sweeps, the front porch, the rear deck) | `render_panos.py` | `assets/panos/{8k,4k,2k}/<ID>.webp`, `assets/thumbs/`, by `tools/web/publish_panos.py` |
 | 10 hero stills (7 used by the page) | `render_heroes.py` | `assets/design/<key>.webp` (landing page, Design sheet), by `tools/web/publish_design.py` |
 | 32 exterior orbit frames, 3000×2000 | `render_exterior.py` | `assets/exterior/`, by `tools/web/publish_exterior.py` |
 | Baked model (GLB with lightmap atlases) | `bake_web.py` | `assets/model/house.glb`: dollhouse, floor plan, and the surface the panoramas are projected on during a move |
@@ -122,16 +122,16 @@ fails (exit code, a Python traceback, or `FAILED` in the build log). It does not
 | `build` | `build_scene.py --zones all --strict` | `house.blend` | about 1 min |
 | `probe` | automatic exposure and white balance of every sweep, no panorama | `panos_probe/render_meta.json` | 106 s for 43 sweeps |
 | `smooth` | `smooth_exposure.py` relaxes those values along the tour graph | `panos/pins.json` | 1 s |
-| `panos` | `render_panos.py --pins --skip-existing` | `panos/<ID>.png`, `panos/render_meta.json` | about 3.2 min per sweep (2.6 to 3.9): 2 h 18 min for 43, so about 2 h 25 min for today's 45 |
+| `panos` | `render_panos.py --pins --skip-existing` | `panos/<ID>.png`, `panos/render_meta.json` | about 3.2 min per sweep (2.6 to 3.9): 2 h 18 min for 43, so about 2 h 37 min for today's 49 |
 | `heroes` | `render_heroes.py`, 2400 px, 1024 samples | `heroes/<key>.png` | about 16 min |
 | `bake` | `bake_web.py --detail 2` | `web/house.glb`, `web/house.summary.json` | about 13 min |
 | `adapt` | `adapt_web.py` | `web/adapt.json` | seconds |
 | `exterior` | `render_exterior.py`, 3000 px, 512 samples | `exterior/` | about 18 min |
 
-(Panorama, probe and smooth times: the fourth round's run of all 43 sweeps, 2026-11-19; the fifth
-round rendered only 32 of its 45 sweeps again, see "Re-render a subset". Heroes and exterior: the
-third-round run. Bake: a full test bake at `--detail 2`.) A panorama PNG is 8-bit RGB, about 33 MB.
-While one renders, the card shows about 13.5 GB in use.
+(Times: the fourth round's run of all 43 sweeps, 2026-11-19, 185 min from the panoramas to the
+exterior frames. The fifth and the sixth round each rendered 32 sweeps again, see "Re-render a
+subset"; the fifth took 131 min with the hero stills and the bake.) A panorama PNG is 8-bit RGB,
+about 33 MB. While one renders, the card shows about 13.5 GB in use.
 
 * **Environment:** `SKIP` (stage names to skip), `NODES` (comma list of sweeps for the probe and
   panorama stages; default all), `PANO_ARGS`, `SMOOTH_ARGS`, `BAKE_DETAIL` (default 2), `BAKE_ARGS`,
@@ -215,8 +215,18 @@ python3 tools/web/build_site_data.py --version <YYYY-MM-DDx>        # assets/dat
 
 1. Edit the zone module(s), `bl/zones/<zone>*.py` (rules in `DESIGN.md`). Zone code is written in
    **concept-plan** feet; `bl/warp.py` carries it onto the architect's plan.
+   **Two rooms are the exception** (sixth round): the primary suite (`primary_suite.py`: bedroom,
+   vestibule, walk-in closet) and the primary bath (`baths_primary.py`) are fitted out after the
+   warp, in **plan feet**. There a number in the code is the number on the architect's sheet and
+   in the built model: edit it directly, with no inverse map. The warp's name rules (fitted or
+   loose) do not touch these pieces; the bake's name rules still do. Their walls, doors, windows
+   and the skylight are revisions; move those in `bl/revision_spec.py` (`SUITE_*`, `BATH_*`,
+   `PRIMARY_BATH_*`), which the zone, the sweep placement and the web data read too. See
+   "Architect's plan and the owner's changes".
 2. Preview: `tools/render/dev_preview.sh kitchen_dining K0,D0,H2` builds only that zone and writes
-   `.cache/dev_kitchen_dining/K0_sheet.png` (four 90° views) for each sweep named.
+   `.cache/dev_kitchen_dining/K0_sheet.png` (four 90° views) for each sweep named. The revisions
+   run in every build, so `dev_preview.sh primary_suite P0,S0,C0` and `dev_preview.sh baths A0`
+   show those two rooms fitted out; a fit-out whose zone was not asked for is skipped.
 3. Full build (about a minute), then steps 1 and 2 of "Verify":
 
    ```bash
@@ -231,14 +241,15 @@ python3 tools/web/build_site_data.py --version <YYYY-MM-DDx>        # assets/dat
 ### Add or move sweeps
 
 `place_sweeps.py` ray-casts the built model (CPU only) and decides where the camera may rest. It keeps
-the 20 seed stops, keeps an old approach stop only where it joins the graph, puts a sweep in every
-doorway that has none within 3 ft, fills the remaining reachable floor (≥ 1.2 ft clearance, ≥ 4 ft
-between sweeps that see each other, at most 4 in the garage), and adds `LC` in the foyer, 4 ft in
+the 20 seed stops (the walk-in closet's `C0` goes to the middle of the closet's aisle, `WALKIN`),
+keeps an old approach stop only where it joins the graph, puts a sweep in every doorway that has
+none within 3 ft, fills the remaining reachable floor (≥ 1.2 ft clearance, ≥ 4 ft between
+sweeps that see each other, at most 4 in the garage), and adds `LC` in the foyer, 4 ft in
 front of the laundry closet's door wall and looking 14° down at the stacked units, and the outdoor
 sweeps `OP` (porch) and `OD` (deck) when their doors stand open. It writes `links` (straight lines a
 person can walk) and `visible` (line of sight, through clear glass). The result is deterministic and
-ids are stable; the rules are in `DESIGN.md`. On the fifth-round model: 45 sweeps, 55 links, one
-component, 14 hops across, links 2.9 to 10.6 ft; the old ids T1 T3 T4 T6 P1 are gone.
+ids are stable; the rules are in `DESIGN.md`. On the sixth-round model: 49 sweeps, 58 links, one
+component, 16 hops across, links 2.9 to 10.6 ft; the old ids T1 T3 T4 T6 P1 are gone.
 
 ```bash
 $BLENDER -b tools/render/.cache/house.blend -noaudio --python tools/render/place_sweeps.py -- \
@@ -253,14 +264,21 @@ python3 tools/render/extract_scene.py && python3 tools/web/dimension_plan.py
   the graph is not connected and nothing was written.
 * **`--keep SWEEPS.json` keeps an installed layout** (normally the file the run overwrites), so that
   the panoramas of the untouched rooms stay valid after a change to part of the model. Every sweep
-  of that file stays exactly where it is, with its id, yaw, pitch and label, while the new model
+  of that file stays exactly where it is, with its id, yaw and pitch, while the new model
   leaves it at least 0.9 ft of clearance (`--keep-clear`). A seed the scene file has moved since
   (`NODE_MOVES`) follows the scene; a sweep that lost its place is nudged by up to 1.5 ft or
-  dropped, with a note; `LC` follows the closet. The usual rules then add sweeps only on floor the
-  kept ones leave uncovered, with ids the kept file never used, and `links` / `visible` are computed
-  afresh. The file's `"keep"` block (printed by `apply_sweeps.py`) lists the unchanged, moved, new
-  and removed ids. Fifth round: 41 unchanged, `K0` and `LC` moved, `D1` and `K4` new, none removed.
-  A second run on its own result keeps all 45.
+  dropped, with a note; `LC` follows the closet. A label follows the scene file too: a renamed
+  seed takes its new name, and with it the kept sweeps that carried its old one. The usual rules
+  then add sweeps only on floor the kept ones leave uncovered, with ids the kept file never used,
+  and `links` / `visible` are computed afresh. The file's `"keep"` block (printed by
+  `apply_sweeps.py`) lists the unchanged, moved, new, removed and renamed ids. Sixth round: 43
+  unchanged; `C0` and `S1` moved; `P2 P3 P4 P5` new, on the floor the bed left uncovered when it
+  moved to the west wall; none removed; `S0`, `S1` ("Primary vestibule") and `C0` ("Walk-in
+  closet") renamed. A second run on its own result keeps all 49.
+* **Opening views chosen by eye** are in `OPENING` in `apply_sweeps.py` and override the automatic
+  or kept yaw and pitch at every install: `G0`, `H2`, and since the sixth round `C0` (the closet's
+  hanging wall), `S1` (through the bath door at the stone wall), `A0` (across the vanity), `P5`
+  (the bed between the two windows) and `A3` (the taller shower window).
 * **Without `--keep`** the whole tour is laid out afresh from the seeds: fill sweeps may land
   elsewhere, and then every panorama has to be rendered again.
 * **More or fewer sweeps** (a fresh layout): `--min-sep` (default 4.0 ft between sweeps that see each
@@ -287,21 +305,31 @@ A plan change has three records that must agree:
 1. `bl/revision_spec.py`: the numbers (pure Python, no `bpy`), on the architect's plan.
 2. `bl/revisions.py`: the Blender geometry. Add a function and put it in the list in `apply()` before
    `floor_gaps` and `skirting_trim`. Copy an existing wall for a new wall (`_like`), so it keeps a
-   `scene_index` and bakes as a wall. A zone that must make room reads the same spec: zones are
-   written in concept feet, so Bedroom 4 carries the closet wall's face back with the inverse of
-   `relayout.X_FRONT_ROOMS` (`bedrooms._b4_desk_x`).
+   `scene_index` and bakes as a wall. Raise when a piece is not where the spec expects it: that
+   shows as `FAILED` on the `revisions:` line. A zone that must make room reads the same spec:
+   zones are written in concept feet, so Bedroom 4 carries the closet wall's face back with the
+   inverse of `relayout.X_FRONT_ROOMS` (`bedrooms._b4_desk_x`). Anything put into the `openings`
+   collection stays below 7 ft or carries "ceiling" in its name: `check_holes.py` casts its
+   ceiling rays up from 7 ft (the suite entry's track ends at 6.99 ft).
 3. `apply_revisions_web.py`: the web data. A new change list (`CHANGES_<n>`, or a function like
-   `changes_5()` when the text quotes the spec's numbers; it becomes
+   `changes_6()` when the text quotes the spec's numbers; it becomes
    `design_revision.owner_changes_<n>` and shows in the Design sheet by itself), rooms / doors /
    windows in the measurements, wall boxes **appended** to `scene.objects` by name (an existing wall
-   that gets an opening is shortened in place and keeps its index), a `scene.audit` row, and the
-   Design view if the change gets one. A change list that a later round overrides stays, reworded
-   to say so.
+   that gets or loses part of an opening is reshaped in place and keeps its index; a door that
+   moves keeps its leaf object, moved in place), a `scene.audit` row, and the Design view if the
+   change gets one. A change list that a later round overrides stays, reworded to say so.
+
+The smallest complete example is the Bedroom 3 bathroom's taller window (sixth round):
+`BED3_BATH_WIN_Y` in the spec; `revisions.bedroom3_bath_window` reshapes the wall, the frame and the
+pane; `baths.build_suite3` cuts its tile and builds the sill and the jamb returns from the same
+constant; `apply_revisions_web.py` reads it for W11.
 
 For a design still: a camera in `data/hero_cameras.json`, its key in `KEYS` of
 `tools/web/publish_design.py`, and `views.<key>` in `data/design.json`.
 
-Then, in this order: build and verify; `apply_relayout.py` and `apply_revisions_web.py`;
+Before any of it, put what the request leaves open to the owner as direct questions, each with a
+recommended answer (`DESIGN.md`, "Sixth round": two of four recommendations were wrong). Then, in
+this order: build and verify; `apply_relayout.py` and `apply_revisions_web.py`;
 `place_sweeps.py --keep` on the new build (look at the overlay); the sequence from `apply_sweeps.py`
 on; render what the change touches ("Re-render a subset"); publish; tests. Add the round to
 `DESIGN.md`.
@@ -311,37 +339,58 @@ on; render what the change touches ("Re-render a subset"); publish; tests. Add t
 * **A few sweeps, same build:** delete their PNGs in `.cache/panos/` (a sweep whose pin changed is
   redone without that), then
   `NODES=K0,LC SKIP="build probe smooth heroes bake adapt exterior" tools/render/final_run.sh`.
-* **After a rebuild that changed part of the house** (the fifth round's procedure; the sweeps were
-  placed with `--keep` first):
+* **After a rebuild that changed part of the house** (the procedure of the fifth and the sixth
+  round; the sweeps were placed with `--keep` first):
   1. *Which sweeps.* The moved and new ones of the `"keep"` block, and every kept sweep whose eye
      has a line of sight to a changed part of the model, on the old build or on the new one,
      through open doorways and clear glass. The `visible` lists do not answer that: they say which
-     sweeps see each other, and a sweep in the primary dressing room sees the dining table through
-     two doorways without seeing a sweep near it. The fifth round cast rays from every kept sweep to
-     a 7×7×7 lattice of points in a box around each changed part (the closet's and the dining set's
-     old and new places, the re-planned cabinetry, Bedroom 4's east half, the repaired ceiling and
-     floor strips), on both builds (one-off scripts, not in the repository). 32 of 45 sweeps were
-     rendered again; the 13 kept (`B3 P0 A0 A1 A3 C3 G2 G3 S1 X0 Y1 Y2 Y3`) are the three bathrooms,
-     four of Bedroom 3's five sweeps and its closet, the primary bedroom and the doorway to its
-     bath, one of Bedroom 2's two sweeps and two of the garage's four. When in doubt, render: a
+     sweeps see each other, and the entrance sweep sees the Bedroom 3 bathroom's window through two
+     doorways without seeing the sweep in that bathroom. Both rounds cast rays from every sweep to
+     a 7×7×7 lattice of points in a box around each changed part, on both builds (one-off scripts,
+     not in the repository). A changed part is a room as well as a wall: where a window grew, the
+     room is brighter, and every sweep that sees into it is rendered. When in doubt, render: a
      sweep costs three minutes.
-  2. *Pins for new sweeps.* A sweep without an entry in `.cache/panos/pins.json` is rendered with
-     its own automatic values (`render_panos.py` prints `NOT pinned`), which would show as a step in
-     the cross-fade. Give each new sweep the average of its linked neighbours' pins (`ev`, `kelvin`,
-     `tint`; new sweeps linked to each other are solved together) and check its links against the
-     smoothing limits (0.3 stop, 300 K, 6 tint). A sweep whose id is reused at another place (`LC`)
-     is pinned like a new one; the others keep their pins.
+     * Fifth round, 32 of 45: the laundry closet, the dining set, the re-planned cabinetry,
+       Bedroom 4's east half, the repaired ceiling and floor strips.
+     * Sixth round, 32 of 49: the nine sweeps of the primary suite; sixteen in the hall, Bedroom 2,
+       the shared bath, the dining area, the kitchen and the living room, because the suite entry
+       wall closes the hall's long axis and is seen from as far as the living room; `A3 Y1 B3` and
+       the entrance `E0`, which see the taller window; `Y0 Y2 Y3`, which see into that bathroom.
+       The 17 kept: `H1 H2 GA LC B4 Z0 C3 G0 G1 G2 G3 L1 L2 L4 L5 OP OD`.
+  2. *Pins.* A sweep without an entry in `.cache/panos/pins.json` is rendered with its own
+     automatic values (`render_panos.py` prints `NOT pinned`), which would show as a step in the
+     cross-fade; and a room that was rebuilt no longer fits its old pins. So probe the render list
+     on the new build into a scratch directory (`render_panos.py` with the probe stage's options:
+     `--nodes <ids> --preview-only --preview-width 480 --samples 16 --out <dir>`) and compare with
+     the automatic values of the published run (`auto` in `.cache/panos/render_meta.json`).
+     * Where the probes repeat (the fifth round), the pins stay, and each new sweep gets the
+       average of its linked neighbours' pins (`ev`, `kelvin`, `tint`; new sweeps linked to each
+       other are solved together). A sweep whose id is reused at another place (`LC`) is pinned
+       like a new one.
+     * Where a room's probe moved by more than 0.3 stop (the sixth round: the walk-in closet, now
+       an enclosed room with its own light, probed 1.35 stop lower, the bedroom 0.45), re-solve
+       the sweeps of the changed rooms: `smooth_exposure.py --fix <all other ids>` on a metadata
+       file in which the other sweeps carry their pins as probe values, so no kept panorama
+       changes. The nine suite sweeps needed `--move-kelvin 2600` to close every link. With the
+       old pins and the neighbours' average, the closet and the four new bedroom sweeps would
+       have come out about a stop too bright.
+
+     Either way every link must end inside the smoothing limits (0.3 stop, 300 K, 6 tint), and a
+     sweep whose pin changed is rendered.
   3. *Render.* Copy the new build to `.cache/house.blend`, then
      `NODES=<ids> SKIP="build probe smooth exterior" tools/render/final_run.sh` renders those
-     panoramas, all hero stills and the bake (add `heroes` to `SKIP` when no still shows the change;
-     drop `exterior` when something outside changed). Every sweep of `NODES` is redone, because its
-     metadata names the old build; the others are not touched.
+     panoramas, all hero stills and the bake (add `heroes` to `SKIP` when no still shows the change).
+     Drop `exterior` from `SKIP` when something outside changed: the stage renders all 32 frames,
+     which share one exposure. The sixth round did (the taller and the wider west window, the
+     moved skylight). Every sweep of `NODES` is redone, because its metadata names the old build;
+     the others are not touched.
   4. Until the next full render `render_meta.json` names two builds, so a run without `NODES` would
      redo the kept sweeps as well: keep passing `NODES`.
 * With `NODES`, always skip `probe` and `smooth`: the probe stage starts a fresh metadata file and
-  `smooth` would write a `pins.json` that holds only those sweeps. If the change alters how bright a
-  room is, probe and smooth all sweeps first (`SKIP="build panos heroes bake adapt exterior"`, 2
-  minutes) and add the sweeps whose pins moved to `NODES`.
+  `smooth` would write a `pins.json` that holds only those sweeps. Probing and smoothing all
+  sweeps again instead (`SKIP="build panos heroes bake adapt exterior"`, 2 minutes) is the other
+  way to follow a change in brightness, but it may move the pins of kept sweeps, which then have
+  to be rendered too.
 * **Publish only those:** `$PY tools/web/publish_panos.py tools/render/.cache/panos --only K0,LC`
   (the other manifest entries are kept).
 * **One hero still:** `tools/render/gpu.sh -b tools/render/.cache/house.blend -noaudio --python
@@ -396,12 +445,11 @@ same rooms in the same arrangement as the earlier concept model, but different s
   * Foyer: two skylights.
   * Primary bedroom: sliding door to the garden.
   * Bedroom 2: tall window from a 2'-0" sill to the ceiling (third round; it ran to the floor before).
-  * Primary bath: tall clear window from a 2'-0" sill to the ceiling, with a stool and a linen roman
-    shade (third round). The room's west-wall finish (`A0 tile west ...`, any material) is cut
-    around it by name. An evergreen screens it in the fenced side yard.
   * Kitchen: skylight on the east roof plane.
-  * Primary bath: skylight over the shower (second round).
   * Garage: the north cabinet run is fitted into the plan's narrower garage (`relayout.X_GARAGE_RUN`).
+  * Bedroom 3 bathroom (sixth round, `bedroom3_bath_window`): the shower window W11 runs from a
+    3'-0" sill to a 7'-6" head (`BED3_BATH_WIN_Y`; 5'-0" to 7'-0" before). Width, frosted glass
+    and frame stay; the bath zone builds tile, jamb returns and sill from the same constant.
   * **Laundry closet** (fifth round, `laundry_closet`): carved out of Bedroom 4's north-east
     corner, opening east onto the foyer. The revision cuts a 2'-6" × 6'-8" opening into the
     Bedroom 4 / foyer wall and builds the closet's west and south walls as copies of that wall,
@@ -412,6 +460,36 @@ same rooms in the same arrangement as the earlier concept model, but different s
     stands the desk in the niche beside the closet and dresses the closet's two bedroom faces
     (`bed4_closet_faces`, called by the revision after the warp). Numbers, naming rules and the
     fourth round's closet in the kitchen, which this one replaces: `DESIGN.md`, "Fifth round".
+  * **Primary suite** (sixth round; `suite_rooms`, `suite_fit_out`; numbers `SUITE_*`). The 8 ft
+    zone between the primary bedroom and the primary bath is divided as on the architect's sheet:
+    the walk-in closet, an enclosed room (6'-1" × 8'-0") behind a new 5 in wall with a sliding
+    pocket door (D18; its leaf is shown 0.30 ft out of the pocket, which leaves a 2.17 ft
+    passage: the sweep placement needs about 2.05 ft to reach the closet); the vestibule
+    (4'-7" × 8'-0"), open to the bedroom, with the attic access hatch in its ceiling; and the
+    suite entry (D09), a 2'-8" opening with a sliding panel on the hall side. The entry stands
+    1'-8" south of its place on the sheet, because this model has Bedroom 2's entry alcove where
+    the sheet has hall. `bl/zones/primary_suite_rooms.py` builds the walls (copies of the
+    bedroom / closet wall), doors, baseboards and the hatch, after `bath_door`.
+    `bl/zones/primary_suite.fit_out` furnishes the bedroom as drawn (king bed on the west wall
+    between the two west windows; W14 stays by the owner's decision although the sheet omits
+    it), the vestibule and the closet, and reports on the `revisions:` line anything in front of
+    window glass, within 3 ft of the bedroom's east wall, in a door opening or in a wall.
+  * **Primary bath** (sixth round; `bath_door`, `bath_window`, `primary_bath_skylight`,
+    `primary_bath_fit_out`; numbers `BATH_*`, `PRIMARY_BATH_*`). Laid out as on the sheet: door
+    D08 at the east end of the north wall, a 5'-0" × 3'-0" shower in the north-west corner under
+    the moved skylight W20, the toilet in the south-west corner, a 6'-6" double vanity on the
+    south wall, and window W13, 3'-0" wide from its 2'-0" sill to the ceiling, with its mullion
+    on the shower's glass line (clear glass; an evergreen screens it in the fenced side yard).
+    `primary_bath_fit_out` calls `bl/zones/baths_primary.build_room` for the finishes after the
+    owner's image `styles/primary bathroom wall style.jpg`: stacked stone on the vanity wall,
+    cream tile in the shower, grey-green board wainscot under cream plaster, a dark timber beam,
+    a plain grey stone floor.
+
+  **Built after the warp.** Since the sixth round these two rooms are not written on the concept
+  plan: `primary_suite.build()` and `baths_primary.build_primary()` only register the zone, and
+  the revisions above build the rooms in plan feet, because they must sit on the sheet's lines
+  and the warp moves loose furniture in clusters. Editing them: "Change a room's design".
+  Decisions, numbers and departures from the sheet: `DESIGN.md`, "Sixth round".
 
   Changes made in the zones themselves:
   * The dining table (`kitchen_dining_dining.build_rect`) continues the island's west end, toward
@@ -422,8 +500,9 @@ same rooms in the same arrangement as the earlier concept model, but different s
   * The kitchen's south wall is the third-round one: refrigerator column at the hall end, double
     ovens, the counter under three glass-front uppers, the cooktop under the hood.
   * Third round: Bedroom 4's bed is turned across the room (`bedrooms.build_bed4`), and the
-    kitchen, the primary bath (`baths_primary.py`), the shared bath (`baths_shared.py`) and the
-    garage door follow the owner's style images in `styles/`.
+    kitchen, the shared bath (`baths_shared.py`) and the garage door follow the owner's style
+    images in `styles/`. Of the primary bath's third-round restyle the oak trough vanity
+    remains; the sixth round replaced the rest.
 * **Web data:** `apply_revisions_web.py` writes the opening list, the room notes and the change
   lists (`design_revision.owner_changes[_N]`; the fourth round's entries say that the fifth
   superseded them). The laundry closet comes from `bl/revision_spec.py`: room M13 (2'-10" wide
@@ -434,6 +513,17 @@ same rooms in the same arrangement as the earlier concept model, but different s
   the highlight reel (`LC` after `B4`), adds the Design view `LC` when it is absent, prints a note
   when a hand-edited view still carries words of a superseded layout, and moves the kitchen stop
   K0 (`NODE_MOVES`, see "Add or move sweeps").
+  For the sixth round the tool divides the suite's 8 ft zone as the spec has it: room M05 becomes
+  the walk-in closet and keeps its tag, the vestibule is the new room M14, D18 is the closet's
+  pocket door, and D08, D09, D10, W11, W13 and W20 take their new extents; D09's entry says that
+  it stands 1'-8" south of the sheet (computed from `SUITE_ENTRY_Z` and `SUITE_ENTRY_SHEET_Z`).
+  In `scene.objects` the wall pieces around those openings are reshaped in place (`reshape()`
+  refuses a piece that is not where the spec expects it), the two old door leaves are moved in
+  place to their successors (the plan draws every box of group `door`, and objects are never
+  removed), and the closet's east wall (three pieces) and its pocket leaf are appended (5367 to
+  5370). The tool names the stops S0 and C0 after the two rooms (`NODE_NAMES`), writes
+  `owner_changes_6` and rewords the entries of earlier rounds that this one overtakes. The
+  Design view A0 is a hand edit of `data/design.json`.
   `tools/web/dimension_plan.py` redraws the Dimensions sheet from the scene and the measurements.
 
 ## How the look is controlled
@@ -477,15 +567,17 @@ node per group, with `extras.tg_class`:
 | `exterior` | Roof, fascia, facade skins | hidden | hidden | shown |
 | `landscape` | Grounds, deck, fences, paths, the street and the neighbours | shown (through windows) | hidden | shown; "Hide garden" |
 
-An object or a parent can force its class with a custom property `tg_class`. Name rules worth
+An object or a parent can force its class with a custom property `tg_class` (the primary bath's
+wall finishes do: stone, tile, wainscot and plaster are `wall`). Name rules worth
 knowing: anything named "door", "leaf", "jamb", "baseboard" ... is filed under walls (`WALL_PART`),
 so the washer's round door is called "hatch"; objects named `laundry closet ...` are `base`; a
 zone object named "cabinet", "closet", "vanity" ... is a built-in (`base`), so furniture and wall art
 must not carry such a word; a material named "glass" is exported as a transparent pane.
 
 * **Lighting** is the full Cycles result (GI, soft shadows, materials), baked into per-group atlases,
-  saved display-referred and shown unlit by three.js. A full bake at `--detail 2` gives 66 atlases
-  (58 MP, about 311 MB of GPU texture memory as RGBA8 with mipmaps) in a GLB of about 7 MB.
+  saved display-referred and shown unlit by three.js. The fifth round's bake at `--detail 2` gave
+  66 atlases (59 MP, about 315 MB of GPU texture memory as RGBA8 with mipmaps) in a GLB of about
+  7 MB.
 * **`--detail`** raises the texel density of floors / built-ins and furniture, because in the
   dollhouse and the floor plan the bake is the picture. `--tex-budget` (default 320 MB) caps the total;
   boosted atlases step down until it fits, so atlas sizes are not always powers of two.
@@ -629,12 +721,15 @@ The neighbouring houses' roof colours follow the aerial photo (`NEIGHBOUR_ROOFS`
   * `common.py`: scene context and geometry helpers.
   * `shell.py`: exact architecture with modern finishes.
   * `warp.py`: concept plan to architect's plan, inside Blender.
-  * `revision_spec.py`, `revisions.py`, `laundry.py`: the owner's changes.
+  * `revision_spec.py`, `revisions.py`, `laundry.py`, `zones/primary_suite_rooms.py`: the owner's
+    changes (numbers; geometry after the warp; the laundry closet's contents; the primary suite's
+    walls and doors).
   * `lighting.py`: sky, sun, portals, fixtures and balance.
   * `materials.py` + `materials_pbr.py`: material library (`KEYS` contract).
   * `assets.py`: Poly Haven fetch, cache and attribution.
   * `zones/<zone>*.py`: one module family per area (kitchen_dining, living, primary_suite, bedrooms, baths,
-    hall_entry_garage, exterior).
+    hall_entry_garage, exterior). `primary_suite.py` and `baths_primary.py` build after the warp,
+    in plan feet.
 * **`data/`** (read and written through `tools/web/sitedata.py`):
   * `scene.json`: the tour's full scene. `sweeps.json`: the sweeps (`place_sweeps.py`).
   * `measurements.json`: the dimension schedule. `design.json`: Design sheet views, text, image paths.

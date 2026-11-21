@@ -1,5 +1,5 @@
 {
- "version": "33f9179d9011",
+ "version": "1b7ba32bbb3a",
  "convention": "Equirectangular 2:1, top row = up (+y). Centre column = world yaw `offset` (yaw 0 = SCENE -z, plan north); u increases clockwise seen from above. Paths are relative to this file. Each node lists the resolution levels that exist; widths are in `widths`.",
  "widths": {
   "8k": 8192,
@@ -365,6 +365,46 @@
     "2k": "2k/LC.webp"
    },
    "thumb": "../thumbs/LC.webp",
+   "source": "render"
+  },
+  "P2": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/P2.webp",
+    "4k": "4k/P2.webp",
+    "2k": "2k/P2.webp"
+   },
+   "thumb": "../thumbs/P2.webp",
+   "source": "render"
+  },
+  "P3": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/P3.webp",
+    "4k": "4k/P3.webp",
+    "2k": "2k/P3.webp"
+   },
+   "thumb": "../thumbs/P3.webp",
+   "source": "render"
+  },
+  "P4": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/P4.webp",
+    "4k": "4k/P4.webp",
+    "2k": "2k/P4.webp"
+   },
+   "thumb": "../thumbs/P4.webp",
+   "source": "render"
+  },
+  "P5": {
+   "offset": 0,
+   "levels": {
+    "8k": "8k/P5.webp",
+    "4k": "4k/P5.webp",
+    "2k": "2k/P5.webp"
+   },
+   "thumb": "../thumbs/P5.webp",
    "source": "render"
   },
   "S1": {
