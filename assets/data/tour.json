@@ -1,5 +1,5 @@
 {
- "version":"2026-11-21b",
+ "version":"2026-11-21c",
  "title":"1095 W McKinley",
  "subtitle":"Proposed remodel · 4 bedrooms · 3 full bathrooms",
  "units":"ft",
@@ -99,5 +99,5 @@
   {"id":"garage","label":"Garage","bounds":[21.574,31.417,39.1938,52.3328],"at":[30.3839,41.8749],"sweep":"G0","tag":null}
  ],
  "highlights":["E0","L8","D0","K0","P0","B2","B3","B4","LC","A0","A1","A3","S0","C0","C3","G0"],
- "files":{"model":"492259bf237e","plan":"3803ad6f72ec","code":"fa37936fbce8"}
+ "files":{"model":"492259bf237e","plan":"3803ad6f72ec","code":"37b85e1dcd8a"}
 }

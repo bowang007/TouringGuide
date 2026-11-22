@@ -20,6 +20,10 @@
 // it needs handed in here (the viewer carries util, panos, the sweep graph and the engine). That way this
 // file can load them all with the release label (?v=...) that index.html put on main.js.
 
+// The mirror on netlify.app (tools/web/deploy_mirror.sh) carries the host's badge in the lower right corner on its
+// free plan; the chrome moves up clear of it (tour.css .host-badge).
+if (/\.netlify\.app$/.test(location.hostname)) document.documentElement.classList.add('host-badge');
+
 const ENGINE = './engine.js';
 const FILES = {
   tour: 'assets/data/tour.json',

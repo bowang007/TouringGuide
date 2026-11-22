@@ -141,18 +141,22 @@ every sweep `tour.json` names.
 ## Mirror for visitors who cannot reach GitHub Pages
 
 `github.io` is unreliable from mainland China. `deploy_mirror.sh` uploads `index.html` and `assets/` (nothing else)
-to Tencent EdgeOne Pages:
+to a second host:
 
 ```bash
 tools/web/deploy_mirror.sh --dry-run     # build the upload folder, print file count and size, send nothing
-tools/web/deploy_mirror.sh               # upload; needs the API token in ~/.edgeone_token or $EDGEONE_API_TOKEN
+tools/web/deploy_mirror.sh               # upload to https://mckinley-house-tour.netlify.app
 ```
 
-It needs an EdgeOne account with an API token, and a domain name added to the project in the console: the
-project's own address serves mainland visitors only through preview links that expire after 3 hours. With the
-project in the area "Global AZ (excluding Chinese mainland)" (`EDGEONE_AREA=overseas`, the default) the domain
-needs no ICP filing. Run it after every publish; GitHub Pages stays the address for everyone else. Whether a
-visitor in mainland China gets through has to be tested from there.
+* **Netlify** (default, in use): needs no domain; sign in once with `npx netlify-cli@17 login`. The site's
+  "team login protection", which new free accounts switch on for every site, is off for this site. The free plan
+  shows a "Powered by Netlify" badge in the lower right corner; on `*.netlify.app` the page lifts its controls
+  clear of it (`main.js` sets `.host-badge`, `tour.css` raises `--bottom`). A `netlify.app` address was reachable
+  from most mainland test locations in mid-2026 but can be slow: have someone there try it.
+* **Tencent EdgeOne Pages** (`MIRROR_HOST=edgeone`, not set up): needs an API token and a domain name added to the
+  project; its own address serves mainland visitors only through preview links that expire after 3 hours.
+
+Run the script after every publish; GitHub Pages stays the address for everyone else.
 
 ## Tests
 

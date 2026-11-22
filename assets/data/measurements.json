@@ -1,5 +1,5 @@
 {
- "version":"2026-11-21b",
+ "version":"2026-11-21c",
  "rooms":[
   {"name":"Primary bedroom","width_ft":11.0827,"depth_ft":12.2498,"area_sqft":135.76,"target_ft":[11.0827,12.2498],"matches_design_target":true,"id":"M01","node":"P0","basis":"P","bounds_ft":[0.225,11.3077,0.225,12.4748],"kind":"room","note":"Clear interior size; excludes walls. King bed with a low headboard on the west wall, centred between the two west windows (W15 and W14, both kept), with a nightstand under each; the rear sliding door W01 opens to the garden. Open to the vestibule at the south-east corner (D10, 4′7″ wide, no door)."},
   {"name":"Bedroom 2 · main bay","width_ft":10.5006,"depth_ft":12.25,"area_sqft":128.63,"target_ft":[10.5006,12.25],"matches_design_target":true,"id":"M02","node":"B2","basis":"R","bounds_ft":[11.6677,22.1683,0.225,12.475],"kind":"room","note":"Retained original main-room dimensions. Entry alcove and closet are separate."},

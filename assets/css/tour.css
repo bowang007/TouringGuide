@@ -4,6 +4,9 @@
    their paper look from the single-file page. */
 
 :root{
+  /* bottom inset of everything anchored to the lower edge; .host-badge lifts it clear of a badge the host puts
+     in the lower right corner (the free plan of the mirror on netlify.app) */
+  --bottom:max(var(--edge),env(safe-area-inset-bottom));
   --ink:#263330;--paper:#faf9f5;--accent:#315e4e;
   --bg:#16181b;--ui:rgba(36,39,43,.76);--ui-strong:rgba(30,33,37,.95);--ui-hover:rgba(255,255,255,.17);--ui-text:#fff;
   --edge:14px;--bar:44px;
@@ -50,13 +53,13 @@ body.fly-in::before{opacity:0}
 .toast.show{opacity:1}
 
 /* First-run hint (inside view): one line above the toolbar, with a small floor ring before the words. */
-.hint{position:absolute;left:50%;bottom:calc(max(var(--edge),env(safe-area-inset-bottom)) + var(--bar) + 14px);transform:translateX(-50%);z-index:4;max-width:calc(100vw - 24px);padding:9px 16px 9px 13px;border-radius:19px;background:var(--ui);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font-size:12.5px;font-weight:500;letter-spacing:.1px;white-space:nowrap;opacity:0;visibility:hidden;transition:opacity .35s,visibility 0s .35s;pointer-events:none}
+.hint{position:absolute;left:50%;bottom:calc(var(--bottom) + var(--bar) + 14px);transform:translateX(-50%);z-index:4;max-width:calc(100vw - 24px);padding:9px 16px 9px 13px;border-radius:19px;background:var(--ui);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font-size:12.5px;font-weight:500;letter-spacing:.1px;white-space:nowrap;opacity:0;visibility:hidden;transition:opacity .35s,visibility 0s .35s;pointer-events:none}
 .hint::before{content:"";display:inline-block;width:15px;height:8px;margin-right:9px;border:2px solid #fff;border-radius:50%;vertical-align:-1px;opacity:.95}
 .hint.show{opacity:1;visibility:visible;transition:opacity .5s .5s,visibility 0s .5s}
 .reel-open .hint,.no-webgl .hint{display:none}     /* the reel stands where the hint would show */
 /* While the 3D model is still on its way a visitor who is already inside sees this note in the hint's
    place (the hint comes when the rings do). And the mark of a view that is loading (a far jump, a fly-in). */
-.note{position:absolute;left:50%;bottom:calc(max(var(--edge),env(safe-area-inset-bottom)) + var(--bar) + 14px);transform:translateX(-50%);z-index:4;max-width:calc(100vw - 24px);padding:9px 16px;border-radius:19px;background:var(--ui);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font-size:12.5px;font-weight:500;letter-spacing:.1px;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:0;visibility:hidden;transition:opacity .35s,visibility 0s .35s;pointer-events:none}
+.note{position:absolute;left:50%;bottom:calc(var(--bottom) + var(--bar) + 14px);transform:translateX(-50%);z-index:4;max-width:calc(100vw - 24px);padding:9px 16px;border-radius:19px;background:var(--ui);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font-size:12.5px;font-weight:500;letter-spacing:.1px;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:0;visibility:hidden;transition:opacity .35s,visibility 0s .35s;pointer-events:none}
 .note.show{opacity:1;visibility:visible;transition:opacity .35s}
 .reel-open .note,.no-webgl .note{display:none}
 .wait{position:absolute;left:50%;top:50%;z-index:4;display:none;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:var(--ui);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);pointer-events:none}
@@ -65,7 +68,7 @@ body.fly-in::before{opacity:0}
 .no-webgl .wait{display:none}
 
 /* ---- Toolbar: round dark buttons, the active mode filled white ---- */
-.bar{position:absolute;bottom:max(var(--edge),env(safe-area-inset-bottom));z-index:6;display:flex;gap:6px;align-items:center}
+.bar{position:absolute;bottom:var(--bottom);z-index:6;display:flex;gap:6px;align-items:center}
 .bar-left{left:max(var(--edge),env(safe-area-inset-left))}
 .bar-right{right:max(var(--edge),env(safe-area-inset-right))}
 .bar-group{display:flex;gap:2px;padding:3px;border-radius:calc(var(--bar)/2);background:var(--ui);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -81,14 +84,14 @@ body.fly-in::before{opacity:0}
 @media(hover:none){.rb[data-tip]::after{display:none}}
 .reel-open .rb[data-tip]::after{display:none}     /* the reel stands where the tips would show */
 
-.menu{position:absolute;right:max(var(--edge),env(safe-area-inset-right));bottom:calc(max(var(--edge),env(safe-area-inset-bottom)) + var(--bar) + 8px);z-index:7;display:none;min-width:210px;padding:6px;border-radius:14px;background:var(--ui-strong);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.menu{position:absolute;right:max(var(--edge),env(safe-area-inset-right));bottom:calc(var(--bottom) + var(--bar) + 8px);z-index:7;display:none;min-width:210px;padding:6px;border-radius:14px;background:var(--ui-strong);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 12px 40px rgba(0,0,0,.45)}
 .menu.open{display:block}
 .menu button{display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;border-radius:9px;color:#fff;font-size:13px;text-align:left}
 .menu button:hover{background:var(--ui-hover)}
 .menu button:focus-visible{outline:2px solid #fff;outline-offset:-2px}
 
 /* ---- Highlight reel: slides up from the bottom, above the toolbar ---- */
-.reel{position:absolute;left:0;right:0;bottom:calc(max(var(--edge),env(safe-area-inset-bottom)) + var(--bar) + 6px);z-index:5;padding:0 max(var(--edge),env(safe-area-inset-right)) 0 max(var(--edge),env(safe-area-inset-left));opacity:0;visibility:hidden;transform:translateY(34px);pointer-events:none;transition:transform .28s cubic-bezier(.2,.7,.2,1),opacity .2s,visibility 0s .28s}
+.reel{position:absolute;left:0;right:0;bottom:calc(var(--bottom) + var(--bar) + 6px);z-index:5;padding:0 max(var(--edge),env(safe-area-inset-right)) 0 max(var(--edge),env(safe-area-inset-left));opacity:0;visibility:hidden;transform:translateY(34px);pointer-events:none;transition:transform .28s cubic-bezier(.2,.7,.2,1),opacity .2s,visibility 0s .28s}
 .reel.open{opacity:1;visibility:visible;transform:none;transition:transform .28s cubic-bezier(.2,.7,.2,1),opacity .2s}
 .reel-strip{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;padding:4px 2px 6px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent;scroll-snap-type:x proximity;pointer-events:auto}
 .reel-card{position:relative;flex:0 0 152px;height:95px;padding:0;overflow:hidden;border-radius:9px;background:#24272b;box-shadow:0 0 0 1px rgba(255,255,255,.16),0 4px 16px rgba(0,0,0,.35);scroll-snap-align:start}
@@ -99,7 +102,7 @@ body.fly-in::before{opacity:0}
 .reel-card:focus-visible{outline:2px solid #fff;outline-offset:2px}
 
 /* ---- Exterior controls ---- */
-#exteriorControls{position:absolute;left:50%;bottom:max(var(--edge),env(safe-area-inset-bottom));transform:translateX(-50%);z-index:5;display:none;gap:6px;align-items:center;max-width:calc(100% - 2*var(--edge))}
+#exteriorControls{position:absolute;left:50%;bottom:var(--bottom);transform:translateX(-50%);z-index:5;display:none;gap:6px;align-items:center;max-width:calc(100% - 2*var(--edge))}
 .mode-exterior #exteriorControls{display:flex}
 .reel-open #exteriorControls{display:none}
 .exterior-views,.exterior-actions{display:flex;gap:2px;padding:3px;border-radius:calc(var(--bar)/2);background:var(--ui);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -109,7 +112,7 @@ body.fly-in::before{opacity:0}
 .exterior-actions #exteriorEnter{background:#fff;color:var(--bg);font-weight:600}
 .exterior-actions #exteriorEnter:hover{background:#e9ecea}
 #exteriorControls button:focus-visible{outline:2px solid #fff;outline-offset:2px}
-@media(max-width:1280px){#exteriorControls{bottom:calc(max(var(--edge),env(safe-area-inset-bottom)) + var(--bar) + 8px)}}
+@media(max-width:1280px){#exteriorControls{bottom:calc(var(--bottom) + var(--bar) + 8px)}}
 @media(max-width:760px){#exteriorControls{flex-direction:column}}
 
 /* ---- Loading, error, no-WebGL fallback ---- */
@@ -242,3 +245,4 @@ body.fly-in::before{opacity:0}
 .landing-actions svg{width:22px;height:22px;flex:none}
 @media(max-width:640px){.landing-actions{flex-direction:column}.landing-actions button{min-width:0;width:100%;padding:15px 18px}.landing h1{margin-bottom:20px}}
 @media(prefers-reduced-motion:reduce){.landing-actions button{transition:none}}
+.host-badge{--bottom:calc(max(var(--edge),env(safe-area-inset-bottom)) + 50px)}
