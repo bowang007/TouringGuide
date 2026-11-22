@@ -648,7 +648,7 @@ test('design sheet: the primary bathroom\'s view and the sixth round tell of the
   assert.ok(byId.has(v.node) && holds(bath, byId.get(v.node).p[0], byId.get(v.node).p[2]), '"Walk into this room" stands in the primary bathroom (' + v.node + ')');
   assert.match(text, /stone[^.]*(vanity|south) wall|(vanity|south) wall[^.]*stone/i, 'the stone is on the vanity wall');
   assert.match(text, /shower[^.]*north-west|north-west[^.]*shower/i, 'the shower stands in the north-west corner');
-  // the finishes of the third round are gone (the wainscot is "grey-green": only the tile and the floor are named here)
+  // the finishes of the third round are gone (the walls of the seventh round have a test of their own below)
   assert.doesNotMatch(text, /sage|subway|encaustic|brass|blue-and-cream/i, 'no word of the green shower tile, the brass or the patterned floor');
   // no view describes the open dressing area or its wardrobes any more
   const stale = Object.entries(design.views).filter(([, o]) => /dressing area|open wardrobe/i.test(o.title + ' ' + o.text)).map(([k]) => k);
@@ -661,4 +661,154 @@ test('design sheet: the primary bathroom\'s view and the sixth round tell of the
   assert.ok(says(/shower/i, /window/i, /3'-0"/, /7'-6"/), 'the front suite\'s shower window runs from a 3\'-0" sill to a 7\'-6" head');
   assert.ok(says(/stone/i, /vanity wall/i), 'the stone is on the vanity wall');
   assert.ok(says(/primary bedroom/i, /both west windows/i), 'both west windows of the primary bedroom are kept');
+});
+
+// ---- the owner's seventh round (2026-11-21) -------------------------------------------------------------
+// The refrigerator stands in view beside the microwave, every window is white with grid bars, the primary
+// bathroom's walls are white, the living room's fireplace is sealed with the sofa on that wall and the
+// television opposite, and the sky is turned so that the yard faces north. No wall and no opening moves:
+// the round is texts, and in the living room new sweeps around the new furniture for one that went (L5
+// stood where the sofa is now). The only id written here is L5; rooms, cards, windows and views are found
+// by their names, and places are held to the rule (which room, which side), not to coordinates.
+const cardNamed = (re) => tour.highlights.map((id) => byId.get(id)).filter((s) => s && re.test(s.label));
+// Where the line of sight of a sweep (its opening yaw) leaves a room's rectangle: {x, z, side} or null
+// when it never enters the room.
+function leaves(room, s) {
+  const a = s.yaw * Math.PI / 180, d = [Math.sin(a), -Math.cos(a)], o = [s.p[0], s.p[2]], [x0, z0, x1, z1] = room.bounds;
+  let t0 = 0, t1 = Infinity, side = null;
+  for (const [k, lo, hi, low, high] of [[0, x0, x1, 'west', 'east'], [1, z0, z1, 'north', 'south']]) {
+    if (Math.abs(d[k]) < 1e-9) { if (o[k] < lo || o[k] > hi) return null; continue; }
+    const ta = (lo - o[k]) / d[k], tb = (hi - o[k]) / d[k], out = Math.max(ta, tb);
+    t0 = Math.max(t0, Math.min(ta, tb));
+    if (out < t1) { t1 = out; side = d[k] > 0 ? high : low; }
+  }
+  return t0 <= t1 ? { x: o[0] + d[0] * t1, z: o[1] + d[1] * t1, side } : null;
+}
+
+test('seventh round: sweep L5 is gone; the reel\'s "Living room" card stands in the living room and looks at the rear glass', (t) => {
+  // the sweep that stood where the sofa is now: no sweep, and nothing still names it
+  assert.ok(!byId.has('L5'), 'tour.json has no sweep L5');
+  const naming = [...tour.sweeps.flatMap((s) => [...s.links, ...s.visible].map((id) => [s.id, id])), ...tour.highlights.map((id) => ['highlights', id]), ...tour.rooms.map((r) => [r.id, r.sweep]),
+    ...[...measurements.rooms, ...measurements.windows, ...measurements.doors].map((x) => [x.id, x.node]), ...Object.entries(design.views).map(([k, v]) => ['view ' + k, v.node]), ...Object.keys(manifest.nodes).map((id) => ['panorama manifest', id])];
+  assert.deepEqual([...new Set(naming.filter(([, id]) => id === 'L5').map(([who]) => who))], [], 'still naming L5');
+  // one card "Living room", on a sweep that exists and stands in the living room
+  const room = named(/^living room$/i);
+  assert.ok(room, 'tour.json has the room "Living room"');
+  const cards = cardNamed(/^living room$/i);
+  assert.equal(cards.length, 1, 'one card "Living room" in the reel (' + tour.highlights.filter((id) => !byId.has(id) || /^living room$/i.test(byId.get(id).label)).join(', ') + ')');
+  const card = cards[0];
+  assert.ok(!card.outdoor && holds(room, card.p[0], card.p[2]) && card.room === room.id, 'its sweep ' + card.id + ' stands in the living room');
+  assert.equal(room.sweep, card.id, 'a click on the room\'s name on the floor plan enters where the card does');
+  // it shows the room at a glance: the rear glass ahead, so the television wall and the sofa wall are left and right of it
+  const rear = [...measurements.windows, ...measurements.doors].filter((o) => /^living\b/i.test(o.name) && o.axis === 'x' && Math.abs(o.c - room.bounds[1]) < 1);
+  assert.ok(rear.filter((o) => o.kind === 'window').length >= 2 && rear.some((o) => o.kind === 'door'), 'the schedule has the living room\'s rear glazing and its garden door (' + rear.map((o) => o.id).join(', ') + ')');
+  const glass = rear.filter((o) => o.kind === 'window'), mid = (Math.min(...glass.map((o) => o.start)) + Math.max(...glass.map((o) => o.end))) / 2, wall = glass[0].c;
+  const off = turn(card.yaw, bearing(card, mid, wall)), back = card.p[2] - wall, across = (card.p[0] - room.bounds[0]) / (room.bounds[2] - room.bounds[0]);
+  assert.ok(off <= 30, 'the card opens looking at the rear glass (' + off.toFixed(1) + ' degrees off its middle)');
+  assert.ok(back >= 10, 'from far enough back to have the room in the picture (' + back.toFixed(1) + ' ft from the glass)');
+  assert.ok(across > 0.3 && across < 0.7, 'from the middle of the room\'s width, a side wall to its left and to its right (at ' + (across * 100).toFixed(0) + ' % of the width)');
+  assert.ok(card.pitch <= 0 && card.pitch >= -10, 'level or a little down (pitch ' + card.pitch + ')');
+  t.diagnostic('Living room card ' + card.id + ' at (' + card.p[0] + ', ' + card.p[2] + '), yaw ' + card.yaw + ', ' + back.toFixed(1) + ' ft from the rear glass');
+});
+
+test('seventh round: the living room\'s sweeps are one piece, with a stop in front of each opening of the rear wall', (t) => {
+  const room = named(/^living room$/i), here = standing(room).filter((s) => s.room === room.id);
+  assert.ok(here.length >= 6, 'sweeps stand in the living room (' + here.map((s) => s.id).join(', ') + ')');
+  // from the dining end to the rear glass and to every other stop without leaving the room
+  const mine = new Set(here.map((s) => s.id)), start = cardNamed(/^open living area$/i)[0] || here[0];
+  assert.ok(mine.has(start.id), 'the card "Open living area" stands in the room (' + start.id + ')');
+  const seen = new Set([start.id]), queue = [start.id];
+  while (queue.length) for (const id of byId.get(queue.shift()).links) if (mine.has(id) && !seen.has(id)) { seen.add(id); queue.push(id); }
+  assert.deepEqual([...mine].filter((id) => !seen.has(id)), [], 'sweeps of the living room that cannot be reached from ' + start.id + ' over links inside the room');
+  // the rear wall: a stop within 3 ft of each of its openings, in front of it
+  const rear = [...measurements.windows, ...measurements.doors].filter((o) => /^living\b/i.test(o.name) && o.axis === 'x' && Math.abs(o.c - room.bounds[1]) < 1);
+  const at = rear.map((o) => [o, here.filter((s) => s.p[0] >= o.start && s.p[0] <= o.end && s.p[2] - o.c <= 3)]);
+  assert.deepEqual(at.filter(([, list]) => !list.length).map(([o]) => o.id + ' ' + o.name), [], 'openings of the rear wall without a stop in front of them');
+  // and the stop the schedule names for them is still one of the room's
+  for (const o of rear) assert.ok(mine.has(o.node), '"Visit in 3D" of ' + o.id + ' stands in the living room (' + o.node + ')');
+  t.diagnostic(here.length + ' sweeps: ' + here.map((s) => s.id).join(' ') + '; at the rear wall: ' + at.map(([o, list]) => o.id + ' ' + list.map((s) => s.id).join('+')).join(', '));
+});
+
+test('seventh round: the card of the open living area looks at the kitchen\'s tall wall at its hall end, where the refrigerator stands beside the microwave', (t) => {
+  const cards = cardNamed(/^open living area$/i);
+  assert.equal(cards.length, 1, 'one card "Open living area" in the reel');
+  const card = cards[0], kitchen = named(/^kitchen/i), hall = named(/^hall$/i), garage = named(/^garage$/i);
+  assert.ok(kitchen && hall && garage, 'tour.json has the kitchen, the hall and the garage');
+  // the tall cabinet wall is the wall the kitchen shares with the garage; its hall end is the end nearest the hall
+  const out = leaves(kitchen, card);
+  assert.ok(out, 'the card\'s line of sight (yaw ' + card.yaw + ') crosses the kitchen');
+  const beyond = { north: [out.x, out.z - 1.5], south: [out.x, out.z + 1.5], west: [out.x - 1.5, out.z], east: [out.x + 1.5, out.z] }[out.side], behind = roomAt(beyond[0], beyond[1]);
+  assert.ok(behind && behind.id === garage.id, 'it ends on the wall between the kitchen and the garage (the ' + out.side + ' side; beyond it: ' + (behind && behind.label) + ')');
+  const along = out.side === 'north' || out.side === 'south' ? [out.x, kitchen.bounds[0], kitchen.bounds[2], hall.at[0]] : [out.z, kitchen.bounds[1], kitchen.bounds[3], hall.at[1]];
+  const share = (along[0] - along[1]) / (along[2] - along[1]), fromHall = Math.abs(along[3] - along[1]) < Math.abs(along[3] - along[2]) ? share : 1 - share;
+  assert.ok(fromHall <= 1 / 3, 'in the third of that wall nearest the hall (' + (fromHall * 100).toFixed(0) + ' % along it from the hall end)');
+  assert.ok(card.pitch <= 0 && card.pitch >= -15, 'level or a little down (pitch ' + card.pitch + ')');
+  // the Design sheet's kitchen says what stands there
+  const key = design.order.find((k) => /^kitchen$/i.test(design.views[k].label));
+  assert.ok(key, 'the Design sheet has a tab "Kitchen"');
+  const text = design.views[key].title + ' ' + design.views[key].text;
+  assert.ok(text.split(/\.\s/).some((c) => /refrigerator/i.test(c) && /microwave/i.test(c) && /beside|next to/i.test(c)), 'the kitchen\'s view puts the refrigerator beside the microwave');
+  assert.doesNotMatch(text, /pantry|behind (cabinet )?panels|panel-ready|integrated refrigerator|double (wall )?ovens?/i, 'no word of the refrigerator behind panels or of the second oven');
+  t.diagnostic('card ' + card.id + ' yaw ' + card.yaw + ': its view meets the ' + out.side + ' wall at (' + out.x.toFixed(1) + ', ' + out.z.toFixed(1) + '), ' + (fromHall * 100).toFixed(0) + ' % from the hall end');
+});
+
+test('seventh round: every window and glazed door of the schedule has a white frame and grid bars; the skylights are as they were', (t) => {
+  const glazed = [...measurements.windows.filter((w) => w.kind !== 'skylight'), ...measurements.doors.filter((d) => /glazed|glass/i.test(d.type))];
+  assert.ok(glazed.length >= 15 && glazed.some((o) => o.kind === 'door'), 'the schedule lists the windows and the glazed garden door (' + glazed.length + ')');
+  assert.deepEqual(glazed.filter((o) => !/white frame/i.test(o.type)).map((o) => o.id + ': ' + o.type), [], 'type texts that do not say "white frame"');
+  assert.deepEqual(glazed.filter((o) => !/\bgrid\b/i.test(o.type)).map((o) => o.id + ': ' + o.type), [], 'type texts that do not mention the grid');
+  // the grid is given as lites wide x high, so that a reader can count them on the picture
+  assert.deepEqual(glazed.filter((o) => !/\d+ lites? wide\s*[×x]\s*\d+ high|one lite/i.test(o.type)).map((o) => o.id + ': ' + o.type), [], 'type texts without the number of lites');
+  const sky = measurements.windows.filter((w) => w.kind === 'skylight');
+  assert.deepEqual(sky.filter((w) => /grid|white frame/i.test(w.type)).map((w) => w.id), [], 'skylights have no grid');
+  // nothing in the schedule or on the Design sheet still tells of black or steel frames, or of a picture window
+  const all = [...measurements.windows, ...measurements.doors, ...measurements.rooms];
+  assert.deepEqual(all.filter((o) => /black|steel|picture (window|glazing)/i.test((o.type || '') + ' ' + (o.note || '') + ' ' + o.name)).map((o) => o.id), [], 'schedule entries that mention black or steel frames');
+  const dark = Object.entries(design.views).filter(([, v]) => (v.title + '. ' + v.text).split(/\.\s/).some((c) => /black|steel/i.test(c) && /window|frame|sash|mullion|grid|glazing/i.test(c))).map(([k]) => k);
+  assert.deepEqual(dark, [], 'Design views with a sentence about black or steel windows');
+  const says = (re) => design.order.filter((k) => (design.views[k].title + '. ' + design.views[k].text).split(/\.\s/).some((c) => /white/i.test(c) && /grid/i.test(c) && re.test(c)));
+  assert.ok(says(/window|frame/i).length >= 3, 'the Design views that describe a window say white and grid (' + says(/window|frame/i).join(', ') + ')');
+  t.diagnostic(glazed.length + ' glazed openings, ' + sky.length + ' skylights; views telling of white grid windows: ' + says(/window|frame/i).join(', '));
+});
+
+test('seventh round: the primary bathroom is white, no text tells of a fireplace, and the change list has the owner\'s five items', (t) => {
+  // the bath: white walls and one stone wall, in the view and in the schedule's note
+  const key = design.order.find((k) => /^primary bathroom$/i.test(design.views[k].label)), bath = design.views[key].title + ' ' + design.views[key].text;
+  assert.match(bath, /wall[^.]*\bwhite\b|\bwhite\b[^.]*wall/i, 'the primary bathroom\'s view says its walls are white');
+  assert.match(bath, /stone[^.]*(vanity|south) wall|(vanity|south) wall[^.]*stone/i, 'and keeps the stone on the vanity wall');
+  assert.doesNotMatch(bath, /wainscot|grey-green|gray-green|green|cap rail|cream/i, 'no word of the green board wainscot, its cap rail or the cream plaster and tile');
+  for (const [where, rows] of [['schedule', measurements.rooms], ['room table', measurements.audit || []]]) {
+    const row = rows.find((r) => /^primary bathroom$/i.test(r.name));
+    assert.ok(row && /\bwhite\b/i.test(row.note || '') && !/wainscot|green|cream/i.test(row.note || ''), 'the ' + where + '\'s note of the primary bathroom tells of white walls');
+  }
+  // the fireplace: sealed without a trace, so only the change list speaks of it
+  const texts = [...Object.entries(design.views).map(([k, v]) => ['view ' + k, v.label + ' ' + v.title + ' ' + v.text]), ...tour.sweeps.map((s) => ['sweep ' + s.id, s.label]), ...tour.rooms.map((r) => ['room ' + r.id, r.label]),
+    ...[...measurements.rooms, ...measurements.windows, ...measurements.doors, ...(measurements.audit || [])].map((o) => [o.id, o.name + ' ' + (o.type || '') + ' ' + (o.note || '')])];
+  assert.deepEqual(texts.filter(([, text]) => /fire ?place|hearth|firebox|mantel/i.test(text)).map(([who]) => who), [], 'texts that still tell of a fireplace');
+  // a view of the living room, when the sheet has one, shows the new arrangement from inside the room
+  const living = design.order.filter((k) => /living/i.test(design.views[k].label));
+  for (const k of living) {
+    const v = design.views[k], room = named(/^living room$/i);
+    assert.match(v.title + ' ' + v.text, /sofa/i, 'view ' + k + ' tells of the sofa');
+    assert.match(v.title + ' ' + v.text, /television|\bTV\b/, 'view ' + k + ' tells of the television');
+    assert.ok(byId.has(v.node) && holds(room, byId.get(v.node).p[0], byId.get(v.node).p[2]), '"Walk into this room" of view ' + k + ' stands in the living room (' + v.node + ')');
+  }
+  // the owner's seventh round: the five items, in the owner's order, one entry each
+  const rounds = design.owner_changes || [], round = rounds.find((r) => r.round === 7);
+  assert.ok(round, 'design.json has the seventh round of the owner\'s changes (rounds: ' + rounds.map((r) => r.round).join(', ') + ')');
+  assert.match(String(round.date), /^\d{4}-\d{2}-\d{2}$/, 'with its date');
+  const items = [
+    ['the refrigerator beside the microwave', [/refrigerator/i, /microwave/i]],
+    ['white windows with grid lines', [/window/i, /\bwhite\b/i, /\bgrid\b/i]],
+    ['the primary bathroom\'s white walls', [/primary bath/i, /\bwhite\b/i, /wall/i]],
+    ['the fireplace sealed, the sofa on that side, the television opposite', [/fireplace/i, /sofa/i, /television|\bTV\b/]],
+    ['daylight for a yard that faces north', [/north/i, /yard|garden/i, /sun|sky|daylight/i]],
+  ];
+  assert.ok(round.changes.length >= items.length, 'it lists the owner\'s five items (' + round.changes.length + ' entries)');
+  items.forEach(([what, res], i) => assert.ok(res.every((re) => re.test(round.changes[i])), 'entry ' + (i + 1) + ' is about ' + what + ': "' + String(round.changes[i]).slice(0, 80) + '…"'));
+  // an entry beyond the five is not a sixth change: it says what was set aside or stays as it was
+  const more = round.changes.slice(items.length);
+  assert.deepEqual(more.filter((c) => !/set aside|as (they|it) (were|was)|not part of this round|unchanged/i.test(c)).map((c) => c.slice(0, 80)), [], 'entries beyond the five that read as further changes');
+  if (more.length) t.diagnostic('beyond the five items: ' + more.map((c) => '"' + c.slice(0, 70) + '…"').join(', '));
+  if (!living.length) t.diagnostic('the Design sheet has no tab for the living room: the sealed fireplace, the sofa and the television are told in the change list only');
 });

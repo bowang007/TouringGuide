@@ -58,10 +58,20 @@ SAME_FT, SAME_RAD = 1e-4, 1e-6
 #   A0  from the door side of the bath across the vanity: stone wall, mirror, beam and lamp, the shelf, the toilet,
 #       the west window, the shower's glass at the right edge
 #   P5  at the foot of the bed: the bed on the west wall between the two west windows
+# Seventh round (the living room: fireplace sealed, sofa on the east wall, television on the west wall). The two
+# new sweeps whose automatic view looked out of the living room, at the dining table and the hall:
+#   L7  between the media console and the coffee table: the sofa on the wall where the fireplace was, its two
+#       lamps, the canvas and the east windows, the rear glazing at the left edge
+#   L8  at the south edge of the living room, looking north: the television on the left, the garden door and the
+#       rear glazing in the middle, the armchair and the coffee table, the sofa on the right
+# (L0, the stop of the reel's "Living room" card, keeps its authored view: it stands 3 ft in front of the sofa and
+# looks at the television wall. L6 and L9 keep the automatic view, south across the room from the rear glazing.)
 # (LC, the laundry sweep, has no entry any more: its view is place_sweeps.py LAUNDRY['pitch'].)
 OPENING = {'G0': (105.0, -3.0), 'H2': (40.0, -2.0),
            'C0': (-30.0, -4.0), 'S1': (-170.0, -4.0), 'A0': (-138.0, -5.0), 'P5': (-90.0, -3.0),
-           'A3': (-75.0, -3.0)}      # A3: face the taller shower window (sixth round)
+           'A3': (-75.0, -3.0),      # A3: face the taller shower window (sixth round)
+           'L7': (85.0, -4.0), 'L8': (0.0, -4.0),
+           'D0': (-172.0, -3.0)}     # D0: across the dining table at the refrigerator and microwave (seventh round)
 
 sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
 sys.path.insert(0, os.path.join(REPO, 'tools', 'web'))

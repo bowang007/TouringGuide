@@ -1,8 +1,14 @@
-"""Sink window W08 dressed as in the owner's "kitchen window" references: the black three-sash
-window reads as a steel GRID window (6 x 4 lites: black muntin bars on both faces of the glass),
-a cream painted casing with back band and a deep stool, two brass gooseneck sconces with brass
-dome shades on the brick piers, and cafe curtains (semi-sheer striped linen on brass clip rings and
-a brass rod) over the two outer sashes, leaving the centre sash clear over the faucet.
+"""Sink window W08 dressed as in the owner's "kitchen window" references: a three-sash GRID window
+(6 x 4 lites), a painted casing with back band and a deep stool, two brass gooseneck sconces with
+brass dome shades on the brick piers, and cafe curtains (semi-sheer striped linen on brass clip
+rings and a brass rod) over the two outer sashes, leaving the centre sash clear over the faucet.
+
+Seventh round (2026-11-21), the owner: "Set all windows to white color, and it should have grid line
+for these windows". The window was a black steel grid window in a cream casing. Now the frame and the
+grid are white: bl/revisions.white_windows recolours the shell's frame and builds the bars of every
+window in the house, this one with the 2 x 4 lites per sash it had (revision_spec.WINDOW_GRID_KEEP),
+so this module no longer builds bars. The casing and the stool are the same satin white as the frame
+(library `window_white`), so the whole window reads white against the whitewashed brick.
 
 Shell geometry (bl/shell.py _kitchen_window, concept plan): east wall x 40.61-41.06, frame centre
 x 40.8367, frame depth 0.22, face width 0.16, mullions at z 25.387 / 27.387 (+-0.06), glass
@@ -30,6 +36,7 @@ FACE = WALL_E - SPL                         # brick face (casing sits on it)
 ROD_Y = 5.30
 CURTAIN_X = 40.415                          # mean plane of the cafe curtains
 TOP = 3.0
+WHITE = 'window_white'                      # casing and stool: the frame's satin white (cream until the sixth round)
 
 
 def sashes():
@@ -44,33 +51,16 @@ def sashes():
 def build(ctx, g: Geo):
     col = g.sub('kd window')
     lights = g.sub('kd_lights')
-    cream = KM.paint_cream()
     brass = KM.brass()
-    _muntins(g, col)
-    _casing(g, cream, col)
+    _casing(g, WHITE, col)
     sc = _sconces(g, brass, col, lights)
     _cafe(g, brass, col)
-    return {'muntin_sashes': 3, 'sconces': sc, 'cafe_panels': 2}
+    return {'grid': 'bl/revisions.white_windows', 'casing': WHITE, 'sconces': sc, 'cafe_panels': 2}
 
 
-def _muntins(g, col):
-    """Grid bars inside and outside the glass: 1 vertical + 3 horizontal per sash (6 x 4 lites)."""
-    w = 0.055
-    rows = [GY0 + (GY1 - GY0) * k / 4 for k in (1, 2, 3)]
-    for i, (z0, z1) in enumerate(sashes()):
-        acc = C.Acc()
-        zm = (z0 + z1) / 2
-        for xa, xb in ((XC - FD / 2 + 0.02, GX0 - 0.002), (GX1 + 0.002, XC + FD / 2 - 0.02)):
-            acc.wbox(xa, xb, GY0 - 0.01, GY1 + 0.01, zm - w / 2, zm + w / 2)
-            for y in rows:
-                acc.wbox(xa, xb, y - w / 2, y + w / 2, z0 - 0.01, zm - w / 2)
-                acc.wbox(xa, xb, y - w / 2, y + w / 2, zm + w / 2, z1 + 0.01)
-        acc.done(g, f'kd W08 muntin panel s{i}', 'black_aluminum', col, bevel=0.004)
-
-
-def _casing(g, cream, col):
+def _casing(g, paint, col):
     """Flat casing with a back band on the brick face, jamb/head liners in the reveal, and a deep
-    stool with an apron over the backsplash ledge."""
+    stool with an apron over the backsplash ledge, all in `paint` (cream until the sixth round, now the frame's white)."""
     F = C.Face('mx', FACE)
     acc = C.Acc()
     st_top = 3.17
@@ -87,14 +77,14 @@ def _casing(g, cream, col):
     acc.wbox(FACE - CASE_T, xi, st_top, HEAD, Z0, Z0 + 0.03)
     acc.wbox(FACE - CASE_T, xi, st_top, HEAD, Z1 - 0.03, Z1)
     acc.wbox(FACE - CASE_T, xi, HEAD - 0.03, HEAD, Z0 + 0.03, Z1 - 0.03)
-    acc.done(g, 'kd W08 casing panel', cream, col, bevel=0.006)
+    acc.done(g, 'kd W08 casing panel', paint, col, bevel=0.006)
     # stool (horns past the casing) and apron down to the worktop
     st = C.Acc()
     xs, h0, h1 = FACE - CASE_T - 0.09, za - bb - 0.06, zb + bb + 0.06
     st.poly_y([(xs, h0), (FACE, h0), (FACE, Z0), (xi - 0.001, Z0), (xi - 0.001, Z1), (FACE, Z1), (FACE, h1), (xs, h1)],
               3.085, st_top)
     st.wbox(FACE, WALL_E, TOP, 3.085, Z0, Z1)
-    st.done(g, 'kd W08 sill return', cream, col, bevel=0.008)
+    st.done(g, 'kd W08 sill return', paint, col, bevel=0.008)
 
 
 def _sconces(g, brass, col, lights):

@@ -203,9 +203,11 @@ def sofa_pillow(ctx, parent, x, z, size, mat, tilt_deg=16.0, seat_top=1.47, thic
     return G.obj(ctx, name, v, f, mat, COLL, parent, weld=True)
 
 
-def throw_over_arm(ctx, parent, L=7.9, D=3.25, mat=None, side=-1, ta=ARM_T, arm_top=ARM_TOP, seat_top=1.47):
+def throw_over_arm(ctx, parent, L=7.9, D=3.25, mat=None, side=-1, ta=ARM_T, arm_top=ARM_TOP, seat_top=1.47,
+                   x_range=(0.75, 2.75)):
     """Knit throw draped over one sofa arm: a fold lies on the seat, wraps over the arm and the
-    end hangs down the outside. Built as a ribbon offset clear of the (puffed) arm surface."""
+    end hangs down the outside. Built as a ribbon offset clear of the (puffed) arm surface.
+    x_range: the stretch of the arm it covers, measured from the sofa's back."""
     import numpy as np
     o = 0.06                                    # clearance from the upholstery
     zc = side * (L / 2 - ta / 2)                # arm centre line
@@ -229,7 +231,7 @@ def throw_over_arm(ctx, parent, L=7.9, D=3.25, mat=None, side=-1, ta=ARM_T, arm_
     for t in np.linspace(0, 1, 9)[1:]:          # hanging outside, drifting slightly out
         path.append((zc + side * (hw + o + 0.02 * t), cy - 1.0 * t))
     path = np.array(path)
-    xs = np.linspace(0.75, 2.75, 28)
+    xs = np.linspace(x_range[0], x_range[1], 28)
     seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
     s_hang = seg[-9]
     verts, faces, uvs = [], [], []
@@ -311,27 +313,28 @@ def barrel_chair(ctx, parent, base_y=0.0, R_out=1.2, R_in=0.8, back_h=2.32, arm_
 
 
 # ------------------------------------------------------------------------- tables
-def coffee_table(ctx, parent, W=2.6, Lz=5.0, top_y=1.29, t=0.19, base_y=0.0):
+def coffee_table(ctx, parent, r=1.42, top_y=1.25, t=0.15, base_y=0.0):
+    """Round walnut coffee table on a black steel cross base (two flat-bar hoops at right angles), centred on the
+    local origin."""
     out = []
-    v, f = G.prism([(x, z) for x, z in G.rounded_rect_outline(W, Lz, 0.55, 12)], top_y - t, top_y)
+    v, f = G.prism(G.circle_outline(r, 96), top_y - t, top_y)
     o = G.obj(ctx, 'coffee table top', v, f, 'walnut_slab', COLL, parent)
-    G.bevel(o, 0.05, 4, angle=40)
+    G.bevel(o, 0.045, 4, angle=40)
     out.append(o)
-    # black steel sled frame
-    tw = 0.075
-    ix, iz = W / 2 - 0.34, Lz / 2 - 0.42
+    reach = r - 0.36                    # the legs stand well inside the top's edge
     y_top = top_y - t
     parts = []
-    for sx in (-1, 1):
-        for sz in (-1, 1):
-            parts.append(G.box_verts(sx * ix - tw / 2, sx * ix + tw / 2, base_y, y_top, sz * iz - tw / 2, sz * iz + tw / 2))
-        parts.append(G.box_verts(sx * ix - tw / 2, sx * ix + tw / 2, base_y, base_y + tw, -iz - tw / 2, iz + tw / 2))
-        parts.append(G.box_verts(sx * ix - tw / 2, sx * ix + tw / 2, y_top - tw, y_top, -iz - tw / 2, iz + tw / 2))
-    for sz in (-1, 1):
-        parts.append(G.box_verts(-ix + tw / 2, ix - tw / 2, y_top - tw, y_top, sz * iz - tw / 2, sz * iz + tw / 2))
+    for k, a in enumerate((math.radians(45), math.radians(135))):
+        tw = 0.07 - 0.004 * k           # the second hoop a hair slimmer: no coincident faces where the two cross
+        hoop = [G.box_verts(-reach, reach, base_y, base_y + tw, -tw / 2, tw / 2),
+                G.box_verts(-reach, reach, y_top - tw, y_top, -tw / 2, tw / 2),
+                G.box_verts(-reach, -reach + tw, base_y, y_top, -tw / 2, tw / 2),
+                G.box_verts(reach - tw, reach, base_y, y_top, -tw / 2, tw / 2)]
+        v, f = G.merge(*hoop)
+        parts.append((G.rot_y(v, a), f))
     v, f = G.merge(*parts)
     o = G.obj(ctx, 'coffee table frame', v, f, 'black_metal', COLL, parent, smooth=False)
-    G.bevel(o, 0.01, 2)
+    G.bevel(o, 0.008, 2)
     out.append(o)
     return out
 
@@ -348,8 +351,8 @@ def side_table(ctx, parent, r=0.68, h=1.85, base_y=0.0):
 
 
 # ------------------------------------------------------------------------- lamps
-def table_lamp(ctx, parent, world_xyz, base_y, lights_coll):
-    """Ceramic gourd base + linen drum shade, bulb inside. world_xyz=(x, z) for the light."""
+def table_lamp(ctx, parent, world_xyz, base_y, lights_coll, shade_r=0.62):
+    """Ceramic gourd base + linen drum shade (bottom radius shade_r), bulb inside. world_xyz=(x, z) for the light."""
     out = []
     prof = [(0.0, 0.0), (0.16, 0.0), (0.2, 0.03), (0.27, 0.2), (0.29, 0.38), (0.25, 0.58), (0.16, 0.74),
             (0.07, 0.83), (0.055, 0.9), (0.0, 0.9)]
@@ -359,7 +362,7 @@ def table_lamp(ctx, parent, world_xyz, base_y, lights_coll):
                    n=16, cap_bottom=False)
     out.append(G.obj(ctx, 'table lamp neck', v, f, 'black_metal', COLL, parent))
     y0, y1 = base_y + 1.12, base_y + 1.95
-    rb, rt = 0.62, 0.58
+    rb, rt = shade_r, shade_r - 0.04
     v, f = G.lathe([(rb, y0), (rt, y1), (rt - 0.012, y1), (rb - 0.012, y0), (rb, y0)], n=64,
                    cap_bottom=False)
     out.append(G.obj(ctx, 'table lamp shade', v, f, shade_material(), COLL, parent))
@@ -369,33 +372,11 @@ def table_lamp(ctx, parent, world_xyz, base_y, lights_coll):
     return out
 
 
-def floor_lamp(ctx, parent, world_xz, lights_coll, base_y=0.0):
-    out = []
-    v, f = G.lathe([(0.0, base_y), (0.42, base_y), (0.43, base_y + 0.03), (0.40, base_y + 0.07),
-                    (0.05, base_y + 0.09), (0.0, base_y + 0.09)], n=48, cap_bottom=False)
-    out.append(G.obj(ctx, 'floor lamp base', v, f, 'black_metal', COLL, parent))
-    y0, y1 = base_y + 4.42, base_y + 5.45
-    v, f = G.lathe([(0.0, base_y + 0.08), (0.03, base_y + 0.08), (0.03, y0 + 0.55), (0.0, y0 + 0.55)],
-                   n=16, cap_bottom=False)
-    out.append(G.obj(ctx, 'floor lamp stem', v, f, 'black_metal', COLL, parent))
-    rb, rt = 0.72, 0.66
-    v, f = G.lathe([(rb, y0), (rt, y1), (rt - 0.012, y1), (rb - 0.012, y0), (rb, y0)], n=72, cap_bottom=False)
-    out.append(G.obj(ctx, 'floor lamp shade', v, f, shade_material(), COLL, parent))
-    # spider + small diffuser disc at the bottom of the bulb
-    v, f = G.lathe([(0.0, y0 + 0.5), (0.12, y0 + 0.5), (0.12, y0 + 0.52), (0.0, y0 + 0.52)], n=24, cap_bottom=False)
-    out.append(G.obj(ctx, 'floor lamp diffuser', v, f, lighting.emitter('living_lamp_diff', 2700, 3.0), COLL, parent))
-    x, z = world_xz
-    lighting.point_light(ctx, x, (y0 + y1) / 2, z, watts=12.0, kelvin=2700, radius_ft=0.14,
-                         coll=lights_coll, name='living floor lamp')
-    return out
-
-
 # ------------------------------------------------------------------------- rug, books
-def rug(ctx, x0, x1, z0, z1, t=0.045):
-    w, d = x1 - x0, z1 - z0
-    v, f = G.prism(G.rounded_rect_outline(w, d, 0.12, 6), 0.002, t)
-    v = G.translate(v, (x0 + x1) / 2, 0, (z0 + z1) / 2)
-    o = G.obj(ctx, 'living rug', v, f, 'rug_wool_cream', COLL)
+def rug(ctx, cx, cz, r, t=0.045):
+    """Round cream wool rug of radius r centred on (cx, cz)."""
+    v, f = G.prism(G.circle_outline(r, 128), 0.002, t)
+    o = G.obj(ctx, 'living rug', G.translate(v, cx, 0, cz), f, 'rug_wool_cream', COLL)
     G.bevel(o, 0.018, 3, angle=40)
     return o
 

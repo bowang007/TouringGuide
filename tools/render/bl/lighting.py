@@ -2,10 +2,14 @@
 
 Daylight: a Poly Haven CC0 pure-sky HDRI (fair-weather cumulus) for the visible sky, reflections and
 sky fill, plus a sun lamp for the direct sun, late morning in Sunnyvale. The HDRI's own sun is clamped
-out and the HDRI is rotated so its bright side matches the lamp. If the HDRI can't be fetched, a
-physical (Nishita) sky without sun disc is used instead. The house's street side faces south (SCENE +z)
+out and the HDRI is rotated so its bright side stands at the lamp's azimuth. If the HDRI can't be fetched,
+a physical (Nishita) sky without sun disc is used instead. The house's street side faces south (SCENE +z)
 and the garden faces north, so a south-east sun rakes through the east living/kitchen windows and the
-front rooms.
+front rooms, the rear facade and the deck by the house are in open shade, and the sky over the garden is
+the deep-blue side: the glow and the brightest clouds stand over the street.
+
+The sky's position is measured, not only derived: setup_daylight() renders the finished world alone
+(check_sky), logs where its bright side stands against the lamp and refuses a sky that is not at the lamp.
 
 Room modules should create interior fixtures through `can()`, `pendant_light()`, `strip()`
 so color temperature and intensity stay consistent across the house.
@@ -31,6 +35,7 @@ SKY_HDRI_RES = '4k'
 SKY_HDRI_STRENGTH = 2.4
 SKY_HDRI_TINT = (1.0, 1.0, 1.0)  # the HDRI's own sky colour (was bluish to suit a fixed 9000K white balance)
 SKY_HDRI_CLAMP = 40.0        # radiance cap that removes the HDRI's own sun (the lamp is the only sun)
+SKY_CHECK_TOLERANCE_DEG = 5.0  # measured azimuth difference sky-vs-lamp that a build accepts (check_sky)
 
 
 def kelvin_rgb(k):
@@ -52,7 +57,7 @@ def sun_direction():
 
 def _hdri_sun_rotation(path):
     """Mapping rotation (radians about Z) that puts the HDRI's brightest pixel (its sun) at the lamp's
-    azimuth. Cached next to the HDRI as <file>.sun.json."""
+    azimuth. The pixel's (u, v) is cached next to the HDRI as <file>.sun.json (the rotation is not)."""
     import json
     import os
     side = path + '.sun.json'
@@ -75,16 +80,137 @@ def _hdri_sun_rotation(path):
             json.dump({'u': u, 'v': (iy + 0.5) / h}, open(side, 'w'))
         except OSError:
             pass
-    # Blender equirect lookup: u = atan2(D.y, -D.x) / 2pi + 0.5 for world direction D
-    a = (u - 0.5) * 2 * math.pi
-    hdri_az = math.atan2(math.sin(a), -math.cos(a))
+    # Cycles' equirect lookup (kernel direction_to_equirectangular): u = 0.5 - atan2(D.y, D.x) / 2pi for the
+    # lookup direction D. The image's centre column faces +X (east) and u grows clockwise seen from above,
+    # so the unrotated HDRI's sun stands at the angle -(u - 0.5) * 2pi, counter-clockwise from +X.
+    # The Mapping node (POINT) turns the lookup vector by +rotation, which turns the sky by -rotation:
+    # sun_world = sun_hdri - rotation, hence rotation = sun_hdri - lamp (both counter-clockwise from +X).
+    # Both facts are measured (rotation 0 puts this HDRI's sun at azimuth 124.1, rotation 90 at 214.1) and
+    # check_sky() re-measures every build. Until the owner's seventh round this read
+    # atan2(sin a, -cos a), i.e. the centre column taken as -X: the whole sky stood 180 degrees off the lamp
+    # (sun-glow in the north-west over the garden).
+    hdri_az = -(u - 0.5) * 2 * math.pi
     d = sun_direction()
     return hdri_az - math.atan2(d.y, d.x)
 
 
+def _azimuth_deg(v):
+    """Compass azimuth of a Blender direction: degrees clockwise from north (+Y), east (+X) = 90."""
+    return math.degrees(math.atan2(v.x, v.y)) % 360.0
+
+
+def measure_sky_azimuth(world=None, width=512, samples=8):
+    """(azimuth, elevation) in degrees of the brightest direction of `world`, MEASURED on a render: the world
+    alone (an empty scratch scene) through a 360-degree camera that looks north, so the image's centre
+    column is north and azimuth grows clockwise to the right, exactly like SUN_AZIMUTH_DEG and the tour's
+    panoramas. The radiance clamp of the HDRI sky is lifted for the measurement, so the peak is the HDRI's
+    own sun disc and not a bright cloud; for a sky without a disc (the physical-sky fallback) it is the
+    centre of the brightest region. Cycles on the CPU, a second or two; nothing is left in the file."""
+    import os
+    import shutil
+    import tempfile
+
+    import numpy as np
+    world = world or bpy.context.scene.world
+    clamps = [n for n in world.node_tree.nodes if n.type == 'VECT_MATH' and n.operation == 'MINIMUM']
+    keep = [tuple(n.inputs[1].default_value) for n in clamps]
+    tmp = tempfile.mkdtemp(prefix='tg_sky_')
+    path = os.path.join(tmp, 'sky.exr')
+    sc = bpy.data.scenes.new('_tg_sky_check')
+    cd = bpy.data.cameras.new('_tg_sky_check')
+    cam = bpy.data.objects.new('_tg_sky_check', cd)
+    img = None
+    had_result = bpy.data.images.get('Render Result') is not None
+    try:
+        for n in clamps:
+            n.inputs[1].default_value = (1e9, 1e9, 1e9)
+        sc.world = world
+        sc.collection.objects.link(cam)
+        sc.camera = cam
+        cd.type = 'PANO'
+        try:
+            cd.panorama_type = 'EQUIRECTANGULAR'
+        except (AttributeError, TypeError):
+            cd.cycles.panorama_type = 'EQUIRECTANGULAR'
+        cam.rotation_euler = (math.radians(90), 0, 0)        # looks along +Y (north), +Z up
+        sc.render.engine = 'CYCLES'
+        sc.cycles.device = 'CPU'
+        sc.cycles.samples = samples
+        sc.cycles.use_adaptive_sampling = False
+        sc.cycles.use_denoising = False
+        sc.render.film_transparent = False
+        sc.render.resolution_x, sc.render.resolution_y = width, width // 2
+        sc.render.resolution_percentage = 100
+        st = sc.render.image_settings
+        st.file_format = 'OPEN_EXR'
+        st.color_mode = 'RGB'
+        st.color_depth = '32'
+        sc.render.filepath = path
+        bpy.ops.render.render(write_still=True, scene=sc.name)
+        img = bpy.data.images.load(path)
+        w, h = img.size
+        px = np.empty(w * h * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+    finally:
+        for n, v in zip(clamps, keep):
+            n.inputs[1].default_value = v
+        if img is not None:
+            bpy.data.images.remove(img)
+        result = bpy.data.images.get('Render Result')
+        if result is not None and not had_result:
+            bpy.data.images.remove(result)
+        bpy.data.scenes.remove(sc)
+        bpy.data.objects.remove(cam)
+        bpy.data.cameras.remove(cd)
+        shutil.rmtree(tmp, ignore_errors=True)
+    lum = px.reshape(h, w, 4)[:, :, :3].astype(np.float64) @ np.array([0.2126, 0.7152, 0.0722])
+    el = ((np.arange(h) + 0.5) / h - 0.5) * 180.0            # Blender image rows run bottom-up
+    az = ((np.arange(w) + 0.5) / w - 0.5) * 360.0            # centre column = north, clockwise
+    lum[el < 5.0, :] = 0.0                                   # the sky only
+    peak = float(lum.max())
+    if not peak > 0.0:
+        raise RuntimeError('the sky rendered black')
+    yy, xx = np.nonzero(lum >= 0.5 * peak)
+    wgt = lum[yy, xx] * np.cos(np.radians(el[yy]))
+    ang = np.radians(az[xx])
+    return (math.degrees(math.atan2(float((np.sin(ang) * wgt).sum()), float((np.cos(ang) * wgt).sum()))) % 360.0,
+            float((el[yy] * wgt).sum() / wgt.sum()))
+
+
+def check_sky(world=None, sun=None, strict=True):
+    """Measure where the sky's bright side stands (measure_sky_azimuth) and compare it with the sun lamp's
+    own direction. Always logs both azimuths and their difference and stores them on the world (custom
+    properties tg_sky_az, tg_sun_az, tg_sky_az_diff, readable from the built .blend). With `strict` a
+    difference above SKY_CHECK_TOLERANCE_DEG raises: a build must not ship a sky that contradicts its sun.
+    Returns the signed difference in degrees (sky minus lamp, clockwise), or None if the render failed."""
+    world = world or bpy.context.scene.world
+    sun = sun or bpy.data.objects.get('TG Sun')
+    lamp = sun.rotation_euler.to_matrix() @ Vector((0.0, 0.0, 1.0)) if sun is not None else sun_direction()
+    lamp_az, lamp_el = _azimuth_deg(lamp), math.degrees(math.asin(max(-1.0, min(1.0, lamp.z))))
+    try:
+        az, el = measure_sky_azimuth(world)
+    except Exception as e:
+        print(f'[lighting] WARNING sky check could not run ({type(e).__name__}: {e}); '
+              f'the sky azimuth is NOT verified against the sun lamp', flush=True)
+        return None
+    diff = (az - lamp_az + 180.0) % 360.0 - 180.0
+    ok = abs(diff) <= SKY_CHECK_TOLERANCE_DEG
+    world['tg_sky_az'], world['tg_sun_az'], world['tg_sky_az_diff'] = round(az, 2), round(lamp_az, 2), round(diff, 2)
+    print(f'[lighting] sky check: sky bright side measured at azimuth {az:.1f} deg (elevation {el:.1f}), '
+          f'sun lamp at {lamp_az:.1f} deg (elevation {lamp_el:.1f}), clockwise from north; '
+          f'difference {diff:+.1f} deg ' + (f'(ok, tolerance {SKY_CHECK_TOLERANCE_DEG:g})' if ok else
+                                           f'(MISMATCH, tolerance {SKY_CHECK_TOLERANCE_DEG:g})'), flush=True)
+    if strict and not ok:
+        raise RuntimeError(f'[lighting] the sky stands {diff:+.1f} deg from the sun lamp (sky {az:.1f}, lamp '
+                           f'{lamp_az:.1f} deg clockwise from north): the sky mapping is wrong')
+    return diff
+
+
 def setup_daylight(ctx, hdri_path=None, hdri_rotation_deg=0.0):
     """World sky + sun lamp. Default sky: SKY_HDRI (see module doc). If hdri_path is given, use that
-    equirect HDRI as-is (rotated by hdri_rotation_deg) instead."""
+    equirect HDRI as-is (rotated by hdri_rotation_deg) instead. The finished sky is measured against the
+    lamp (check_sky): a mismatch stops the build for the default sky and the physical sky, and is only
+    logged for a caller's own HDRI, whose rotation is the caller's."""
     auto_hdri = False
     if hdri_path is None and SKY_HDRI:
         try:
@@ -139,9 +265,10 @@ def setup_daylight(ctx, hdri_path=None, hdri_rotation_deg=0.0):
         except AttributeError:
             pass
         sky.sun_elevation = math.radians(SUN_ELEVATION_DEG)
-        # Nishita sun_rotation: angle about Z measured from +Y toward -X; we want the sky's
-        # bright side to match the lamp, so derive from the direction vector.
-        sky.sun_rotation = math.atan2(-d.x, d.y) % (2 * math.pi)
+        # Sky texture sun_rotation: the sun's compass azimuth, about Z from +Y (north) toward +X (east),
+        # clockwise seen from above (measured by check_sky: until the owner's seventh round this was taken
+        # as counter-clockwise, which mirrored the fallback sky east-west: glow at 232 for a lamp at 128).
+        sky.sun_rotation = math.atan2(d.x, d.y) % (2 * math.pi)
         try:
             sky.altitude = 30.0
             sky.air_density = 1.0
@@ -164,6 +291,7 @@ def setup_daylight(ctx, hdri_path=None, hdri_rotation_deg=0.0):
     if sun.name not in ctx.coll('lights').objects:
         ctx.coll('lights').objects.link(sun)
     sun.rotation_euler = d.to_track_quat('Z', 'Y').to_euler()
+    check_sky(world, sun, strict=auto_hdri or not hdri_path)
     return sun
 
 

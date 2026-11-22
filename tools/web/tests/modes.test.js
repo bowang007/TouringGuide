@@ -168,6 +168,38 @@ test('floor plan: straight down, north up, room names; a click on a name or on t
   s.note('click on the floor of ' + c.room.label + ' -> inside on ' + st.sweep);
 });
 
+// A room that has a card of its own name in the reel is entered where the card goes: the name on the floor
+// plan and the picture in the strip mean the same view. Since the owner's seventh round the living room's
+// card is the stop at the room's south edge that shows the television wall, the rear glass and the sofa
+// wall in one picture, not the stop in front of the sofa.
+test('floor plan: a click on the name of the living room opens the view its reel card shows', async (s) => {
+  await s.open();
+  const tour = await s.tour(), all = byId(tour.sweeps);
+  const room = tour.rooms.find((r) => /^living room$/i.test(r.label));
+  assert.ok(room, 'tour.json has the room "Living room"');
+  const cards = tour.highlights.filter((id) => all.get(id).label === room.label);
+  assert.equal(cards.length, 1, 'one card "' + room.label + '" in the reel');
+  const card = all.get(cards[0]);
+  assert.equal(card.room, room.id, 'the card\'s sweep ' + card.id + ' is one of the room\'s');
+  assert.equal(room.sweep, card.id, 'the room is entered on its card\'s sweep');
+  await s.inside(tour.start);
+  await s.press(s.testid('btn-floorplan'));
+  await mode(s, 'floorplan');
+  await s.settle(8000);
+  const name = await s.page.$eval('[data-testid="plan-label-' + room.id + '"]', (e) => { const b = e.getBoundingClientRect(), c = getComputedStyle(e); return { text: e.textContent.trim(), shown: b.width > 4 && b.height > 4 && c.visibility !== 'hidden' && Number(c.opacity) > 0.5 }; });
+  assert.ok(name.shown && name.text === room.label, 'the name "' + room.label + '" is on the plan');
+  await s.shot('floorplan-living-name');
+  await s.press(s.testid('plan-label-' + room.id));
+  await mode(s, 'inside', 12000);
+  await s.waitRest(card.id, 12000);
+  const own = { yaw: card.yaw * Math.PI / 180, pitch: card.pitch * Math.PI / 180 };
+  const st = await s.waitFor((o) => { const x = window.TOUR.getState(); return !x.transition && Math.abs(Math.atan2(Math.sin(x.yaw - o.yaw), Math.cos(x.yaw - o.yaw))) < 0.03 && Math.abs(x.pitch - o.pitch) < 0.03 ? { yaw: x.yaw, pitch: x.pitch } : false; },
+    { what: 'the view of the card (yaw ' + card.yaw + ', pitch ' + card.pitch + ' degrees)', timeout: 6000 }, own);
+  await s.settle(8000);
+  await s.shot('living-from-its-name');
+  s.note('the name "' + room.label + '" -> ' + card.id + ', yaw ' + (st.yaw * 180 / Math.PI).toFixed(1) + ', pitch ' + (st.pitch * 180 / Math.PI).toFixed(1) + ' degrees (the card: ' + card.yaw + ', ' + card.pitch + ')');
+});
+
 // Screen points whose surface, as the page's own ray cast sees it, is a level one inside the room (its
 // floor, the top of what stands in it), a hand's width clear of its walls; the most central first.
 const levelSpots = (s, room) => s.page.evaluate((b) => {

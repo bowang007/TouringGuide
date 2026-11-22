@@ -1,6 +1,6 @@
-"""Fixtures of the primary bath (stop A0): brushed-nickel exposed shower set, deck taps, oak-framed mirrors,
-enamel wall lamps, towel bar, iron shelf brackets, hewn beams, stone wall mesh, the shelf's still life and the
-plants.
+"""Fixtures of the primary bath (stop A0): brushed-nickel exposed shower set, low-iron shower glass, deck taps,
+oak-framed mirrors, enamel wall lamps, towel bar, iron shelf brackets, hewn beams, stone wall mesh, the shelf's
+still life and the plants.
 
 Same conventions as baths_kit (SCENE feet; a wall Frame has u = distance out of the wall face,
 v = along the wall, y = height). The room is built after the warp, in plan feet (baths_primary.py),
@@ -234,6 +234,15 @@ def linear_drain(ctx, coll, name, a0, a1, c, y, axis='x'):
     for k in range(n):
         p = a0 + 0.06 + (a1 - a0 - 0.12) * (k + 0.5) / n
         bx(f'{name} grate slot {k}', p - 0.012, p + 0.012, y + 0.003, y + 0.0035, c - 0.035, c + 0.035, slot)
+
+
+def glass_panel(ctx, coll, name, a, b, y0, y1, t=0.031):
+    """Frameless 3/8in shower glass from plan point a=(x, z) to b=(x, z), like baths_kit.glass_panel but in low-iron
+    glass (M.glass: neutral faces, a pale edge), so the white tile behind it stays white."""
+    ob = K.glass_panel(ctx, coll, name, a, b, y0, y1, t)
+    ob.data.materials[0] = M.glass()
+    ob.data.materials[1] = M.glass_edge()
+    return ob
 
 
 def clamp(ctx, coll, name, x, y, z, along, size=(0.16, 0.10, 0.075)):

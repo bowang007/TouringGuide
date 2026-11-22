@@ -274,7 +274,7 @@ function prepareMaterial(mat, proj, flags = {}, adapt = null) {
     let head = '#include <packing>\n' + SHELL_GLSL;
     let body = (shell ? SHELL_DISCARD : FOOT_DISCARD(tight ? DOLL_MARGIN_BASE : DOLL_MARGIN)) + '\n\t#include <map_fragment>';
     // dollhouse / floor plan: with the near walls and ceilings gone, surfaces that never saw light in the bake
-    // (cabinet backs, the far side of the fireplace, slab edges) show. Black reads as a hole in the model, so
+    // (cabinet backs, the backs of built-in pieces, slab edges) show. Black reads as a hole in the model, so
     // texels with almost no light go to a dark neutral grey, like a cut surface.
     body += '\n\tif ( uTgCull > 0.5 ) { float tgUnlit = dot( diffuseColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );'
       + ' diffuseColor.rgb = mix( vec3( ' + DOLL_UNLIT.toFixed(3) + ' ), diffuseColor.rgb, smoothstep( 0.0, 0.03, tgUnlit ) ); }';

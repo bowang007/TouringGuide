@@ -15,6 +15,7 @@ it where they say so. How to run things is in `README.md`.
 | Fourth | 2026-11-19 evening | Matterport-style tour; a laundry closet, built in the kitchen's south-west corner (the wrong place) | "Fourth round" below |
 | Fifth | 2026-11-20 | The laundry closet moved into Bedroom 4's north-east corner, opening onto the foyer; the dining table moved to the island's west end; the kitchen's south wall back to the third round's | "Fifth round" below |
 | Sixth | 2026-11-20 afternoon | The primary suite on the architect's sheet: the walk-in closet a room of its own behind a pocket door, a vestibule, a sliding suite entry, the bed on the west wall. The primary bath rebuilt to the sheet and restyled after the owner's wall image. A taller shower window in the Bedroom 3 bathroom. The owner's four answers: that window from a 3'-0" sill to a 7'-6" head; the bath laid out as on the sheet; the second west window of the primary bedroom (W14) kept although the sheet omits it; the stone on the vanity wall, not in the shower | "Sixth round" below |
+| Seventh | 2026-11-21 | A visible stainless refrigerator beside a built-in microwave. Every window and glazed door white, with grid bars. The primary bath a white room with one stone wall. The living room without its fireplace: sofa on the east wall, television on the west wall. The sky turned to the sun, for a yard that faces north. The owner also asked for an exterior after 1073 W McKinley Ave and then set it aside | "Seventh round" below |
 
 ## Design language (1077 W McKinley)
 
@@ -23,24 +24,28 @@ it where they say so. How to run things is in `README.md`.
   panels. Doors are flush white slabs with matte-black levers. Casings are minimal.
 - **Floors.** Wide-plank (≈9") light white oak with a matte, natural-oil look, used everywhere
   except wet rooms. Wet rooms get large-format 24×48 warm-grey porcelain.
-- **Glazing.** Slim matte-black aluminium frames and big clear panes, with no divided lights.
+- **Glazing.** Slim frames and clear panes. Since the seventh round every window and glazed door
+  is satin white with white grid bars (matte black without divided lights until then); only the
+  skylights keep black frames.
 - **Kitchen.**
   - Cabinetry: flat-slab walnut with horizontal grain and integrated finger-pull channels.
   - Surfaces: white Calacatta-look quartz worktops with a full-height quartz backsplash.
   - Island: waterfall quartz with a walnut base, plus saddle-tan leather counter stools on
     black pedestal bases.
-  - Appliances: integrated stainless column fridge, stacked wall ovens and an induction cooktop.
+  - Appliances: stainless and in plain view (seventh round): a French-door refrigerator beside a
+    built-in microwave over a wall oven, and a cooktop under the hood.
   - Hood: minimal white plaster or integrated.
   - Lighting: a linear LED pendant (or ring pendants) over the island, warm LED strips under
     the uppers and at the toe kick.
-- **Living.**
-  - A book-matched green-grey stone feature wall (onyx/quartzite with rust-gold veins) around
-    a long linear gas fireplace, with a floating walnut hearth/ledge.
-  - Seating: a white bouclé or linen sofa with ochre/mustard accent pillows and sculptural
-    bouclé lounge chairs.
-  - A walnut coffee table on a large cream wool rug.
-  - Accents: big abstract art in neutral/ochre/charcoal, a fiddle-leaf fig or olive tree, and
-    ceramic vases with dried pampas.
+- **Living** (as furnished since the seventh round, which removed the fireplace and its stone
+  feature wall; layout in "Seventh round").
+  - The east wall is a plain white wall. A white bouclé sofa with ochre and cream pillows stands
+    against it, a round walnut side table with a ceramic lamp at each end, an abstract canvas in
+    neutral/ochre/charcoal above it.
+  - Opposite, on the west wall, a 75 in television over a low white-oak console on black steel
+    legs.
+  - A round walnut coffee table on a round cream wool rug, one bouclé barrel chair, a money tree
+    in a fluted planter beside the console, a few ceramic vases.
 - **Dining.** A walnut or oak table, curved bouclé dining chairs, and a double-ring LED chandelier.
 - **Bedrooms.** Upholstered low platform beds in light grey/cream with layered white linen
   bedding and a throw. Cream or white-oak nightstands with ceramic lamps. A soft grey or
@@ -50,8 +55,8 @@ it where they say so. How to run things is in `README.md`.
     vessel sinks, plus backlit LED mirrors.
   - Fixtures: matte-black faucets and shower trim, wall-hung or skirted one-piece toilets.
   - Shower: frameless glass, a linear drain, and a recessed niche with an LED strip.
-  - Walls: white 3D wave/ribbed tile on the primary bath feature walls, and black fluted or
-    large-format marble-look porcelain in the secondary baths.
+  - Walls: the primary bath is white with one wall of stacked stone (sixth and seventh rounds);
+    black fluted or large-format marble-look porcelain in the secondary baths.
 - **Exterior.**
   - Facade: smooth warm-white stucco with a warm wood (cedar/thermo-ash) cladding accent at the
     recessed entry, charcoal fascia and a charcoal standing-seam roof.
@@ -65,9 +70,10 @@ it where they say so. How to run things is in `README.md`.
   touching the floor or wall it rests on. The palette is warm white, oak, walnut, black,
   ochre and sage.
 
-Daylight is a late-morning sun from the south-east plus a physical sky, with the interior lights
-on (warm). The renders are white-balanced neutral with a slightly warm tilt, like a listing
-photographer's.
+Daylight is a late-morning sun from the south-east plus a sky HDRI whose bright side stands at
+the sun, so the sky over the north-facing garden is the deep-blue side ("Seventh round"), with
+the interior lights on (warm). The renders are white-balanced neutral with a slightly warm tilt,
+like a listing photographer's.
 
 ## Owner's style images (third round, 2026-11-19)
 
@@ -75,14 +81,18 @@ The owner's reference photos in `styles/` (reference only; never copied into the
 language above in four places:
 
 - **Kitchen** (`kitchen_dining_*.py`): warm vintage-American in soft layered neutrals. Cream shaker
-  cabinetry with unlacquered brass cup pulls and knobs, glass-front uppers and a greige pantry wall
-  with a panelled fridge. A cream plaster hood with a dentil band over a scalloped marble splash and
-  a brass pot filler; walnut open shelves on whitewashed brick. A fireclay farmhouse sink under a
-  black grid window with brass sconces and linen cafe curtains. A white-oak island with a honed
-  quartzite top, brass pendants, a Persian runner, and a warm oak dining set under a brass lantern.
+  cabinetry with unlacquered brass cup pulls and knobs, glass-front uppers and a greige tall wall
+  (the code's "pantry wall") for the refrigerator and the oven tower; since the seventh round a
+  stainless refrigerator stands in it in plain view, beside a built-in microwave. A cream plaster
+  hood with a dentil band over a scalloped marble splash and a brass pot filler; walnut open
+  shelves on whitewashed brick. A fireclay farmhouse sink under a three-sash grid window after
+  `styles/kitchen window.jpg` (black steel in this round, white since the seventh) with brass
+  sconces and linen cafe curtains. A white-oak island with a honed quartzite top, brass pendants,
+  a Persian runner, and a warm oak dining set under a brass lantern.
 - **Primary bath** (`baths_primary.py`): the floating solid-oak double vanity with two carved basins
   (`styles/primary bathroom sink.jpg`). The rest of this round's bath was replaced in the sixth
-  round, which rebuilt the room after `styles/primary bathroom wall style.jpg`: see "Sixth round".
+  round, which rebuilt the room after `styles/primary bathroom wall style.jpg`, and the seventh
+  made its other walls white: see "Sixth round" and "Seventh round".
 - **Shared bath** (`baths_shared.py`): a rustic-oak wood-look tile wall with a lit niche behind the WC,
   warm Spanish-cream stone-look porcelain, a light-oak vanity with a travertine trough basin and a
   limestone-look floor.
@@ -113,7 +123,8 @@ neighbours.
    no touch pad, no minimap, no guided tour, no second renderer. Requirement: at rest PSNR ≥ 40 dB
    against the published file (measured 55 to 61 dB).
 2. **Many sweeps, short hops.** Sweeps are placed by a tool on the built model (rules below), about
-   4 ft apart with at least 1.2 ft of clearance: 43 instead of 27 (49 since the sixth round). Soft
+   4 ft apart with at least 1.2 ft of clearance: 43 instead of 27 (49 since the sixth round, 52
+   since the seventh). Soft
    white rings on the floor mark the sweeps in view; a cursor ring lies on the surface under the
    mouse.
 3. **A click moves.** To the ring clicked, else to the sweep that best matches the clicked point or
@@ -181,9 +192,10 @@ outline); there is no double-click zoom, because a click always moves.
   takes its new label, and so do the kept sweeps that carried its old one (S1 had S0's).
 - **Opening views.** A seed keeps its authored view, a new sweep looks in its most open direction,
   a kept sweep keeps what it had. `OPENING` in `apply_sweeps.py` overrides that at every install
-  with views chosen by eye on renders: G0 and H2, and since the sixth round C0 (the closet's
+  with views chosen by eye on renders: G0 and H2; since the sixth round C0 (the closet's
   hanging wall), S1 (through the bath door at the stone wall), A0 (across the vanity), P5 (the
-  bed between the two windows) and A3 (the taller shower window).
+  bed between the two windows) and A3 (the taller shower window); since the seventh L7, L8 and
+  D0 ("Seventh round"). A card of the highlight reel opens its sweep at this view.
 - **Link** = a straight line up to 11 ft that a person can walk (rays at four heights and three
   lateral offsets, bare floor under all three lines), dropped when a third sweep gives two shorter
   legs with less than 20 % detour. Links never pass through glass and must form one component.
@@ -244,7 +256,7 @@ outline); there is no double-click zoom, because a click always moves.
   model.
 - `check_holes.py` works on a 0.2 ft grid. The warp maps the two front corners of the central ceiling
   panel with different rooms, which left a hairline up to 0.03 ft wide, open to the attic, along the
-  kitchen / garage wall at the hall end of the pantry wall; only a scan at 0.015 ft pitch found it
+  kitchen / garage wall at the hall end of the kitchen's tall wall; only a scan at 0.015 ft pitch found it
   (`revisions.ceiling_seam` now squares that edge). After changing walls or ceilings near a new room,
   scan its faces finely or look closely at renders of the joints.
 - A black atlas in the bake means its UV islands could not have their pixel margin, not bad normals.
@@ -336,9 +348,10 @@ built-in).
   x 21.43..27.43, z 21.86..24.61, on the island's centre line, its east end 0.02 ft short of the
   island worktop (x 27.45..33.22). Six chairs, three on each long side (backs at z 20.80 and 25.67),
   none at the ends, no rug, the brass lantern over the middle. From the south chairs' backs it is
-  3.21 ft to the pantry-wall fronts (z 28.88) and 3.01 ft to the oven handles; nothing stands west
-  of x 21.43 (the hall line is x 21.2). The floor between the island and the living room is open and
-  stays so.
+  3.21 ft to the tall wall's cabinet fronts (z 28.88), 3.01 ft to the oven's handle and to the
+  refrigerator's doors, and 2.81 ft to the refrigerator's handles (seventh round); nothing stands
+  west of x 21.43 (the hall line is x 21.2). The floor between the island and the living room is
+  open and stays so.
 - **How it is placed.** The set is loose furniture: `bl/warp.py` moves its cluster by the shift of
   the cluster's centre and keeps its size, while the island is fitted and shrinks with the room. So
   `kitchen_dining_dining._rect_centre()` states the position on the built plan (`RECT_GAP` short of
@@ -347,12 +360,12 @@ built-in).
   centre (the lantern's fitted rod is mapped by the same point) and put no recessed can over it (cans
   are loose and would join the cluster). After a change, compare `'dining': {'plan': ...}` in the
   build log with the built objects.
-- **Kitchen south wall:** the third-round layout again (`kitchen_dining_kitchen.py` as in commit
-  ed664e0), west to east: end panel toward the hall (x 21.83) | refrigerator column (21.90..24.82) |
-  double ovens (24.87..27.12) | counter with three glass-front uppers (27.22..32.06) | cooktop under
-  the hood (32.07..35.15) | base run to the corner.
+- **Kitchen south wall:** the third-round layout again, west to east: end panel toward the hall
+  (x 21.83) | refrigerator bay (21.90..24.82) | oven tower (24.87..27.12) | counter with three
+  glass-front uppers (27.22..32.06) | cooktop under the hood (32.07..35.15) | base run to the
+  corner. What stands in the bay and the tower changed in the seventh round.
 - **Hero stills.** `K0` stands in the hall and looks east along the table to the island and the
-  pantry wall; `B4` takes in the desk niche.
+  tall wall; `B4` takes in the desk niche.
 
 ### Repairs found in review
 
@@ -411,7 +424,7 @@ questions, each with concrete options and one of them recommended, before the lo
 | How tall the Bedroom 3 bathroom's shower window becomes | sill 3'-0", head 7'-6" | as recommended |
 | Whether the primary bath is rebuilt to the sheet's layout | yes | yes: shower north-west, toilet south-west, double vanity on the south wall, door at the east end of the north wall; the skylight moves with the shower, the west window to the sheet's place, 3 ft wide |
 | Whether the primary bedroom's second west window (W14), which the sheet does not show, goes | remove it | **keep it** |
-| Where the stacked stone of the wall image goes | the two shower walls | **the vanity wall** (the south wall, behind the vanity and the mirrors); plain cream tile in the shower |
+| Where the stacked stone of the wall image goes | the two shower walls | **the vanity wall** (the south wall, behind the vanity and the mirrors); plain tile in the shower (cream then, white since the seventh round) |
 
 Two of the four recommendations were wrong. The answers override everything else, the sheet
 included (W14); where the answers and the request are silent, the sheet decides.
@@ -493,31 +506,34 @@ south. Two things changed at once.
   vertical size of the third round: 2'-0" sill to the ceiling, transom at 6 ft, clear glass. Its
   mullion stands on the shower's south glass line (`BATH_WIN_MULLION_Z`, z 24.21), 0.2 ft north
   of the window's centre where the sheet has it, because a glass panel cannot end on glass. The
-  north lite is inside the shower (stone sill, tiled reveal); the south lite has the oak stool
-  and the roman shade.
+  north sash is inside the shower (stone sill, tiled reveal); the south sash has a stool and
+  the roman shade.
 - Skylight W20 (second round: "over the shower") moved with the shower (`PRIMARY_BATH_SKY`).
   It is cut into the shell as built, so nothing is left where it was.
-- Finishes take room: tile and wainscot 0.065 ft on a wall, the stone up to 0.15 ft. The vanity
-  slab therefore shows 6.44 ft of its 6'-6", and the toilet's tank stands 0.19 ft off the
-  structural wall.
+- Finishes take room: the shower tile and the tile base 0.065 ft on a wall, the stone up to
+  0.15 ft, so the toilet's tank stands 0.19 ft off the structural wall. The painted walls carry
+  no finish: the vanity slab runs its full 6'-6" to the east wall.
 
 **Style, after `styles/primary bathroom wall style.jpg`** (rustic, warm, low saturation), with the
-stone where the owner put it. Materials are `Z_baths_primary_*` (`baths_primary_mats.py`).
+stone where the owner put it, and since the seventh round with white walls where the image and
+the sixth round had green boards ("Seventh round"). Materials are `Z_baths_primary_*`
+(`baths_primary_mats.py`).
 
 - South (vanity) wall: stacked natural stone over the full width and height, in true displacement
   (Poly Haven Rustic Stone Wall 02; `STONE_SIZE`, `STONE_STRETCH` and `STONE_MID` set the size of
   the stones and the flush sandy mortar bed). On it two oak-framed mirrors, and above them a
   rough dark timber beam with an enamel lamp over each basin.
-- Shower: plain honed cream stone-look tile, 24 × 48 in, on its two solid walls and a cream mosaic
-  floor. No stone, nothing glazed.
-- Other walls: muted grey-green tongue-and-groove wainscot to 3'-8" with a cap rail, warm cream
-  plaster above and on the ceiling, one timber beam across the ceiling.
+- Shower: plain matte white tile, 24 × 48 in, on its two solid walls, a white mosaic floor,
+  off-white stone trims and low-iron glass. No stone, nothing glazed.
+- Other walls: the house's plain white painted wall from the floor to the ceiling, above a
+  5 5/8 in base of the shower's tile; the house's white ceiling, with one timber beam across it.
 - Floor: quiet warm-grey stone, 24 × 24 in, no pattern. Fittings in brushed nickel. A timber shelf
   on iron brackets with bottles, a botanical print and a trailing plant; striped towels, a cactus
   in a zinc pot, a fringed mat.
-- What differs from the image: the room is lit by daylight with the lamps as warm accents, the
-  image by one lamp at dusk; the stone's courses are more regular; the floor is lighter; the
-  window frames stay black, like the house's.
+- What differs from the image: the walls beside the stone are white, not green boards (the
+  owner's seventh round); the room is lit by daylight with the lamps as warm accents, the image
+  by one lamp at dusk; the stone's courses are more regular; the floor is lighter; the window
+  has a white frame with grid bars, like the house's.
 
 The room is fitted out by `baths_primary.build_room` after the warp (see "Which plan" in the code
 contract), so its patterns are laid out on the built room: tile courses start at the floor and the
@@ -525,7 +541,8 @@ niche's sill sits on a joint, the floor grid is centred on the room.
 
 ### Bedroom 3 bathroom: the taller shower window
 
-W11 on the west wall keeps its 3'-0" width, its frosted glass and its black two-lite frame. Sill
+W11 on the west wall keeps its 3'-0" width, its frosted glass and its two-sash frame (black in
+this round, white with grid bars since the seventh). Sill
 3'-0", head 7'-6" (`BED3_BATH_WIN_Y`; 5'-0" and 7'-0" before), measured from the house's floor
 datum; the bath's tile floor is 0.1 ft higher. `revisions.bedroom3_bath_window` moves the wall
 below and the header above, stretches frame and pane, and checks the bath zone's tile, jamb
@@ -543,7 +560,8 @@ returns and sill against the opening.
 
 ### Sweeps, pins, renders
 
-- 49 sweeps, 58 links. Placed with `--keep`: 43 stay; C0 moves to the middle of the closet's aisle
+- 49 sweeps and 58 links in this round (52 and 67 since the seventh). Placed with `--keep`: 43
+  stay; C0 moves to the middle of the closet's aisle
   and S1 in front of the new bath door; P2 to P5 are new, on the bedroom floor the bed left
   uncovered when it moved to the west wall. Every room of the suite has a sweep. The suite's
   links: T2-S0 through the suite entry, S0-P0, S0-C0 through the pocket door, S0-S1, S1-A0 through
@@ -577,6 +595,209 @@ returns and sill against the opening.
   a door tag with a room label on both sides of its wall (D18, between the closet and the
   vestibule) slides along the wall to the nearer end of those labels.
 
+## Seventh round (2026-11-21): refrigerator, white windows, white bath, no fireplace, north light
+
+The owner: "put the refrigerator next to the microwave, there is no refrigerator now"; "Set all
+windows to white color, and it should have grid line for these windows"; "The walls in primary
+bathroom, it's not coherent, some of the wall are green, make it coherent be removing these green
+walls and set it to white"; "Seal off the fireplace so that we could put sofa on the fireplace
+side, and put a TV on the other side of the wall so that we could watch TV"; and in a second
+message: "I think the light is not correct in your model, the yard is facing north".
+
+**The exterior was asked for and set aside.** With the first message the owner asked for an
+exterior after 1073 W McKinley Ave, then wrote "forget the exterior now". No photos of that house
+were found online. Roof, massing, entry and facade are as they were; outside, only the white
+frames and grid bars are new. The round's change list in the Design sheet says so.
+
+How each sentence was read went to the owner before the build, and there was no objection. No
+wall and no opening moved: every number in the Dimensions sheet is as it was.
+
+### Refrigerator and microwave
+
+The refrigerator was integrated: greige shaker panels at the hall end of the kitchen's tall wall,
+beside a tower of two wall ovens. The owner read the panels as a pantry and the tower's upper
+unit as the microwave.
+
+- The bay (x 21.90..24.82) is open to the wall and holds a stainless French-door refrigerator
+  with a bottom freezer drawer: 34.8 in wide, 70.6 in to the hinge covers, the case flush behind
+  the cabinet fronts (z 28.88), the door faces 0.20 ft in front of them and the handles 0.40 ft.
+  Above it a two-door cabinet from y 6.03, on one line with the tower's top door.
+- The tower's upper unit is a built-in microwave in a 27 in trim kit (y 3.92..5.50; black glass
+  door, control strip with a lit clock), over the unchanged wall oven (y 1.60..3.78). The
+  refrigerator's door edge is 0.7 in from the trim kit. All three share the library's `stainless`.
+- **Fitted, in plan feet.** The relayout map's slope changes inside the bay, so a refrigerator
+  written in concept feet comes out lopsided. `_refrigerator()` and the cabinet doors over it are
+  dimensioned on the architect's plan through `kitchen_dining_cabs.PlanFace` (the inverse of
+  `relayout.X_HALL` / `Z_RIGHT`), and every part is named `kd refrigerator ... panel`, which
+  `bl/warp.py` treats as fitted. Keep the warp's loose words out of those names (`fridge`,
+  `freezer`, `handle`, `pull`, `hinge`, `post`, `bar` ...). The microwave is loose like the oven,
+  as `kd microwave oven ...`: "microwave" alone contains the fitted word "wave".
+- **Departures.** 34.8 in, not a 36 in unit: the bay is 35.1 in and nothing else was to move.
+  The handles are brass like the kitchen's hardware and the oven's since the third round
+  (`APPL_HANDLE = 'stainless'` turns all three). The walkway from the south chairs is 2.81 ft at
+  the refrigerator's handles (3.06 ft at the old pulls).
+- The `K0` still is aimed 5° further right, so that the refrigerator is whole in the frame.
+
+### White windows with grid bars
+
+One late revision on the built model, `revisions.white_windows` (numbers `WINDOW_*` in
+`bl/revision_spec.py`). A window is every upright pane of `glass_clear` or `glass_frosted` in the
+`openings` collection whose name has no "skylight", whoever built it: no window builder was
+edited, and a window added later is covered. How to change a grid: README, "Change a window's
+grid".
+
+- **White.** Every frame piece in `openings` that carried `black_aluminum` (heads, sills, jambs,
+  mullions, transom bars, the stiles and rails of the slider and of the garden door) takes the
+  new library material `window_white` (#f5f4f1, satin). So do the primary bath's stool and
+  mullion post and the slider's pull bar (`WINDOW_WHITE_ALSO`), and in the kitchen zone W08's
+  casing and stool. Not touched: the skylights' frames, shower glass, mirrors, cabinet glass, the
+  garage door and its lites, the front door, shades and curtains, the charcoal fascia.
+- **Bars.** 7/8 in wide, 0.03 ft proud of each face of the glass, chamfered. A bar is one piece
+  through the pane, so no bar face lies in a glass face. Vertical bars run through, horizontal
+  bars between them, and all end inside the frame members; where a sash is shallower than the
+  bars are proud (the slider, the garden door) they stop just inside it. The panes stay light
+  portals. The bars take at most 5 % of a room's light (0.07 stop).
+- **The lite rule.** The house's lite is 14 × 16 1/2 in (`WINDOW_LITE`). Each daylight opening,
+  the glass between two frame members, gets the whole numbers of columns and rows that bring its
+  lites closest to that (in log space), with no lite wider than 1.2 × its height. The sashes of
+  one window share their rows. An upper tier lower than 0.6 × the tier under it is a transom:
+  one row, the columns of the sash below. So the bars run on in line across mullions and
+  transoms, and windows of one height have their bars at the same heights round the house.
+- **W08** keeps the 2 × 4 lites per sash it had as a black steel window, after the owner's
+  `styles/kitchen window.jpg` (`WINDOW_GRID_KEEP`); the rule alone gives 2 × 3.
+- **Repairs on the way.** The centre mullions of W02 and W11, which the warp had left 0.13 and
+  0.18 ft off centre, are back in the middle (`WINDOW_MULLION_CENTRE`): with a grid the two
+  sashes would show lites of two widths. The bay's three roller shades stood outside the glass
+  or askew to it, and the cassettes of W10 and W12 reached into the bars' depth: each is set
+  square to its pane, 0.01 ft on the room side of the bars.
+
+Each window's grid is in `WINDOW_GRIDS` (`apply_revisions_web.py`, checked against the build with
+`--check-grids`) and, with its lite sizes, on the `revisions:` line of every build: for example
+1 × 3 lites per sash in the narrow east and west windows, 4 × 5 in the living room's rear glazing.
+
+**Departures.** The lite is not one size (10.6 to 18.1 in wide, 12.7 to 24.4 in tall), because
+the sashes differ. W14 has only a cross, because its sashes are stacked;
+`WINDOW_GRID_KEEP[r'Primary added west window'] = (3, 2)` would give it 10.3 × 12.2 in lites.
+The frames are the old slim profiles, so a two-sash window reads as one grid. D14, a hinged
+glazed door, is treated as a window. W08's casing, W13's stool and the slider's pull are white
+although the request names the windows.
+
+### Primary bath: white, with one stone wall
+
+- Removed: the grey-green board wainscot, its cap rail, and the cream plaster skins on walls
+  and ceiling, with their materials.
+- Every wall except the vanity wall is the shell's own painted wall (`paint_wall`, the house's
+  wall white) from the floor to the ceiling; the zone builds nothing on it. At the floor runs a
+  5 5/8 in base of the shower's tile, 0.065 ft thick: it covers the shell's skirting, which has
+  gaps where the old door and the old window were. The ceiling is the shell's, at y 8.0.
+- Shower: matte white tile, a white 2 × 2 in mosaic floor, off-white stone threshold and sills,
+  white edge profiles where the tile ends, and low-iron glass (`baths_primary_kit.glass_panel`):
+  through the house's `glass_clear` the white tile read pale aqua.
+- Kept: the stacked stone, both beams, the mirrors, the vanity, the lamps, the shelf, the floor,
+  the fittings and the layout ("Sixth round").
+- What remains uneven: the white is warmer near the two 2900 K lamps and dimmer beside the
+  stone (bounced light, not paint). The door's jamb liners stand 0.085 ft proud of the painted
+  wall (`BATH_DOOR_LINER_PROUD`, sized for the wainscot; it must stay at least 0.065, because the
+  base ends on the liner). The shelf's green bottle and the plants stay.
+
+### Living room: no fireplace, sofa east, television west
+
+The fireplace was a mass that the living zone built in front of the east wall: stone surround,
+firebox, flames, a walnut ledge. The wall behind it was never cut and the shell has no chimney.
+So the zone no longer builds it (`living_fireplace.py` and `living_fire_mats.py` are gone), and
+the east wall is the shell's painted wall with one unbroken baseboard.
+
+- **Furnished as the architect's sheet draws it**, on the axis z 8.05. The sofa stands against the
+  east wall (z 4.40..11.70), facing west, under the south-east window and below its glass, with a
+  side table and a lamp at each end and the canvas over its south half. Opposite, on the west
+  wall, a 75 in television (z 5.31..10.79, y 2.32..5.44; dark, not emissive) over a low white-oak
+  console (z 4.30..11.80). A round coffee table on a round rug, one armchair to the north-west, a
+  money tree beside the console, twelve cans in an even field of 4 × 3. Every position is in
+  the docstring and the constants of `living.py`.
+- Clear: 7.58 ft between the coffee table and the console (the walk from the dining area to the
+  garden door), 4.50 ft between the rug and the console, 2.33 ft between the armchair and the
+  rear glass; every line from a sofa seat to the screen. Furniture covers 55 of the room's
+  249 sq ft (71 before).
+- **In plan feet, under one root.** `living.py` is written in SCENE feet on the architect's plan
+  and builds with the other zones; every object hangs under the Empty `TG living root` at the
+  origin, and `bl/warp.py` skips objects named `TG ...` and objects with a parent. `build()`
+  measures the clearances on the built meshes and lists in `notes` what does not hold.
+- **Departures from the sheet and the request.** The sofa is 7.3 ft long (7.9 before), to stand
+  on the sheet's z 4.4..11.7. The rug and the coffee table are new, round as drawn. One armchair
+  instead of two, at (30.4, 3.75) and not at the sheet's (33.5, 2.3), where it would stand 0.9 ft
+  from the rear glass and on sweep L1; it stands in front of the west rear glazing, 2.33 ft off
+  it. The television is 75 in; the sheet's symbol is about 69 in. The canvas is smaller and
+  hangs over the sofa's south half, because the window takes the north half. The floor lamp, the
+  pampas and the ledge's vases are gone; the tree moved from the north-east corner to the west
+  wall. The sheet's "(N) SKYLIGHT" over the sofa is not in the model and was not asked for.
+- The still `living` looks north from (30.9, 4.8, 20.3): the television wall on the left, the
+  rear glass, the sofa wall on the right. The Design sheet has no view of the living room.
+
+### Daylight: the yard faces north
+
+The plan was oriented correctly (garden = north = SCENE −z) and so was the sun lamp: azimuth 128°
+clockwise from north, elevation 42°, a late-morning sun near an equinox in Sunnyvale, with the
+house's shadow on the near lawn. The sky was wrong. `_hdri_sun_rotation()` took the equirect
+image's centre column for −X; Cycles has it at +X. The HDRI's glow therefore stood at azimuth
+−52°, in the north-west over the garden, exactly opposite the lamp, in every published render
+with this sky.
+
+- **Fix:** one line in `bl/lighting.py` (the Mapping rotation goes from 183.77° to 3.77°). The
+  physical-sky fallback had an error of the same kind (the Sky Texture's `sun_rotation` is a
+  compass azimuth; the code took it counter-clockwise) and is corrected too; it was in no
+  published image. Sun azimuth, elevation and strength are unchanged.
+- **The sky is now measured:** every build renders the finished world alone, logs where its
+  bright side stands against the lamp and stops on a mismatch (README, "How the look is
+  controlled").
+- **A north-facing yard, checked by ray casts on the built model** (28 panes, 600 points each):
+  no direct sun through any north or west pane. Sun enters through the four east panes (living
+  room ×2, dining, kitchen), the bay's centre and east sashes, the window above the front door
+  and the four skylights. The rear facade and the deck by the house are in open shade; the one
+  lit patch on the deck is the east window's beam leaving through the glass corner.
+- The sky over the garden is half as bright as it was, so the north rooms lost sky fill and
+  every pin of the earlier runs was stale.
+- Left as it is: the HDRI's own sun stands 48° up, the lamp 42° (the azimuths agree).
+
+### Sweeps, pins, renders
+
+- 52 sweeps, 67 links. Placed with `--keep`: 48 stay and none moves; L5 goes (it stood where the
+  sofa is); L6 to L9 are new, all in the living room: L6 at the rear glazing behind the armchair,
+  L7 between the console and the coffee table, L8 at the room's south edge, L9 in the corner
+  north of the sofa. The round coffee table stands on the old link L0-L1; the bridge rule placed
+  L6 to rejoin L1 before the fill added L7, which joins it as well. The layout was kept as the
+  tool made it.
+- Close stops: L0 is 0.93 ft from the coffee table's rim (the limit for a kept sweep is 0.9),
+  L6 and L9 are 1.2 ft from the rear glazing's grid bars, K4 is 1.48 ft from the refrigerator's
+  handles.
+- Opening views (`OPENING` in `apply_sweeps.py`): L7 (yaw 85°, pitch −4°) the sofa wall; L8
+  (0°, −4°) the television on the left, the rear glass, the sofa on the right; D0 (−172°, −3°)
+  across the dining table at the refrigerator and the microwave.
+- **The reel.** The "Living room" card is L8 (`HIGHLIGHTS` in `apply_revisions_web.py`). It was
+  L0, which stands in front of the sofa and looks at the television with the sofa behind the
+  camera. `build_site_data.py` enters an open space on its card of the reel, so the living room's
+  name on the floor plan opens L8 as well; W03, W04 and D14 in the Dimensions sheet still stand
+  on L0. The "Open living area" card, D0, now shows the refrigerator and the microwave. The
+  "Kitchen" card, K0, still opens east along the work aisle, with the refrigerator behind the
+  camera.
+- Rendered again: everything. All 52 panoramas, the hero stills (the cameras `K0` and `living`
+  changed), the bake and the 32 exterior frames, with pins from a fresh probe; the smoothing
+  needed `--move-kelvin 2600`, and the outdoor sweeps' white balance was pinned by hand (README,
+  "Render everything again").
+
+### Process notes
+
+- **Measure what a formula sets.** The sky stood half a circle off until the owner said so,
+  because its rotation was derived and never compared with the lamp in a picture. The build now
+  measures it and refuses a mismatch.
+- **A finish that runs through the whole house is one late revision on the built model**, found
+  by collection and material, not an edit in every builder.
+- **Before removing a thing, find who builds it.** The fireplace was the zone's furniture in
+  front of an uncut wall: no revision, no wall repair.
+- **Where two places state one fact, a tool compares them.** The Dimensions sheet's texts give
+  each window's grid, which the build computes: `apply_revisions_web.py --check-grids`.
+- **The owner's words name what they see.** A panelled refrigerator was "no refrigerator", the
+  upper oven "the microwave": the answer was to make the thing read as what it is.
+
 ## How to build and review
 
 ```bash
@@ -608,7 +829,7 @@ graph in a production run), so a fixture that should read brighter needs a highe
 |---|---|---|
 | `common.py` | core | `Ctx` (scene data, lookups, collections, geometry helpers), `ft2bl`, `place`, `world_bbox_ft` |
 | `shell.py` | core | Exact architecture with modern finishes. Builds no furniture or fixtures. |
-| `lighting.py` | core (exterior zone may tune the sun/sky constants) | Sky and sun, window portals, `can()`, `point_light()`, `emitter()` |
+| `lighting.py` | core (exterior zone may tune the sun/sky constants) | Sky and sun, the sky check (`check_sky()`), window portals, `can()`, `point_light()`, `emitter()` |
 | `materials.py` | materials | `get(key)` library. KEYS are a stable contract. |
 | `assets.py` | core | CC0 Poly Haven fetch and cache: `model()`, `texture()`, `hdri()`, `write_manifest()` |
 | `zones/<zone>.py` | one zone agent each | `build(ctx) -> dict` that adds everything inside its zone (the primary suite and the primary bath: after the warp, see "Which plan") |
@@ -638,6 +859,18 @@ Rules:
   - order matters: `bath_door`, `bath_window`, `primary_bath_skylight`, then `suite_rooms`,
     `suite_fit_out`, `primary_bath_fit_out`, all before `floor_gaps` and `skirting_trim`;
   - keep `primary_suite.fit_out`'s audit empty, and check positions on the built model.
+
+  Since the seventh round the living zone is in plan feet too, a third way: `living.build()`
+  runs with the other zones before the warp, and every object hangs under the root Empty
+  `TG living root` at the SCENE origin. The warp skips objects named `TG ...` and objects with a
+  parent, so a new piece must get that parent (the end of `build()` does it for the collection).
+  In the kitchen, a zone in concept feet, the refrigerator alone is dimensioned on the plan
+  (`kitchen_dining_cabs.PlanFace`; "Seventh round").
+- **Windows.** A window's pane and frame members go into the `openings` collection, the frame in
+  `black_aluminum`: `revisions.white_windows` finds them there, makes them white and builds the
+  grid bars. No zone builds window bars of its own (the garage door's lites are the door's), and
+  whatever hangs at a window (shade, curtain) stays at least 0.04 ft on the room side of the
+  glass: the bars stand 0.03 ft proud of it.
 - **Collections.** Put every object in `ctx.coll('zone_<zone>')`, or a child of it.
 - **Your files only.** Edit only your own `zones/<zone>.py`, plus any helper files under
   `zones/<zone>_*.py`. If you need a change in a core module, explain it in your final report;
@@ -682,15 +915,16 @@ what replaces them.
 | Zone module | Regions (`scene_classification` rooms) | Sweeps to review |
 |---|---|---|
 | `kitchen_dining` | kitchen, dining | K0, K1, K2, K3, K4, D0, D1 (also seen from H2, H4, L2) |
-| `living` | living | L0, L1, L2, L3, L4, L5 |
+| `living` | living | L0, L1, L2, L3, L4, L6, L7, L8, L9 (also seen from D0, D1) |
 | `primary_suite` | primary, primary_dressing (the vestibule and the walk-in closet) | P0, P2, P3, P4, P5, S0, S1, C0 |
 | `bedrooms` | bed2, bed3, bed3_bay, bed4, bed4_closet, suite3_wic | B2, X0, B3, Y0, Y1, Y2, Y3, B4, Z0, C3 |
 | `baths` | ensuite, shared_bath, suite3_bath | A0 (also seen from S1), A1, A3 |
 | `hall_entry_garage` | front_hall, common_hall, garage, porch (inside face of the entry) | E0, H1, GA, LC, H0, H2, H3, H4, T2, G0, G1, G2, G3 |
 | `exterior` | everything outside the walls: grounds, garden, deck, fences, driveway, trees, garage door (both faces), exterior lights, distant context | OP, OD, and every sweep's window views |
 
-Boundaries: living owns the living region north of z=14.5; `kitchen_dining` owns the open area
-from z=14.5 southward. Halls own circulation only and leave the room zones alone. The laundry closet
+Boundaries: living owns the living region north of z=14.5 on the concept plan (z 14.34 as built);
+`kitchen_dining` owns the open area from there southward. Halls own circulation only and leave the
+room zones alone. The laundry closet
 is not a zone's: `bl/revisions.py` and `bl/laundry.py` build it after the warp (collection
 `heg_laundry` under `zone_hall_entry_garage`), and `LC` is the sweep to review it from. The primary
 suite's walls and doors and the primary bath's door, window and skylight are revisions too; the two

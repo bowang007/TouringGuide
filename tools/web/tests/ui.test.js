@@ -248,6 +248,34 @@ test('Design: the tabs follow design.json and each shows its picture and text', 
   assert.equal(await modal(s), null);
 });
 
+// The owner's rounds of changes (design.json `owner_changes`) are listed under the tabs, newest first, each
+// under its own heading: "Seventh round · 2026-11-21", never "Round 7 round".
+test('Design: the owner\'s rounds are listed newest first, each under its ordinal and date, with every entry', async (s) => {
+  await s.open();
+  await s.enter();
+  await s.press(s.testid('btn-design'));
+  await s.waitFor(() => !!document.querySelector('#designmodal.open'), { what: 'the Design sheet' });
+  const design = await s.json('assets/data/design.json'), rounds = design.owner_changes || [];
+  assert.ok(rounds.length >= 1, 'design.json has the owner\'s rounds');
+  await s.press('#designChanges summary');
+  await s.waitFor(() => document.getElementById('designChanges').open, { what: 'the list of changes to open' });
+  const shown = await s.page.$$eval('#designChangeList h4', (hs) => hs.map((h) => ({ head: h.textContent.trim(), items: [...h.nextElementSibling.querySelectorAll('li')].map((li) => li.textContent) })));
+  assert.equal(shown.length, rounds.length, 'one heading per round');
+  const words = ['', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
+  rounds.slice().reverse().forEach((r, i) => {
+    assert.equal(shown[i].head, (words[r.round] ? words[r.round] + ' round' : 'Round ' + r.round) + (r.date ? ' · ' + r.date : ''), 'heading of round ' + r.round);
+    assert.deepEqual(shown[i].items, r.changes, 'the entries of round ' + r.round);
+  });
+  assert.deepEqual(shown.filter((x) => /^Round \d+ round/.test(x.head)).map((x) => x.head), [], 'headings that say "round" twice');
+  // the newest round is readable: its heading and first entry are inside the sheet when scrolled to
+  await s.page.$eval('#designChangeList h4', (h) => h.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await s.frames(2);
+  const box = await s.page.$eval('#designChangeList h4', (h) => { const b = h.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: innerHeight }; });
+  assert.ok(box.top >= -1 && box.bottom <= box.h + 1, 'the newest round\'s heading is on screen (top ' + box.top.toFixed(1) + ', bottom ' + box.bottom.toFixed(1) + ' of ' + box.h + ' px)');
+  await s.shot('design-changes');
+  s.note('rounds shown: ' + shown.map((x) => x.head + ' (' + x.items.length + ')').join(', '));
+});
+
 test('menu: opens, "Controls & about" lists the rooms, Escape closes', async (s) => {
   await s.open();
   await s.enter();

@@ -44,8 +44,8 @@ export function createDesign(opts) {
   // the owner's rounds of changes (design.json `owner_changes`), newest first
   const rounds = (D.owner_changes || []).slice().reverse();
   if (rounds.length) {
-    const ordinal = ['', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth'];
-    $('designChangeList').innerHTML = rounds.map((r) => '<h4>' + esc((ordinal[r.round] || 'Round ' + r.round) + ' round' + (r.date ? ' · ' + r.date : '')) + '</h4><ul>' + (r.changes || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>').join('');
+    const ordinal = ['', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
+    $('designChangeList').innerHTML = rounds.map((r) => '<h4>' + esc((ordinal[r.round] ? ordinal[r.round] + ' round' : 'Round ' + r.round) + (r.date ? ' · ' + r.date : '')) + '</h4><ul>' + (r.changes || []).map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>').join('');
     $('designChanges').hidden = false;
   }
 

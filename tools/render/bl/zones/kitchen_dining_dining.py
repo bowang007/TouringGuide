@@ -142,8 +142,8 @@ def _chandelier(g, cx, cz, col, lights):
 # and the cluster centre is carried back to the concept plan with the inverse of the kitchen's maps
 # (relayout.X_HALL / Z_RIGHT, region 'kitchen + dining'). Built (new-plan feet): island worktop x 27.453..33.222,
 # z 21.754..24.720; table x 21.433..27.433, z 21.862..24.612; chairs x 21.838..27.028, their backs at z 20.80
-# (north) and 25.67 (south); pantry-wall fronts z 28.882 (3.21 ft south of the chair backs; fridge pulls 3.06,
-# oven handles 3.01); hall line x 21.2 (0.23 ft west of the table's end).
+# (north) and 25.67 (south); pantry-wall fronts z 28.882 (3.21 ft south of the chair backs; refrigerator doors
+# 3.01, its handles 2.81, oven handle 3.01); hall line x 21.2 (0.23 ft west of the table's end).
 RECT_LEN = 6.0                # 72in: three chairs a side between the legs
 RECT_W = 2.75                 # 33in, a little narrower than the island's worktop (2.97 ft built)
 RECT_TOP = 2.5                # 30in

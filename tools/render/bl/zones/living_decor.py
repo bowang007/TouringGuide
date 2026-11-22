@@ -1,5 +1,5 @@
-"""Living-zone decor: procedural abstract canvas, dried pampas (hair curves), fluted planter with a
-Poly Haven tree, Poly Haven ceramic vases (runs inside Blender)."""
+"""Living-zone decor: procedural abstract canvas, fluted planter with a Poly Haven tree, Poly Haven
+ceramic vases (runs inside Blender)."""
 import math
 import os
 
@@ -176,8 +176,9 @@ def art_material(path):
     return m
 
 
-def wall_art(ctx, wall_x, z0, z1, y0, y1, depth=0.13):
-    """Gallery-wrapped canvas on a west wall (face at wall_x, art faces +x) in a thin black floater."""
+def wall_art(ctx, wall_x, z0, z1, y0, y1, depth=0.13, face=1):
+    """Gallery-wrapped canvas in a thin black floater frame on a wall whose room face is at wall_x.
+    face=+1: a west wall, the art looks east (+x); face=-1: an east wall, the art looks west (-x)."""
     path = os.path.join(CACHE_DIR, 'living', 'art_living_abstract_02.png')
     if not os.path.exists(path):
         make_art_image(path)
@@ -186,151 +187,31 @@ def wall_art(ctx, wall_x, z0, z1, y0, y1, depth=0.13):
     gb = gesso.node_tree.nodes.get('Principled BSDF')
     gb.inputs['Base Color'].default_value = (0.86, 0.85, 0.82, 1)
     gb.inputs['Roughness'].default_value = 0.8
-    cx0, cx1 = wall_x + 0.02, wall_x + 0.02 + depth
-    v, f = G.box_verts(cx0, cx1, y0, y1, z0, z1)
-    # viewer faces west: image left = south (z1), right = north (z0)
-    uvs = [(1, 0), (1, 0), (1, 1), (1, 1), (0, 0), (0, 0), (0, 1), (0, 1)]
+    back, front = wall_x + face * 0.02, wall_x + face * (0.02 + depth)      # canvas back / painted face
+    v, f = G.box_verts(min(back, front), max(back, front), y0, y1, z0, z1)
+    # box_verts: vertices 0-3 at z0, 4-7 at z1. Seen from the room the picture's left edge is the south end (z1)
+    # on a west wall and the north end (z0) on an east wall.
+    u0, u1 = (1, 0) if face > 0 else (0, 1)
+    uvs = [(u0, 0), (u0, 0), (u0, 1), (u0, 1), (u1, 0), (u1, 0), (u1, 1), (u1, 1)]
     ob = G.obj(ctx, 'living art canvas', v, f, [gesso, art_material(path)], COLL, smooth=False, uvs=uvs)
     for poly in ob.data.polygons:
-        c = poly.center
-        if abs(c.x - cx1 * FT) < 1e-4:
+        if abs(poly.center.x - front * FT) < 1e-4:
             poly.material_index = 1
     G.bevel(ob, 0.008, 2)
-    # floater frame
+    # floater frame: four bars standing a little proud of the canvas, and the tray behind it
     gap, fw, lip = 0.035, 0.05, 0.02
-    fx0, fx1 = wall_x + 0.005, cx1 + lip
+    fa, fb = wall_x + face * 0.005, front + face * lip
+    fx0, fx1 = min(fa, fb), max(fa, fb)
+    ta, tb = wall_x + face * 0.005, wall_x + face * 0.025
     parts = [G.box_verts(fx0, fx1, y0 - gap - fw, y0 - gap, z0 - gap - fw, z1 + gap + fw),
              G.box_verts(fx0, fx1, y1 + gap, y1 + gap + fw, z0 - gap - fw, z1 + gap + fw),
              G.box_verts(fx0, fx1, y0 - gap, y1 + gap, z0 - gap - fw, z0 - gap),
              G.box_verts(fx0, fx1, y0 - gap, y1 + gap, z1 + gap, z1 + gap + fw),
-             G.box_verts(fx0, fx0 + 0.02, y0 - gap, y1 + gap, z0 - gap, z1 + gap)]   # floater tray
+             G.box_verts(min(ta, tb), max(ta, tb), y0 - gap, y1 + gap, z0 - gap, z1 + gap)]   # floater tray
     v, f = G.merge(*parts)
     fo = G.obj(ctx, 'living art floater frame', v, f, 'paint_black', COLL, smooth=False)
     G.bevel(fo, 0.004, 1)
     return [ob, fo]
-
-
-# ================================================================================ pampas
-def pampas(ctx, base, n_stems=8, seed=3, height=(2.2, 2.9), spread=(6, 28), plume_frac=0.45, fibers=5200):
-    """Dried pampas stems with fluffy plumes as hair curves. base = (x, y, z) SCENE feet of the
-    vase mouth centre. Returns the curves objects."""
-    rng = np.random.default_rng(seed)
-    fib_pts, stem_pts = [], []
-    # fan toward the room (SCENE -x) and along the wall; keep clear of the wall behind (+x)
-    azs = np.linspace(math.radians(80), math.radians(280), n_stems) + rng.uniform(-0.12, 0.12, n_stems)
-    for s in range(n_stems):
-        az = azs[s]
-        tilt = math.radians(rng.uniform(*spread))
-        Ls = rng.uniform(*height)
-        b = np.array([base[0] + 0.04 * math.cos(az + 1), base[1] - 0.7, base[2] + 0.04 * math.sin(az + 1)])
-        hor = np.array([math.cos(az), 0, math.sin(az)])
-        npts = 16
-        sp = []
-        for i in range(npts):
-            t = i / (npts - 1)
-            L = (Ls + 0.7) * t
-            p = b + np.array([0, 1, 0]) * L * math.cos(tilt) + hor * L * math.sin(tilt) * (0.6 + 0.6 * t)
-            p[1] -= 0.12 * (t ** 3) * Ls * math.sin(tilt) * 2
-            sp.append(p)
-        sp = np.array(sp)
-        stem_pts.append(sp)
-        # plume fibres
-        T0 = 1 - plume_frac
-        nf = int(fibers * rng.uniform(0.8, 1.15))
-        ts = T0 + plume_frac * rng.random(nf) ** 0.85
-        for t in ts:
-            fi = t * (npts - 1)
-            i0 = min(int(fi), npts - 2)
-            fr = fi - i0
-            S = sp[i0] * (1 - fr) + sp[i0 + 1] * fr
-            Tg = sp[i0 + 1] - sp[i0]
-            Tg /= np.linalg.norm(Tg)
-            a = np.cross(Tg, [0, 0, 1.0])
-            if np.linalg.norm(a) < 1e-4:
-                a = np.cross(Tg, [1.0, 0, 0])
-            a /= np.linalg.norm(a)
-            bb = np.cross(Tg, a)
-            psi = rng.uniform(0, 2 * np.pi)
-            R = math.cos(psi) * a + math.sin(psi) * bb
-            beta = math.radians(rng.uniform(22, 62))
-            d = Tg * math.cos(beta) + R * math.sin(beta)
-            u = (t - T0) / plume_frac
-            env = math.sin(math.pi * (0.12 + 0.8 * u)) ** 0.7 * (1 - 0.35 * u)
-            ln = 0.46 * env * rng.uniform(0.5, 1.1) + 0.04
-            pts = [S]
-            dd = d.copy()
-            for k in range(1, 4):
-                dd = dd + np.array([0, -0.12, 0]) + rng.normal(0, 0.1, 3)
-                dd /= np.linalg.norm(dd)
-                pts.append(pts[-1] + dd * ln / 3)
-            fib_pts.append(pts)
-    objs = []
-    # fibres
-    fib = np.array(fib_pts)                        # (N, 4, 3) SCENE ft
-    N = fib.shape[0]
-    hc = bpy.data.hair_curves.new('living pampas plumes')
-    hc.add_curves([4] * N)
-    bl = np.stack([fib[..., 0] * FT, -fib[..., 2] * FT, fib[..., 1] * FT], -1).astype(np.float32)
-    hc.position_data.foreach_set('vector', bl.ravel())
-    rad = hc.attributes.new('radius', 'FLOAT', 'POINT')
-    rr = np.tile(np.array([0.0007, 0.0006, 0.00045, 0.00025], np.float32), N)
-    rad.data.foreach_set('value', rr)
-    hc.materials.append(_pampas_material())
-    o = bpy.data.objects.new('living pampas plumes', hc)
-    ctx.coll(COLL).objects.link(o)
-    objs.append(o)
-    # stems
-    ns = len(stem_pts)
-    hs = bpy.data.hair_curves.new('living pampas stems')
-    hs.add_curves([stem_pts[0].shape[0]] * ns)
-    st = np.array(stem_pts)
-    bl = np.stack([st[..., 0] * FT, -st[..., 2] * FT, st[..., 1] * FT], -1).astype(np.float32)
-    hs.position_data.foreach_set('vector', bl.ravel())
-    rad = hs.attributes.new('radius', 'FLOAT', 'POINT')
-    rr = np.tile(np.linspace(0.0028, 0.0016, st.shape[1]).astype(np.float32), ns)
-    rad.data.foreach_set('value', rr)
-    hs.materials.append(_stem_material())
-    o = bpy.data.objects.new('living pampas stems', hs)
-    ctx.coll(COLL).objects.link(o)
-    objs.append(o)
-    return objs
-
-
-def _pampas_material():
-    name = 'Z_living_pampas'
-    m = bpy.data.materials.get(name)
-    if m:
-        return m
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    nt = m.node_tree
-    nt.nodes.clear()
-    out = nt.nodes.new('ShaderNodeOutputMaterial')
-    h = nt.nodes.new('ShaderNodeBsdfHairPrincipled')
-    try:
-        h.parametrization = 'COLOR'
-    except Exception:
-        pass
-    for k, val in (('Color', (0.80, 0.66, 0.46, 1)), ('Roughness', 0.55), ('Radial Roughness', 0.85),
-                   ('Coat', 0.0), ('Random Color', 0.15), ('Random Roughness', 0.2)):
-        if k in h.inputs:
-            h.inputs[k].default_value = val
-    nt.links.new(h.outputs[0], out.inputs['Surface'])
-    m.diffuse_color = (0.8, 0.7, 0.55, 1)
-    return m
-
-
-def _stem_material():
-    name = 'Z_living_pampas_stem'
-    m = bpy.data.materials.get(name)
-    if m:
-        return m
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    b = m.node_tree.nodes.get('Principled BSDF')
-    b.inputs['Base Color'].default_value = (0.62, 0.52, 0.36, 1)
-    b.inputs['Roughness'].default_value = 0.6
-    return m
 
 
 # ========================================================================= imported models

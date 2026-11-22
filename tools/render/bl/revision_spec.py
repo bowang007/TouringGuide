@@ -393,3 +393,43 @@ def suite_entry_panel(closed=False):
     x1 = x0 + SUITE_ENTRY_PANEL_T
     return {'name': 'Primary suite entry sliding panel (open)', 'center': ((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2),
             'size': (x1 - x0, y1 - y0, z1 - z0), 'rot': 0.0, 'aabb': (x0, x1, y0, y1, z0, z1)}
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Seventh round (2026-11-21), the owner: "Set all windows to white color, and it should have grid line for these
+# windows". bl/revisions.white_windows reads these numbers and works on every window and glazed door of the built
+# model (W01..W15, W17 and the living room's garden door D14; the skylights W16, W18..W20 are left alone).
+WINDOW_WHITE = 'window_white'             # bl/materials.py: satin white frames, sashes and grid bars
+WINDOW_FRAME_WAS = 'black_aluminum'       # the frame material until the sixth round (the skylights keep it)
+WINDOW_GLASS = ('M_glass_clear', 'M_glass_frosted')      # a window pane: an upright piece of this glass in `openings`
+WINDOW_SKIP = r'skylight'                 # objects of `openings` that are no window (names)
+# Grid bars (simulated divided lites): 7/8 in wide, on both faces of the glass and 0.03 ft proud of each (less where
+# a sash is shallower than that, e.g. the slider's panels), with a small chamfer.
+WINDOW_BAR_W = 0.073
+WINDOW_BAR_PROUD = 0.03
+WINDOW_BAR_BEVEL = 0.006
+# The house's lite: 14 in wide x 16 1/2 in tall (width : height = 0.85). Every sash is divided into the whole number
+# of columns and rows that brings its lites closest to it; no lite may be wider than 1.2 x its height. An upper tier
+# lower than 0.6 x the tier under it is a transom: one row, the columns of the sash below.
+WINDOW_LITE = (14.0 / 12.0, 16.5 / 12.0)
+WINDOW_LITE_MAX_RATIO = 1.2
+WINDOW_TRANSOM_RATIO = 0.6
+# The kitchen's W08 keeps the grid it had as a black steel window, 2 x 4 lites in each of its three sashes: the
+# owner's own kitchen-window picture (styles/kitchen window.jpg), and the house's proportion at a smaller size
+# (10.5 x 12.8 in). Pane name -> (columns, rows) per sash.
+WINDOW_GRID_KEEP = {r'^W08 glass$': (2, 4)}
+# The black bars the kitchen zone built until the sixth round (removed if an old zone still builds them).
+WINDOW_OLD_BARS = r'^kd W08 muntin panel'
+# Window pieces of the room zones that take the frames' white: the primary bath's stool under W13's dry lite (oak
+# until the sixth round) and the post on W13's mullion that carries the shower glass. Also the pull bar on the
+# primary bedroom slider's meeting stile (1.6 ft of matte black metal until the review of the seventh round: on the
+# white door it read, from across the room and from the garden, as one frame piece left black).
+WINDOW_WHITE_ALSO = (r'^A0 window stool', r'^A0 window mullion post$', r'^Primary slider pull$')
+# Centre mullions that bl/warp.py left off centre (it maps each piece with the room its own centre lies in): Bedroom
+# 2's rear window W02 (0.13 ft east of the middle) and the Bedroom 3 bathroom's W11 (0.18 ft south). Pane names.
+WINDOW_MULLION_CENTRE = (r'^\d+ Bedroom 2 — rear wall$', r'^\d+ Ensuite privacy window glazing$')
+# Roller shades: "<tag> cassette / fabric / hem bar / bar". A shade that stands in or beyond its window's bars is put
+# back square to the pane, 0.01 ft on the room side of the bars (the bay's three shades stood outside the glass and
+# 2.4 degrees off its canted sides since the conversion; W10's and W12's cassettes reached 0.003 ft into the bars).
+WINDOW_SHADES = r'^(.*\bshade\b.*?) (cassette|fabric|hem bar|bar)$'
+WINDOW_HOUSE_CENTRE = (20.0, 27.0)        # a point inside the house (plan x, z): tells a pane's room side

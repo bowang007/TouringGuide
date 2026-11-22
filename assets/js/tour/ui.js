@@ -260,7 +260,8 @@ export function createUI() {
     });
     $('savePano').addEventListener('click', async () => {
       const s = viewer.state();
-      const id = s.mode === 'inside' && s.sweep ? s.sweep : viewer.sweep('L0') ? 'L0' : tour.start;
+      // outside the inside view: the first room of the reel after the entrance (the living room)
+      const id = s.mode === 'inside' && s.sweep ? s.sweep : (tour.highlights || []).find((h) => h !== tour.start && viewer.sweep(h)) || tour.start;
       const url = viewer.panos.url(id);
       if (!url) { toast('A 360° render is not available at this location.'); return; }
       try {

@@ -103,6 +103,22 @@ test('a link with ?sweep=ID opens the inside view on that sweep', async (s) => {
   assert.equal(st.mode, 'inside');
 });
 
+// The address bar hands out links to sweeps, and a round of changes can remove one (L5 stood where the
+// living room's sofa is since the owner's seventh round). Such a link opens the front page like a plain
+// visit: no error, and the way into the house works.
+test('a link to a sweep that has left the tour opens the front page', async (s) => {
+  const tour = await (async () => { await s.open(); return s.tour(); })();
+  const gone = ['L5', 'ZZ'].find((id) => !tour.sweeps.some((x) => x.id === id));
+  await s.open('?sweep=' + gone + '&yaw=40&pitch=-5');
+  assert.equal(await s.page.$eval('#landing', (e) => e.classList.contains('open')), true, 'the landing page is up');
+  const st = await s.state();
+  assert.notEqual(st.sweep, gone);
+  assert.notEqual(st.mode, 'inside', 'not inside on a sweep the link did not name');
+  const start = await s.enter();
+  assert.equal((await s.state()).sweep, start, '"Enter the house" opens on the start sweep');
+  s.note('?sweep=' + gone + ' -> the front page, then ' + start);
+});
+
 // The address bar is a link to the place the visitor is at: ?sweep=ID&yaw=&pitch= (degrees) at rest inside,
 // ?mode=dollhouse|floorplan|exterior otherwise. It is rewritten in place (history.replaceState), so the
 // tour never piles up history entries, and other parameters of the address stay.

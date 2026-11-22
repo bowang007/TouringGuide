@@ -7,6 +7,8 @@
   recalculated per piece, then a small angle-limited bevel softens every edge.
 * sweep() runs a moulding profile along a plan polyline with true mitres (crown mouldings).
 * Hardware (knobs, cup pulls, appliance pulls) is built once at the origin and instanced.
+* PlanFace is a face frame in feet on the ARCHITECT'S plan (for fitted pieces that must be true to size
+  there, e.g. the refrigerator); tube_handle() is an appliance handle whose part names the caller chooses.
 
 Warp classes (bl/warp.py): run meshes are named '... panel ...' / '... cove ...' (fitted: reshaped with
 the room). Knobs and cup pulls on the fitted fronts are named '... hardware panel' (fitted too), so
@@ -44,6 +46,22 @@ class Face:
         """Blender Euler that turns a +Z-axis (Blender up) hardware model to face out of this face."""
         return {'mz': (-math.pi / 2, 0, 0), 'pz': (math.pi / 2, 0, 0),
                 'mx': (0, -math.pi / 2, 0), 'px': (0, math.pi / 2, 0)}[self.facing]
+
+
+class PlanFace(Face):
+    """A Face whose plane, u and w are feet on the ARCHITECT'S plan instead of the concept plan. xinv / zinv
+    carry a built x / z back to the concept plan the zone is built on (the inverses of the relayout maps that
+    bl/warp.py applies to the zone), so a FITTED piece built in this frame has exactly these numbers after the
+    warp. Used where a piece has to be true to size and symmetric on the built plan although a breakpoint of
+    the map runs through it (the refrigerator: the map's slope changes at concept x 23.278, inside its bay)."""
+
+    def __init__(self, facing, plane, xinv, zinv):
+        super().__init__(facing, plane)
+        self.xinv, self.zinv = xinv, zinv
+
+    def __call__(self, u, v, w):
+        x, y, z = super().__call__(u, v, w)
+        return (self.xinv(x), y, self.zinv(z))
 
 
 class Acc:
@@ -115,6 +133,18 @@ class Acc:
         self._f(a)
         self._f(list(reversed(b)))
         n = len(pts_zy)
+        for i in range(n):
+            j = (i + 1) % n
+            self._f([a[i], a[j], b[j], b[i]])
+        self._close(a + b)
+
+    def poly_u(self, F, pts_wv, u0, u1):
+        """Section polygon [(w, v), ...] in a face frame, extruded along the face from u0 to u1."""
+        a = [self._v(F(u0, v, w)) for w, v in pts_wv]
+        b = [self._v(F(u1, v, w)) for w, v in pts_wv]
+        self._f(a)
+        self._f(list(reversed(b)))
+        n = len(pts_wv)
         for i in range(n):
             j = (i + 1) % n
             self._f([a[i], a[j], b[j], b[i]])
@@ -374,4 +404,22 @@ def bar_pull(g, mat, F, u0, v0, u1, v1, coll, name='kd appliance pull', r=0.028,
         out.append(g.cyl_axis(name + ' post foot', F(uu, vv, 0.0), F(uu, vv, 0.018), r * 1.25, mat, 20, coll))
     for p in (a2, b2):                   # rounded end caps
         pass
+    return out
+
+
+def tube_handle(g, mat, F, u0, v0, u1, v1, coll, names, r=0.033, standoff=0.165, post_r=0.02, foot_r=0.04,
+                inset=0.14):
+    """Appliance handle: a round bar from (u0, v0) to (u1, v1) on face F (w=0 is the door's face), its axis
+    `standoff` in front of the face, on two posts `inset` from its ends, each on a round foot.
+    names = (bar, post, foot): the caller chooses them by warp class (bl/warp.py). bar_pull()'s '... pull' /
+    '... post' names are loose; a handle on a FITTED front needs fitted names to stay on it."""
+    du, dv = u1 - u0, v1 - v0
+    L = math.hypot(du, dv)
+    bar = g.cyl_axis(names[0], F(u0, v0, standoff), F(u1, v1, standoff), r, mat, 28, coll)
+    g.bevel_mod(bar, r * 0.3, 3)         # eased ends
+    out = [bar]
+    for t in (inset / L, 1 - inset / L):
+        uu, vv = u0 + du * t, v0 + dv * t
+        out.append(g.cyl_axis(names[1], F(uu, vv, 0.0), F(uu, vv, standoff), post_r, mat, 20, coll))
+        out.append(g.cyl_axis(names[2], F(uu, vv, 0.0), F(uu, vv, 0.014), foot_r, mat, 28, coll))
     return out

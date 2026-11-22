@@ -7,17 +7,22 @@ Principled material if anything fails (e.g. a texture download), so the zone alw
 The room is fitted out AFTER the warp, in plan feet (see baths_primary.py), so world-space patterns
 are laid out on the built room: tile courses start at the floor, the floor grid is centred on the room.
 
+Seventh round (2026-11-21), the owner: "some of the wall are green, make it coherent be removing these green
+walls and set it to white". The grey-green board wainscot, its cap rail and the cream plaster are gone with their
+materials (vgroove, sage_paint, plaster); the walls are the shell's own wall paint (library `paint_wall`) and the
+shower's tile, mosaic and stone trims are white, so the room is white with one stone wall.
+
   stone         stacked natural stone, warm brown-tan with light sandy mortar (Poly Haven
                 rustic_stone_wall_02) with TRUE displacement: the vanity (south) wall
-  shower_tile   honed cream stone-look porcelain, 24x48in stack bond, quiet joints: the shower's walls
-  shower_mosaic 2x2in cream mosaic (shower floor)
-  sill          honed cream limestone (shower threshold, niche sill, window sill of the shower lite)
+  shower_tile   matte white porcelain, 24x48in stack bond, quiet joints: the shower's walls, the niche, the
+                tiled window reveal and the low tile base of the room's other walls
+  shower_mosaic 2x2in matte white mosaic (shower floor)
+  sill          honed off-white stone (shower threshold, niche sill, window sill of the shower lite)
   floor_stone   quiet warm-grey honed stone, 24x24in, fine joints (floor)
-  vgroove       muted grey-green painted tongue-and-groove boards (wainscot); sage_paint: its cap rail
-  plaster       warm cream lime plaster above the wainscot and on the ceiling
   oak           solid oak slab (vanity, mirror frames, window stool)
   timber        reclaimed timber (shelf);  beam: rough dark hewn timber (wall beam, ceiling beam)
   nickel        brushed nickel (taps, shower set, glass fittings, towel bar)
+  glass         low-iron (extra-clear) shower glass, neutral;  glass_edge: its pale edge
   enamel        cream vitreous enamel (lamp shades);  bulb / filament: clear lamp bulb
   jute          flat-woven cotton / jute mat, cream with thin dark stripes
   striped       terry towel with woven stripes
@@ -94,11 +99,19 @@ def _out(g, shader, disp=None):
 
 
 # ------------------------------------------------------------------------------------- tiles
+# Seventh round: the shower is white. The wall paint is library `paint_wall` #f2f0eb; the tile sits a shade under it
+# and is neutral (no cream, no green), so tile, base and painted wall read as one white.
+TILE_WHITE = '#eeedea'
+TILE_GROUT = '#dddbd6'
+MOSAIC_WHITE = '#e9e8e4'
+
+
 def shower_tile(a0_ft=0.0, floor_ft=0.028):
-    """Honed cream stone-look porcelain, 24x48in, stack bond with the long side horizontal, 1/16in joints in the
-    tile's own tone. Matte and quiet: a soft cloudy body, no veins. a0_ft puts a vertical joint at that plan
-    coordinate along the wall; the courses start at the floor (floor_ft)."""
-    cream = hexlin('#e3d8c4')
+    """Matte white porcelain, 24x48in, stack bond with the long side horizontal, 1/16in joints in the tile's own
+    tone (seventh round: it was honed cream). Plain and quiet: a neutral white a shade under the wall paint, the
+    faintest cloud in the body, no veins, no colour. a0_ft puts a vertical joint at that plan coordinate along the
+    wall; the courses start at the floor (floor_ft)."""
+    white = hexlin(TILE_WHITE)
 
     def build(g, P):
         a, b, A, B = g.planar()
@@ -109,47 +122,47 @@ def shower_tile(a0_ft=0.0, floor_ft=0.028):
         n1, _ = g.noise(g.vec(g.mul(qx, 1.1), g.mul(qy, 2.4), qz), 1.0, detail=5.0, rough=0.6, distortion=0.3)
         n2, _ = g.noise(g.vec(g.mul(qx, 0.5), g.mul(qy, 1.1), g.add(qz, 5.0)), 1.0, detail=3.0)
         speck, _ = g.noise(g.frame()['P'], 380.0, detail=1.0)
-        col = g.vscale(cream, g.remap(n2, 0.3, 0.7, 0.955, 1.03))
-        col = g.cmix(col, hexlin('#d3c4ab'), g.mul(g.ss(n1, 0.55, 0.78), 0.35))
-        col = g.vscale(col, g.mul(g.remap(r2, 0.0, 1.0, 0.985, 1.015), g.remap(speck, 0.3, 0.7, 0.99, 1.01)))
+        col = g.vscale(white, g.remap(n2, 0.3, 0.7, 0.98, 1.012))
+        col = g.cmix(col, hexlin('#e6e4df'), g.mul(g.ss(n1, 0.55, 0.78), 0.3))
+        col = g.vscale(col, g.mul(g.remap(r2, 0.0, 1.0, 0.992, 1.008), g.remap(speck, 0.3, 0.7, 0.995, 1.005)))
         grout = g.sub(1.0, g.ss(d, 0.0007, 0.001))
-        col = g.cmix(col, hexlin('#c9bda7'), grout)
+        col = g.cmix(col, hexlin(TILE_GROUT), grout)
         rough = g.lerp(g.add(0.5, g.mul(g.sub(n2, 0.5), 0.1)), 0.85, grout)
         height = g.add(g.ss(d, 0.0006, 0.0022), g.mul(n1, 0.03))
         nrm = g.normal(height=height, dist=0.0007)
         return _out(g, g.bsdf(col, rough, 0.0, nrm))
-    return _make('shower_tile', build, (cream, 0.55))
+    return _make('shower_tile', build, (white, 0.55))
 
 
 def sill():
-    """Honed cream limestone, one piece (threshold strips, niche sill, the shower lite's window sill)."""
-    cream = hexlin('#ddd1bb')
+    """Honed off-white stone, one piece (threshold strips, niche sill, the shower lite's window sill): the tile's
+    white, a shade greyer, so the trims read as stone and not as a second colour."""
+    white = hexlin('#e6e3dd')
 
     def build(g, P):
         fr = g.frame()
         n1, _ = g.noise(fr['P'], 9.0, detail=4.0, rough=0.6)
         n2, _ = g.noise(fr['P'], 240.0, detail=2.0)
-        col = g.vscale(cream, g.mul(g.remap(n1, 0.3, 0.7, 0.95, 1.04), g.remap(n2, 0.3, 0.7, 0.985, 1.015)))
+        col = g.vscale(white, g.mul(g.remap(n1, 0.3, 0.7, 0.975, 1.02), g.remap(n2, 0.3, 0.7, 0.99, 1.01)))
         nrm = g.normal(height=n2, dist=0.0002)
         return _out(g, g.bsdf(col, g.add(0.42, g.mul(g.sub(n1, 0.5), 0.1)), 0.0, nrm))
-    return _make('sill', build, (cream, 0.45))
+    return _make('sill', build, (white, 0.45))
 
 
 def shower_mosaic():
-    """2x2in cream porcelain mosaic, light grout, per-tile tone (shower floor)."""
+    """2x2in matte white porcelain mosaic, white grout a shade darker, a slight per-tile tone (shower floor)."""
     def build(g, P):
         a, b, A, B = g.planar()
         tw = 2.0 * IN
         tid, d, _, _ = P._grid(g, a, b, tw, tw)
         _, rc = g.white(tid)
-        r0, r1, _ = g.sep(rc)
-        col = g.vscale(hexlin('#ddd3c0'), g.remap(r0, 0.0, 1.0, 0.93, 1.05))
-        col = g.cmix(col, g.vm('MULTIPLY', col, (0.98, 1.0, 0.97)), r1)
+        r0, _, _ = g.sep(rc)
+        col = g.vscale(hexlin(MOSAIC_WHITE), g.remap(r0, 0.0, 1.0, 0.965, 1.02))
         grout = g.sub(1.0, g.ss(d, 0.0013, 0.0018))
-        col = g.cmix(col, hexlin('#bdb39f'), grout)
+        col = g.cmix(col, hexlin('#d6d4ce'), grout)
         nrm = g.normal(height=g.ss(d, 0.0013, 0.0045), dist=0.0012)
         return _out(g, g.bsdf(col, g.lerp(0.45, 0.85, grout), 0.0, nrm))
-    return _make('shower_mosaic', build, (hexlin('#ddd3c0'), 0.5))
+    return _make('shower_mosaic', build, (hexlin(MOSAIC_WHITE), 0.5))
 
 
 def floor_stone(cx_ft=4.975, cz_ft=24.78):
@@ -176,65 +189,6 @@ def floor_stone(cx_ft=4.975, cz_ft=24.78):
         nrm = g.normal(s['pert'] if s else None, 0.25, height=g.ss(d, 0.0006, 0.0024), dist=0.0008)
         return _out(g, g.bsdf(col, rough, 0.0, nrm))
     return _make('floor_stone', build, (grey, 0.55))
-
-
-# ------------------------------------------------------------------------------- wainscot, plaster
-SAGE = '#99988a'          # wainscot paint: muted grey-green, low saturation (the style image's panelling)
-
-
-def vgroove():
-    """Painted tongue-and-groove panelling: 4 1/2in boards running up the wall, 1/8in V joints, brushed paint."""
-    def build(g, P):
-        a, b, A, B = g.planar()
-        pitch = 4.5 * IN
-        s = g.div(a, pitch)
-        bid = g.floor(s)
-        t = g.sub(s, bid)
-        dist = g.mul(g.mn(t, g.sub(1.0, t)), pitch)            # m to the nearest joint
-        _, rc = g.white(g.vec(bid, 3.1, 7.7))
-        r0, _, _ = g.sep(rc)
-        fr = g.frame()
-        n1, _ = g.noise(g.vec(g.mul(a, 60.0), g.mul(b, 4.0), g.mul(r0, 9.0)), 1.0, detail=3.0, rough=0.55)   # brush marks
-        n2, _ = g.noise(fr['P'], 2.5, detail=2.0)
-        base = g.vscale(hexlin(SAGE), g.mul(g.remap(r0, 0.0, 1.0, 0.975, 1.02), g.remap(n2, 0.3, 0.7, 0.985, 1.015)))
-        groove = g.ss(dist, 0.0004, 0.0034)
-        col = g.vscale(base, g.lerp(0.5, 1.0, groove))
-        height = g.add(g.mul(groove, 1.0), g.mul(n1, 0.035))
-        nrm = g.normal(height=height, dist=0.0024)
-        rough = g.add(0.5, g.mul(g.sub(n2, 0.5), 0.06))
-        return _out(g, g.bsdf(col, rough, 0.0, nrm))
-    return _make('vgroove', build, (hexlin(SAGE), 0.5))
-
-
-def sage_paint():
-    def build(g, P):
-        fr = g.frame()
-        n1, _ = g.noise(fr['P'], 330.0, detail=3.0, rough=0.55)
-        n2, _ = g.noise(fr['P'], 2.5, detail=2.0)
-        col = g.vscale(hexlin(SAGE), g.remap(n2, 0.3, 0.7, 0.985, 1.015))
-        nrm = g.normal(height=n1, dist=0.0001)
-        return _out(g, g.bsdf(col, 0.5, 0.0, nrm))
-    return _make('sage_paint', build, (hexlin(SAGE), 0.5))
-
-
-def plaster():
-    """Warm cream lime plaster: soft trowel mottling (Poly Haven plastered_wall_04, triplanar)."""
-    target = hexlin('#e6dac4')
-
-    def build(g, P):
-        s = g.tri('plastered_wall_04', 2.4)
-        fr = g.frame()
-        n, _ = g.noise(fr['P'], 1.6, detail=3.0)
-        if s:
-            col = g.grade(s['color'], s['mean'], target, 0.65, sat=0.35)
-            rough = g.rough_from(s, 0.84, 0.25)
-            pert = s['pert']
-        else:
-            col, rough, pert = target, 0.84, None
-        col = g.vscale(col, g.remap(n, 0.3, 0.7, 0.97, 1.025))
-        nrm = g.normal(pert, 0.4)
-        return _out(g, g.bsdf(col, rough, 0.0, nrm))
-    return _make('plaster', build, (target, 0.85))
 
 
 # ------------------------------------------------------------------------------------- stone
@@ -367,6 +321,33 @@ def nickel():
         rough = g.add(0.3, g.add(g.mul(g.sub(n1, 0.5), 0.1), g.mul(g.sub(n2, 0.5), 0.1)))
         return _out(g, g.bsdf(col, rough, 1.0, None))
     return _make('nickel', build, (hexlin(NICKEL), 0.32, 1.0))
+
+
+def _thin_glass(name, tint):
+    """Thin-pane glass PFX+name (bl/materials.thin_glass: never refractive); the library's clear glass if that fails."""
+    full = PFX + name
+    m = bpy.data.materials.get(full)
+    if m is not None:
+        return m
+    from .. import materials
+    try:
+        return materials.thin_glass(full, tint=tint)
+    except Exception as e:  # pragma: no cover
+        print(f'[baths_primary] material {full} fallback: {e!r}')
+        return materials.get('glass_clear')
+
+
+def glass():
+    """Low-iron (extra-clear) tempered glass of the shower screen (seventh round). The house's window glass
+    (`glass_clear`) takes about 6 % more red than green out of the light at every pane, which is right for a window
+    but turns white tile behind a shower screen pale aqua: a white bath is glazed with low-iron glass for exactly
+    that reason. Neutral, 1 % absorption per face. (The name keeps 'glass': bake_web.py exports it as a pane.)"""
+    return _thin_glass('glass_low_iron', (0.99, 0.99, 0.99))
+
+
+def glass_edge():
+    """The polished edge of the low-iron glass: a pale grey-blue line, not the bottle green of ordinary float glass."""
+    return _thin_glass('glass_low_iron_edge', (0.80, 0.85, 0.87))
 
 
 def galvanised():

@@ -36,7 +36,11 @@ tour.json (SCENE feet: x west -> east, y up, z rear/north -> street/south):
   rooms      [{id, label, bounds [x0, z0, x1, z1], at [x, z], sweep, tag}]: the measured rooms of the
              schedule (tag = its M-number, bounds = clear interior, at = centre of the bounds, sweep = the
              sweep to enter the room) followed by the open spaces the schedule does not measure (living,
-             kitchen + dining, hall, garage; tag null; bounds from scene_classification.json).
+             kitchen + dining, hall, garage; tag null; bounds from scene_classification.json). An open
+             space is entered on its card of the highlight reel when it has one: the stop of
+             scene.tour.highlights that carries the room's name and stands in it (the living room's is
+             L8 since the seventh round), else the stop OPEN_ROOMS names. So a click on a room's name
+             on the floor plan opens the picture the reel shows for that room.
              The bounds are rectangles and may lie inside one another: the laundry closet is cut out of
              Bedroom 4's rectangle, and an open space's rectangle reaches over its neighbours. A point
              belongs to the SMALLEST room that contains it: room_of() here, roomAt() in
@@ -61,8 +65,8 @@ the <noscript> link). main.js hands the label on to the modules, the data, the m
 and the panoramas and exterior frames carry the content hash of their manifests, so a new release never shows
 a visitor a cached file of the last one. The import map (the vendored three.js, which only changes with its
 own folder) and links to other sites are left alone. That is the only access to index.html any tool keeps;
-without --version the page is not opened. --check writes nothing and exits 1 when a file is out of date,
-index.html included.
+without --version the page is not opened, and neither is it with --out DIR (a rehearsal into another directory
+never stamps the site's page). --check writes nothing and exits 1 when a file is out of date, index.html included.
 """
 import argparse
 import datetime
@@ -82,7 +86,8 @@ SUBTITLE = 'Proposed remodel · 4 bedrooms · 3 full bathrooms'
 FLOOR = 0.02
 # the old page's `roomIDs`: the stops of its room list, in its order
 HIGHLIGHTS = ['E0', 'L0', 'D0', 'K0', 'P0', 'B2', 'B3', 'B4', 'A0', 'A1', 'A3', 'S0', 'C0', 'C3', 'G0']
-# spaces the schedule does not measure: (id, label, scene_classification room keys, preferred sweep)
+# spaces the schedule does not measure: (id, label, scene_classification room keys, preferred sweep).
+# The preferred sweep is the fallback: a space with a card of its own name in the reel is entered there.
 OPEN_ROOMS = [('living', 'Living room', ('living', 'dining'), 'L0'),
               ('kitchen', 'Kitchen + dining', ('kitchen',), 'K0'),
               ('hall', 'Hall', ('common_hall',), 'H2'),
@@ -296,7 +301,8 @@ def footprint(scene, room_rects):
 
 
 # ------------------------------------------------------------------------------------------- rooms
-def build_rooms(scene, meas, cls, sweep_ids, sweep_xz):
+def build_rooms(scene, meas, cls, sweep_ids, sweep_xz, cards=None):
+    """`cards`: {caption: sweep id} of the highlight reel as the scene lists it (first stop per caption)."""
     by_tag = {}
     for key, v in ((cls or {}).get('meta', {}).get('rooms', {})).items():
         m = re.match(r'audit (M\d+)', v.get('source', ''))
@@ -337,6 +343,9 @@ def build_rooms(scene, meas, cls, sweep_ids, sweep_xz):
         z0, z1 = min(b[2] for b in bs), max(b[3] for b in bs)
         bounds = [r4(x0), r4(z0), r4(x1), r4(z1)]
         at = [r4((x0 + x1) / 2), r4((z0 + z1) / 2)]
+        card = (cards or {}).get(label)                 # the reel's card of this room, when it stands in it
+        if card in sweep_ids and bounds[0] <= sweep_xz[card][0] <= bounds[2] and bounds[1] <= sweep_xz[card][1] <= bounds[3]:
+            prefer = card
         rooms.append({'id': rid, 'label': label, 'bounds': bounds, 'at': at,
                       'sweep': nearest(bounds, at, prefer), 'tag': None})
     return rooms, notes
@@ -370,7 +379,14 @@ def build_tour(scene, meas, cls, version):
                 links[a].append(b)
             if a not in links[b]:
                 links[b].append(a)
-    rooms, notes = build_rooms(scene, meas, cls, ids, xz)
+    start = tour.get('start') if tour.get('start') in links else (ids[0] if ids else None)
+    wanted = tour.get('highlights') or HIGHLIGHTS
+    # the reel's cards by caption, as the reel is put together below: the start first, a caption once
+    caption = {n['id']: n.get('label') or n.get('name') or n['id'] for n in nodes}
+    cards = {}
+    for i in ([start] if start else []) + [i for i in wanted if i in links]:
+        cards.setdefault(caption[i], i)
+    rooms, notes = build_rooms(scene, meas, cls, ids, xz, cards)
     sweeps = []
     for n in nodes:
         nid = n['id']
@@ -410,11 +426,9 @@ def build_tour(scene, meas, cls, version):
         b = r['bounds']
         if not all(inside(rects, x, z, TOL) for x in (b[0], b[2]) for z in (b[1], b[3])):
             problems.append('room %s reaches outside the footprint' % r['id'])
-    start = tour.get('start') if tour.get('start') in links else (ids[0] if ids else None)
     # The highlight reel: one card per place, the entrance first. The cards are captioned with the sweep
     # labels, which several sweeps of a room share ("Kitchen" four times): a second card with a caption the
     # reel already has is left out.
-    wanted = tour.get('highlights') or HIGHLIGHTS
     if len([i for i in wanted if i in links]) != len(wanted):
         notes.append('highlights not in the tour, left out: %s' % ' '.join(i for i in wanted if i not in links))
     highlights, captions = [], set()
@@ -565,7 +579,9 @@ def main():
             sitedata.write_text(p, text)
         print('%-9s %s  %d bytes  version %s' % ('unchanged' if same else 'stale' if a.check else 'wrote',
                                                  sitedata.rel(p), len(text.encode('utf-8')), version))
-    if a.version:
+    if a.version and out.resolve() != sitedata.path('site_tour').parent.resolve():
+        print('index.html: left alone (--out writes somewhere else than the site\'s own data directory)')
+    elif a.version:
         note, changed = set_index_version(a.version, a.check)
         stale += changed
         print(note)

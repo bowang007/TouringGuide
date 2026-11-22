@@ -1,8 +1,8 @@
 {
   "front": {"eye": [6.0, 5.4, 96.0], "aim": [22.0, 7.4, 60.0], "fov_deg": 62, "aspect": 1.5, "exposure": "auto", "exposure_bias": -0.6, "wb": [6300, 4]},
   "back": {"eye": [18.1, 5.2, -11.6], "aim": [29.1, 5.0, 0.0], "fov_deg": 80, "aspect": 1.5, "exposure": "auto", "exposure_bias": -0.4, "wb": [6300, 4]},
-  "K0": {"eye": [17.5, 5.0, 19.9], "aim": [30.5, 3.1, 25.2], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},
-  "living": {"eye": [23.799, 4.8, 15.426], "aim": [36.684, 4.0, 5.935], "fov_deg": 80, "aspect": 1.5, "exposure": "auto"},
+  "K0": {"eye": [17.5, 5.0, 19.9], "aim": [29.9, 3.1, 26.3], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},
+  "living": {"eye": [30.9, 4.8, 20.3], "aim": [30.9, 3.6, 6.0], "fov_deg": 90, "aspect": 1.5, "exposure": "auto"},
   "primary": {"eye": [10.45, 4.8, 12.0], "aim": [1.9, 3.3, 5.0], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},
   "A0": {"eye": [8.55, 5.1, 21.5], "aim": [4.44, 3.9, 27.16], "fov_deg": 90, "aspect": 1.5, "exposure": "auto", "exposure_bias": 0.45},
   "B3": {"eye": [8.978, 4.8, 42.967], "aim": [3.492, 3.9, 52.582], "fov_deg": 84, "aspect": 1.5, "exposure": "auto"},

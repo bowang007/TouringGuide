@@ -224,6 +224,11 @@ def rounded_rect_outline(w, d, r, n=10):
     return pts
 
 
+def circle_outline(r, n=96):
+    """Plan outline (x, z) of a circle of radius r around the origin."""
+    return [(r * math.cos(2 * math.pi * k / n), r * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+
 def prism(outline, y0, y1):
     """Extrude a plan outline [(x, z), ...] between heights y0..y1. Returns verts, faces."""
     n = len(outline)

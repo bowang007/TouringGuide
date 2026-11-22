@@ -1246,6 +1246,7 @@ def _maker(key):
         'wood_cladding': _cladding,
         'roof_metal': _roof_metal,
         'black_aluminum': lambda g: _powder(g, 'black_aluminum', 0.42, metal=0.15),
+        'window_white': lambda g: _powder(g, 'window_white', 0.36, coat=0.12),
         'oak_floor': _oak_floor,
         'tile_floor_bath': _tile_floor_bath,
         'tile_shower_floor': _tile_shower_floor,

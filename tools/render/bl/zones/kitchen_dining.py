@@ -3,11 +3,12 @@ z 14.5-20.8). Camera stops K0, D0, H2 (also seen from L2, H3).
 
 Warm vintage-American kitchen from the owner's style images (styles/kitchen *.jpg): soft layered
 neutrals, no heavy dark masses. Cream painted shaker base and glass-front upper cabinets with
-unlacquered-brass cup pulls and knobs and crown moulding; the tall fridge/oven wall as a greige
-"pantry wall" (panelled fridge, long brass appliance pulls); a walnut open-shelf bay with brass
+unlacquered-brass cup pulls and knobs and crown moulding; the tall wall as a greige "pantry wall"
+holding a stainless-steel French-door refrigerator in its bay beside a built-in microwave over a wall
+oven (owner's seventh round: the panelled fridge read as a pantry); a walnut open-shelf bay with brass
 gallery rails on whitewashed brick; honed grey-veined marble worktops and a scalloped marble slab
 with a brass pot filler behind the gas cooktop; a cream plaster hood with a dentil band; a fireclay
-apron sink and brass bridge faucet under the grid-glazed window W08 with a cream casing, brass
+apron sink and brass bridge faucet under the white grid-glazed window W08 with a white casing, brass
 gooseneck sconces and cafe curtains; a white-oak drawer island with a thick quartzite top under two
 brass-and-glass bell pendants; a madder-red Persian runner in the work aisle; the dining table in
 line with the island at its west end (the shared-bathroom / hall side; owner's correction of 2026-11-20: it

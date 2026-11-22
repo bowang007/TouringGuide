@@ -6,7 +6,9 @@ hood, dishwasher and sink on the east wall under the window, island with the din
 its west end, see kitchen_dining_dining),
 restyled: painted cream shaker base and upper cabinetry with unlacquered-brass cup pulls and knobs,
 crown moulding and a painted toe kick; the tall fridge/oven wall in a soft greige as the "pantry
-wall" (integrated fridge behind shaker panels with long brass appliance pulls); glass-front uppers
+wall": a stainless-steel French-door refrigerator standing in its bay under a two-door cabinet, beside
+the oven tower with a built-in microwave over a wall oven (owner's seventh round, 2026-11-21: the
+panelled, integrated refrigerator read as a pantry: "there is no refrigerator now"); glass-front uppers
 with dishes; a walnut open-shelf bay with brass gallery rails against whitewashed brick; honed
 grey-veined marble worktops with a scalloped marble slab behind the cooktop and a brass pot filler;
 a cream plaster hood with a dentil band; a white fireclay apron-front sink with a brass bridge
@@ -21,15 +23,22 @@ Warp naming: run fronts / carcasses / crowns / splashes are '... panel / carcass
 tile ...' (fitted, reshaped with the room); knobs and cup pulls are '... hardware panel' (fitted, so
 each stays on its front, see kitchen_dining_cabs); appliances, appliance pulls, the faucet and pot
 filler are loose (moved rigidly); the hood is '... soffit ...' (fitted) so it keeps meeting the
-cabinets.
+cabinets. The refrigerator is the exception among the appliances: it fills its fitted bay, so its
+parts are '... panel' (fitted) and are dimensioned on the architect's plan (see _refrigerator).
 """
 import math
+import sys
 
 import bmesh
 
+from ..common import RENDER_DIR
 from . import kitchen_dining_cabs as C
 from . import kitchen_dining_mats as KM
 from .kitchen_dining_geo import Geo, P, principled, srgb
+
+if RENDER_DIR not in sys.path:
+    sys.path.insert(0, RENDER_DIR)
+import relayout as R  # noqa: E402  (the concept -> architect's plan maps that bl/warp.py applies to this zone)
 
 # ----------------------------------------------------------------------------- constants
 WALL_S = 31.41
@@ -70,6 +79,30 @@ COOK = (33.30, 36.30, 29.32, 31.05)     # 36in gas cooktop (x0, x1, z0, z1)
 ISLAND = (28.4, 34.4, 22.0, 25.0)       # island worktop (x0, x1, z0, z1); the dining table continues its west end
 POT_FILLER = (34.80, 4.55)               # (x, y) on the wall inside the slab's scallop
 
+
+# Appliances of the tall wall (owner's seventh round). West -> east: refrigerator bay | oven tower.
+APPL_HANDLE = 'brass'     # handles of the refrigerator, the microwave and the wall oven: 'brass' (the kitchen's
+                          # hardware; the wall oven has had it since the third round) or 'stainless'
+TOPCAB_Y0 = 6.03          # bottom of the top doors, one line across the refrigerator bay and the oven tower
+OVEN_Y = (1.60, 3.78)     # 27in wall oven (lower unit of the tower): fascia bottom / top
+MW_Y = (3.92, 5.50)       # built-in microwave above it: 27in trim kit, 19in high (the oven's face is 26in)
+# Refrigerator: 36in-class counter-depth French-door with a bottom freezer drawer. Feet on the ARCHITECT'S plan
+# (C.PlanFace): it fills the fitted bay between the hall-side end panel and the oven tower.
+RF_SIDE = 0.012           # reveal between the appliance and the bay's sides (1/8in)
+RF_FOOT = 0.085           # underside of the case above the floor (rollers, behind the base grille)
+RF_CASE_TOP = 5.76        # top of the case: 69-1/8in
+RF_DOOR_TOP = 5.80        # top of the doors: 69-5/8in
+RF_CAP_TOP = 5.885        # top of the hinge covers: 70-5/8in over all
+RF_SPLIT = 2.385          # centre of the reveal between the freezer drawer and the doors
+RF_REVEAL = 0.03          # that reveal (3/8in)
+RF_MID = 0.02             # reveal between the two doors (1/4in)
+RF_PROUD = 0.20           # door faces in front of the cabinet fronts (2-3/8in): the case stands flush behind
+                          # the fronts, as a counter-depth unit does; the doors swing clear of the surround
+RF_DOOR_T = 0.245         # door / drawer-front thickness (3in)
+RF_GASKET = 0.03          # gasket zone between the doors and the case
+RF_BACK = 0.085           # air space between the case and the wall (1in)
+RF_GRIP = (0.033, 0.165)  # handles: bar radius (a 13/16in tube), its axis in front of the door face (2in)
+
 COLL = 'kd_kitchen'
 STOOLS = False            # the dining table continues the island (architect's plan): no stools
 
@@ -90,6 +123,16 @@ class _Mats:
         self.glass = KM.glass_cabinet()
         self.black_glass = principled('black_glass', srgb('#060607'), 0.04)
         self.rubber = principled('rubber', srgb('#0d0d0d'), 0.6)
+        # appliances: brushed stainless is the house material 'stainless' (the wall oven, the hood liner)
+        self.steel = g._mat('stainless')
+        self.handle = self.brass if APPL_HANDLE == 'brass' else self.steel
+        self.appl_case = principled('appliance_case', srgb('#3a3c3f'), 0.55)        # painted steel case
+        self.appl_dark = principled('appliance_dark', srgb('#161719'), 0.5)         # base grille, vent slots
+        self.appl_grey = principled('appliance_grey', srgb('#85888c'), 0.38)        # hinge covers
+        self.screen = principled('appliance_screen', srgb('#191b1e'), 0.28)         # microwave window mesh
+        self.keys = principled('appliance_keys', srgb('#2e3034'), 0.45)             # touch-pad legends
+        self.display = principled('appliance_display', srgb('#070d10'), 0.06)
+        self.digits = principled('appliance_digits', srgb('#9fdcff'), 0.4, emission=srgb('#8fd6ff'), strength=3.0)
 
 
 def build(ctx, g: Geo):
@@ -99,6 +142,9 @@ def build(ctx, g: Geo):
     lights = g.sub('kd_lights')
     notes = []
     _tall_wall(g, M, col, hw)
+    _refrigerator(g, M, col, hw)
+    _wall_oven(g, M, col)
+    _microwave(g, M, col)
     _base_runs(g, M, col, hw, lights)
     _worktop_and_splash(g, M, col)
     _uppers(g, M, col, hw, lights)
@@ -110,8 +156,10 @@ def build(ctx, g: Geo):
     _bridge_faucet(g, M, col)
     isl = g.sub('kd island')
     _island(g, M, isl, hw)
-    notes.append('kitchen: greige pantry wall (panelled fridge + ovens), cream shaker L runs, glass uppers, '
-                 'walnut open shelves, plaster hood, fireclay sink, oak island with quartzite top')
+    notes.append('kitchen: greige pantry wall (stainless French-door refrigerator in its bay, built-in microwave '
+                 'over a wall oven), cream shaker L runs, glass uppers, walnut open shelves, plaster hood, '
+                 'fireclay sink, oak island with quartzite top')
+    notes.append(appliance_plan())
     return notes
 
 
@@ -188,25 +236,73 @@ def _base_unit(acc, g, M, F, u0, u1, kind, hw, hinge='l'):
 
 
 # ============================================================================= tall wall
+def _inv(f, v):
+    """Concept coordinate that the piecewise-linear relayout map `f` carries to the new-plan value v."""
+    ps = f.pairs
+    if v <= ps[0][1]:
+        return ps[0][0] + (v - ps[0][1])
+    if v >= ps[-1][1]:
+        return ps[-1][0] + (v - ps[-1][1])
+    for (a0, b0), (a1, b1) in zip(ps, ps[1:]):
+        if b0 <= v <= b1:
+            return a0 + (v - b0) / (b1 - b0) * (a1 - a0)
+
+
+def _plan_face(w=0.0):
+    """Face frame of the tall wall's fronts in feet on the ARCHITECT'S plan (region 'kitchen + dining':
+    relayout.X_HALL / Z_RIGHT), `w` in front of the fronts."""
+    return C.PlanFace('mz', R.Z_RIGHT(FRONT_S) - w, lambda x: _inv(R.X_HALL, x), lambda z: _inv(R.Z_RIGHT, z))
+
+
+def _fridge_bay():
+    """(x0, x1, z of the cabinet fronts, depth to the wall) of the refrigerator bay on the architect's plan."""
+    zf = R.Z_RIGHT(FRONT_S)
+    return R.X_HALL(FRIDGE[0]), R.X_HALL(FRIDGE[1]), zf, R.Z_RIGHT(WALL_S) - zf
+
+
+def appliance_plan():
+    """The tall wall's appliances on the built (architect's) plan, feet: what the build log and the notes
+    report. The oven tower's units are loose: bl/warp.py moves them by the shift of their centre."""
+    b0, b1, zf, depth = _fridge_bay()
+    oc = R.X_HALL((OVEN[0] + OVEN[1]) / 2)
+    r = lambda v: round(v, 3)                                            # noqa: E731
+    return {'refrigerator': {'bay_x': [r(b0), r(b1)], 'body_x': [r(b0 + RF_SIDE), r(b1 - RF_SIDE)],
+                             'width_in': r((b1 - b0 - 2 * RF_SIDE) * 12), 'height_in': r(RF_CAP_TOP * 12),
+                             'case_depth_in': r((depth - RF_BACK - RF_GASKET - (RF_DOOR_T - RF_PROUD)) * 12),
+                             'depth_with_doors_in': r((depth - RF_BACK + RF_PROUD) * 12),
+                             'cabinet_fronts_z': r(zf), 'door_face_z': r(zf - RF_PROUD),
+                             'handle_front_z': r(zf - RF_PROUD - RF_GRIP[1] - RF_GRIP[0]),
+                             'doors_y': [RF_SPLIT + RF_REVEAL / 2, RF_DOOR_TOP],
+                             'drawer_y': [r(Y_B0), RF_SPLIT - RF_REVEAL / 2]},
+            'microwave': {'x': [r(oc - 1.125), r(oc + 1.125)], 'y': list(MW_Y), 'height_in': r((MW_Y[1] - MW_Y[0]) * 12)},
+            'wall_oven': {'x': [r(oc - 1.125), r(oc + 1.125)], 'y': list(OVEN_Y)},
+            'top_doors_y': [TOPCAB_Y0, UPPER_TOP]}
+
+
 def _tall_wall(g, M, col, hw):
-    """Fridge column + oven tower in greige: the 'pantry wall' of the closet references."""
+    """The greige 'pantry wall' of the closet references: the refrigerator's bay (hall-side end panel, a
+    two-door cabinet over the appliance) and the oven tower (drawer, wall oven, microwave, top door) under
+    one frieze and crown. The appliances themselves: _refrigerator, _wall_oven, _microwave."""
     F = C.Face('mz', FRONT_S)
     acc = C.Acc()
-    x0, x1 = FRIDGE
-    # integrated fridge: freezer drawer, French doors, top cabinet
-    acc.shaker(F, x0 + GAP / 2, x1 - GAP / 2, Y_B0, 2.41)
-    xm = (x0 + x1) / 2
-    acc.shaker(F, x0 + GAP / 2, xm - GAP / 2, 2.42, 6.90, sw=0.21)
-    acc.shaker(F, xm + GAP / 2, x1 - GAP / 2, 2.42, 6.90, sw=0.21)
-    acc.shaker(F, x0 + GAP / 2, x1 - GAP / 2, 6.92, UPPER_TOP)
-    # oven tower: drawer, niche backing (ovens are loose appliances in front of it), top door
+    # oven tower: drawer, niche backing (the appliances are loose, in front of it; it shows as the flat face
+    # frame between and above them), top door
     o0, o1 = OVEN
     acc.shaker(F, o0 + GAP / 2, o1 - GAP / 2, Y_B0, 1.54)
-    acc.shaker(F, o0 + GAP / 2, o1 - GAP / 2, 6.03, UPPER_TOP)
-    tall = acc.done(g, 'kd tall wall door panel run', M.greige, col)
+    acc.shaker(F, o0 + GAP / 2, o1 - GAP / 2, TOPCAB_Y0, UPPER_TOP)
+    acc.done(g, 'kd tall wall door panel run', M.greige, col)
     niche = C.Acc()
     niche.box(F, o0, o1, 1.55, 6.02, -FT_T, -0.02)
     niche.done(g, 'kd tall niche panel', M.greige, col, bevel=0.0)
+    # cabinet over the refrigerator: two doors on the bay's centre line (built plan, like the appliance under
+    # them: the reveal between the doors stands over the reveal between the refrigerator's doors)
+    b0, b1, _, _ = _fridge_bay()
+    um = (b0 + b1) / 2
+    Fb = _plan_face()
+    top = C.Acc()
+    top.shaker(Fb, b0 + GAP / 2, um - GAP / 2, TOPCAB_Y0, UPPER_TOP)
+    top.shaker(Fb, um + GAP / 2, b1 - GAP / 2, TOPCAB_Y0, UPPER_TOP)
+    top.done(g, 'kd tall top door panel run', M.greige, col)
     # end panels (two stacked shaker panels on the hall side), side panel to the counter, kick, carcass
     side = C.Acc()
     Fw = C.Face('mx', TALL_X0)
@@ -214,42 +310,171 @@ def _tall_wall(g, M, col, hw):
     side.shaker(Fw, FRONT_S, WALL_S, 3.4, UPPER_TOP, sw=0.24)
     side.wbox(OVEN[1], BASE_X0, 0.0, UPPER_TOP, FRONT_S, WALL_S)
     side.done(g, 'kd tall end panel', M.greige, col)
-    g.box('kd tall plinth', FRIDGE[0], OVEN[1], 0.0, TOE_H, FRONT_S + 0.10, WALL_S - 0.02, M.greige, coll=col)
-    g.box('kd tall carcass', FRIDGE[0], OVEN[1], TOE_H, CEIL - 0.006, FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
+    # The refrigerator stands on the floor in an open bay (no toe kick, no carcass behind it: its side and top
+    # reveals are real gaps); the carcass is the oven tower and the cabinet over the bay.
+    g.box('kd tall plinth', OVEN[0], OVEN[1], 0.0, TOE_H, FRONT_S + 0.10, WALL_S - 0.02, M.greige, coll=col)
+    g.box('kd tall carcass', OVEN[0], OVEN[1], TOE_H, CEIL - 0.006, FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
+    g.box('kd tall carcass over refrigerator', FRIDGE[0], FRIDGE[1], TOPCAB_Y0 - 0.008, CEIL - 0.006,
+          FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
     # frieze behind the crown + crown with mitred returns on both ends
     g.box('kd tall carcass frieze', TALL_X0, BASE_X0, UPPER_TOP, CEIL - 0.006, FRONT_S + 0.004, FRONT_S + FT_T + 0.012,
           M.greige, coll=col)
     C.sweep(g, 'kd tall crown cove', [(TALL_X0, WALL_S - 0.004), (TALL_X0, FRONT_S), (BASE_X0, FRONT_S), (BASE_X0, WALL_S - 0.004)],
             C.crown_profile(0.24, CROWN_H), CROWN_Y, M.greige, col)
-    # hardware: long brass appliance pulls on the French doors, bar on the freezer, cups on the drawer
-    for xx in (xm - 0.16, xm + 0.16):
-        C.bar_pull(g, M.brass, F, xx, 3.75, xx, 5.55, hw, name='kd fridge pull')
-    # freezer bar on the drawer's top rail (2.22-2.41), feet on the rail face
-    C.bar_pull(g, M.brass, F, x0 + 0.75, 2.315, x1 - 0.75, 2.315, hw, name='kd freezer pull')
+    # hardware: cups on the tower's drawer, a knob on each top door (the pair over the refrigerator on its
+    # meeting stiles, the tower's on its east stile), all at one height
     _hw_drawer(g, M, F, o0, o1, Y_B0, 1.54, hw)
-    # lift-up door over the fridge: knob centred on its bottom rail; oven-tower top door: on the stile
-    C.knob(g, M.brass, F, xm, 6.92 + 0.095, hw)
+    for u in (um - GAP / 2 - 0.12, um + GAP / 2 + 0.12):
+        C.knob(g, M.brass, Fb, u, 6.3, hw)
     C.knob(g, M.brass, F, o1 - 0.12, 6.3, hw)
-    # stacked wall ovens (27in, brass handles): loose appliances. Stainless doors with a black-glass
-    # viewing window (closet reference: a stainless oven) rather than full black-glass doors, which
-    # read as two heavy dark slabs in the greige wall.
-    oc = (o0 + o1) / 2
-    for k, (oy0, oy1) in enumerate(((1.60, 3.78), (3.82, 6.0))):
-        ox0, ox1 = oc - 1.125, oc + 1.125
-        g.box(f'kd oven {k} fascia', ox0, ox1, oy0, oy1, FRONT_S - 0.035, FRONT_S + 0.012, 'stainless', 0.01, coll=col)
-        g.box(f'kd oven {k} door', ox0 + 0.05, ox1 - 0.05, oy0 + 0.05, oy1 - 0.3, FRONT_S - 0.05, FRONT_S - 0.03,
-              'stainless', 0.008, coll=col)
-        g.box(f'kd oven {k} window', ox0 + 0.32, ox1 - 0.32, oy0 + 0.3, oy1 - 0.62, FRONT_S - 0.053, FRONT_S - 0.047,
-              M.black_glass, 0.002, coll=col)
-        g.box(f'kd oven {k} controls', ox0 + 0.05, ox1 - 0.05, oy1 - 0.22, oy1 - 0.05, FRONT_S - 0.045, FRONT_S - 0.03,
-              M.black_glass, 0.006, coll=col)
-        for kx in (-0.55, 0.55):
-            g.cyl_axis(f'kd oven {k} knob', (oc + kx, oy1 - 0.135, FRONT_S - 0.045), (oc + kx, oy1 - 0.135, FRONT_S - 0.09),
-                       0.045, M.brass, 24, col)
-        hy = oy1 - 0.38
-        g.cyl_axis(f'kd oven {k} handle', (ox0 + 0.2, hy, FRONT_S - 0.17), (ox1 - 0.2, hy, FRONT_S - 0.17), 0.028, M.brass, 20, col)
-        for xx in (ox0 + 0.32, ox1 - 0.32):
-            g.cyl_axis(f'kd oven {k} handle post', (xx, hy, FRONT_S - 0.05), (xx, hy, FRONT_S - 0.17), 0.017, M.brass, 16, col)
+
+
+def _refrigerator(g, M, col, hw):
+    """Stainless-steel French-door refrigerator with a bottom freezer drawer, 36in class, counter depth, about
+    70in high, standing in the bay at the hall end of the tall wall, directly beside the oven tower.
+
+    Built in feet on the ARCHITECT'S plan (C.PlanFace) and named '... panel' (fitted): it fills the fitted
+    bay, so it is 34-3/4in wide there (the bay is 35in; a 36in-class unit is 35-3/4in). The case stands flush
+    behind the cabinet fronts with 1in of air behind it; doors and drawer front stand RF_PROUD in front of the
+    fronts; the base grille stands in the plane of the oven tower's toe kick. Seen from the room (looking
+    south) the viewer's left is +x."""
+    b0, b1, _, depth = _fridge_bay()
+    F = _plan_face()                     # w=0: the cabinet fronts
+    Fd = _plan_face(RF_PROUD)            # w=0: the door faces
+    u0, u1, um = b0 + RF_SIDE, b1 - RF_SIDE, (b0 + b1) / 2
+    w_door = RF_PROUD - RF_DOOR_T        # back of the doors
+    w_case = w_door - RF_GASKET          # front of the case
+    y_dr0, y_dr1 = Y_B0, RF_SPLIT - RF_REVEAL / 2
+    y_d0, y_d1 = RF_SPLIT + RF_REVEAL / 2, RF_DOOR_TOP
+    N = 'kd refrigerator'
+    case = C.Acc()
+    case.box(F, u0, u1, RF_FOOT, RF_CASE_TOP, -(depth - RF_BACK), w_case)
+    case.done(g, f'{N} case panel', M.appl_case, col, bevel=0.006)
+    gasket = C.Acc()                     # dark behind every reveal between the doors and the drawer
+    gasket.box(F, u0 + 0.035, u1 - 0.035, y_dr0 + 0.035, y_d1 - 0.035, w_case - 0.004, w_door + 0.004)
+    gasket.done(g, f'{N} gasket panel', M.rubber, col, bevel=0.0)
+    doors = C.Acc()
+    doors.box(F, u0, um - RF_MID / 2, y_d0, y_d1, w_door, RF_PROUD)
+    doors.box(F, um + RF_MID / 2, u1, y_d0, y_d1, w_door, RF_PROUD)
+    doors.box(F, u0, u1, y_dr0, y_dr1, w_door, RF_PROUD)
+    doors.done(g, f'{N} door panel', M.steel, col, bevel=0.014, seg=3)
+    # base grille: a louvred kick plate in the plane of the tower's toe kick
+    gr = C.Acc()
+    gr.box(F, u0 + 0.012, u1 - 0.012, 0.015, TOE_H, -0.135, -0.118)
+    n = 6
+    for i in range(n):
+        v = 0.052 + i * (TOE_H - 0.09) / (n - 1)
+        gr.box(F, u0 + 0.05, u1 - 0.05, v - 0.013, v + 0.013, -0.12, -0.10)
+    gr.done(g, f'{N} base grille panel', M.appl_dark, col, bevel=0.003)
+    # hinge covers on the case's top corners, reaching forward over the doors' hinge pins
+    caps = C.Acc()
+    prof = [(-0.42, RF_CASE_TOP), (-0.42, RF_CAP_TOP), (RF_PROUD - 0.10, RF_CAP_TOP),
+            (RF_PROUD - 0.10, RF_DOOR_TOP + 0.008), (w_door, RF_DOOR_TOP + 0.008), (w_door, RF_CASE_TOP)]
+    caps.poly_u(F, prof, u0 + 0.012, u0 + 0.40)
+    caps.poly_u(F, prof, u1 - 0.40, u1 - 0.012)
+    caps.done(g, f'{N} top cap panel', M.appl_grey, col, bevel=0.008)
+    # maker's badge, top corner of the left-hand door as one stands before it (no lettering)
+    badge = C.Acc()
+    badge.box(Fd, u1 - 0.36, u1 - 0.16, y_d1 - 0.30, y_d1 - 0.252, 0.0, 0.005)
+    badge.done(g, f'{N} badge panel', g._mat('chrome'), col, bevel=0.0015)
+    # handles: a vertical bar on each door's meeting edge, a horizontal bar across the top of the drawer
+    names = (f'{N} grip panel', f'{N} grip mount panel', f'{N} grip foot panel')
+    r, so = RF_GRIP
+    for u in (um - RF_MID / 2 - 0.115, um + RF_MID / 2 + 0.115):
+        C.tube_handle(g, M.handle, Fd, u, y_d0 + 0.20, u, y_d0 + 2.60, hw, names, r=r, standoff=so)
+    C.tube_handle(g, M.handle, Fd, u0 + 0.27, y_dr1 - 0.17, u1 - 0.27, y_dr1 - 0.17, hw, names, r=r, standoff=so)
+
+
+def _wall_oven(g, M, col):
+    """27in wall oven, the lower unit of the tower (unchanged since the third round): loose appliance.
+    Stainless door with a black-glass viewing window (closet reference: a stainless oven) rather than a full
+    black-glass door, which read as a heavy dark slab in the greige wall."""
+    oc = (OVEN[0] + OVEN[1]) / 2
+    k = 0
+    oy0, oy1 = OVEN_Y
+    ox0, ox1 = oc - 1.125, oc + 1.125
+    g.box(f'kd oven {k} fascia', ox0, ox1, oy0, oy1, FRONT_S - 0.035, FRONT_S + 0.012, 'stainless', 0.01, coll=col)
+    g.box(f'kd oven {k} door', ox0 + 0.05, ox1 - 0.05, oy0 + 0.05, oy1 - 0.3, FRONT_S - 0.05, FRONT_S - 0.03,
+          'stainless', 0.008, coll=col)
+    g.box(f'kd oven {k} window', ox0 + 0.32, ox1 - 0.32, oy0 + 0.3, oy1 - 0.62, FRONT_S - 0.053, FRONT_S - 0.047,
+          M.black_glass, 0.002, coll=col)
+    g.box(f'kd oven {k} controls', ox0 + 0.05, ox1 - 0.05, oy1 - 0.22, oy1 - 0.05, FRONT_S - 0.045, FRONT_S - 0.03,
+          M.black_glass, 0.006, coll=col)
+    for kx in (-0.55, 0.55):
+        g.cyl_axis(f'kd oven {k} knob', (oc + kx, oy1 - 0.135, FRONT_S - 0.045), (oc + kx, oy1 - 0.135, FRONT_S - 0.09),
+                   0.045, M.handle, 24, col)
+    hy = oy1 - 0.38
+    g.cyl_axis(f'kd oven {k} handle', (ox0 + 0.2, hy, FRONT_S - 0.17), (ox1 - 0.2, hy, FRONT_S - 0.17), 0.028, M.handle, 20, col)
+    for xx in (ox0 + 0.32, ox1 - 0.32):
+        g.cyl_axis(f'kd oven {k} handle post', (xx, hy, FRONT_S - 0.05), (xx, hy, FRONT_S - 0.17), 0.017, M.handle, 16, col)
+
+
+# seven-segment digits of the microwave's clock: segments a (top), b, c (right), d (bottom), e, f (left), g
+_SEG = {'0': 'abcdef', '1': 'bc', '2': 'abged'}
+
+
+def _microwave(g, M, col):
+    """Built-in microwave, the upper unit of the tower: a 27in stainless trim kit (vent slots in its top and
+    bottom rails) around a black-glass door hinged on the left with a vertical handle on its right edge, and a
+    black-glass control strip with a small clock display and a touch pad on the right, the refrigerator's
+    side. 19in high: clearly lower than the 26in wall oven under it. Loose appliance like the oven (every part
+    is named '... oven ...': 'microwave' alone contains bl/warp.py's fitted word 'wave'); concept feet are its
+    real size. Seen from the room (looking south) the viewer's right is -x."""
+    oc = (OVEN[0] + OVEN[1]) / 2
+    y0, y1 = MW_Y
+    ox0, ox1 = oc - 1.125, oc + 1.125
+    N = 'kd microwave oven'
+    zt = FRONT_S - 0.035                  # face of the trim kit (the wall oven's fascia plane)
+    zd = zt - 0.05                        # face of the door and the control strip
+    LAYER = 0.003                         # printed / applied layers stand 1mm proud (as the oven's window does)
+    g.box(f'{N} trim', ox0, ox1, y0, y1, zt, FRONT_S + 0.012, 'stainless', 0.01, coll=col)
+    ix0, ix1, iy0, iy1 = ox0 + 0.10, ox1 - 0.10, y0 + 0.16, y1 - 0.16
+    slots = C.Acc()
+    for yy in (y0 + 0.058, y0 + 0.100, y1 - 0.100, y1 - 0.058):
+        slots.wbox(ix0 + 0.12, ix1 - 0.12, yy - 0.008, yy + 0.008, zt - LAYER, zt + 0.004)
+    slots.done(g, f'{N} vent slots', M.appl_dark, col, bevel=0.0)
+    cs = 0.50                             # control strip width
+    dx0 = ix0 + cs + 0.012                # the door's right (west) edge
+    g.box(f'{N} door', dx0, ix1, iy0, iy1, zd, zt + 0.004, M.black_glass, 0.006, coll=col)
+    g.box(f'{N} door window', dx0 + 0.22, ix1 - 0.11, iy0 + 0.13, iy1 - 0.13, zd - LAYER, zd + 0.003, M.screen, coll=col)
+    g.box(f'{N} control strip', ix0, ix0 + cs, iy0, iy1, zd, zt + 0.004, M.black_glass, 0.006, coll=col)
+    # clock display at the top of the strip, digits 12:00 read from the room (viewer's right = -x)
+    cx = ix0 + cs / 2
+    g.box(f'{N} display', cx - 0.19, cx + 0.19, iy1 - 0.215, iy1 - 0.085, zd - LAYER, zd + 0.003, M.display, coll=col)
+    dig = C.Acc()
+    dw, dh, t = 0.034, 0.064, 0.0075
+    yc = iy1 - 0.150
+    za, zb = zd - 1.5 * LAYER, zd - 0.5 * LAYER
+
+    def seg(s0, s1, v0, v1):              # s: to the viewer's right from the display's centre
+        dig.wbox(cx - s1, cx - s0, v0, v1, za, zb)
+    for ch, s in zip('1200', (-0.118, -0.066, 0.032, 0.084)):
+        a, b = s, s + dw
+        segs = {'a': (a, b, yc + dh / 2 - t, yc + dh / 2), 'g': (a, b, yc - t / 2, yc + t / 2),
+                'd': (a, b, yc - dh / 2, yc - dh / 2 + t),
+                'f': (a, a + t, yc, yc + dh / 2), 'e': (a, a + t, yc - dh / 2, yc),
+                'b': (b - t, b, yc, yc + dh / 2), 'c': (b - t, b, yc - dh / 2, yc)}
+        for k in _SEG[ch]:
+            seg(*segs[k])
+    for v in (yc + 0.014, yc - 0.014 - t):
+        seg(-0.004, 0.004, v, v + t)      # colon
+    dig.done(g, f'{N} display digits', M.digits, col, bevel=0.0)
+    # touch pad: two rows of function keys, a number pad, start / stop
+    keys = C.Acc()
+    kz0, kz1 = zd - LAYER, zd + 0.003
+    for row, v in enumerate((0.30, 0.40, 0.535, 0.635, 0.735, 0.835)):
+        for i in (-1, 0, 1):
+            keys.wbox(cx + i * 0.135 - 0.052, cx + i * 0.135 + 0.052, iy1 - v - 0.062, iy1 - v, kz0, kz1)
+    for i in (-1, 1):
+        keys.wbox(cx + i * 0.10 - 0.085, cx + i * 0.10 + 0.085, iy1 - 1.085, iy1 - 0.985, kz0, kz1)
+    keys.done(g, f'{N} control keys', M.keys, col, bevel=0.0)
+    # handle on the door's right edge: the wall oven's bar (same radius, same distance from the fronts), upright
+    hx = dx0 + 0.105
+    bar = g.cyl_axis(f'{N} handle', (hx, iy0 + 0.10, FRONT_S - 0.17), (hx, iy1 - 0.10, FRONT_S - 0.17), 0.028,
+                     M.handle, 20, col)
+    g.bevel_mod(bar, 0.008, 3)
+    for yy in (iy0 + 0.24, iy1 - 0.24):
+        g.cyl_axis(f'{N} handle post', (hx, yy, zd), (hx, yy, FRONT_S - 0.17), 0.017, M.handle, 16, col)
 
 
 # ============================================================================= base runs

@@ -53,6 +53,16 @@ the fifth round the room was mirrored north-south):
     sill 3'-0", head 7'-6" (was 5'-0" / 7'-0"); width, place, frosted glazing and frame as before; the tile around
     it, the tiled jamb returns and the quartz sill are the baths zone's (bl/zones/baths.py, build_suite3).
 
+Seventh round (2026-11-21), the owner: "Set all windows to white color, and it should have grid line for these
+windows":
+15. white_windows (revision_spec.WINDOW_*), the last step of all: every window and glazed door of the built model
+    (W01..W15, W17 and the garden door D14; the four skylights keep their frames) gets satin white frames, sashes,
+    mullions and transom bars and a grid of white bars on both faces of the glass, lites as close to 14 x 16 1/2 in
+    as each sash allows; the kitchen's W08 keeps 2 x 4 lites per sash; two centre mullions go back to the middle
+    of their windows; roller shades are seated on the room side of the bars; the primary bedroom slider's pull
+    is white too. (The same round's refrigerator, living room and primary bath are the zones' own work, and the
+    sky that stood 180 degrees off the sun is bl/lighting.py.)
+
 Repairs to the conversion run first: ceiling_seam and floor_seam close seams the slab warp opened; floor_overlap
 and ceiling_overlap end two slabs on one line where they overlapped in one plane (coplanar faces of two objects
 shade each other: a dark stripe on the floor across Bedroom 4 and the foyer, a dark rectangle on the foyer's
@@ -1278,6 +1288,364 @@ def floor_gaps(ctx):
     return out
 
 
+# ------------------------------------------------------------- seventh round: white windows with grid lines
+def _ww_rect(ob, u):
+    """(u0, u1, y0, y1, n0, n1) of an object, SCENE feet, in the vertical plane whose horizontal direction on the
+    plan is u = (ux, uz): u along the wall, y up, n square to the wall."""
+    w, _ = _world(ob)
+    x, y, z = w[:, 0] / FT, w[:, 2] / FT, -w[:, 1] / FT
+    a, n = x * u[0] + z * u[1], z * u[0] - x * u[1]
+    return (float(a.min()), float(a.max()), float(y.min()), float(y.max()), float(n.min()), float(n.max()))
+
+
+def _ww_axis(ob):
+    """Plan direction (ux, uz) of the long horizontal side of a pane (or of a shade's cassette)."""
+    w, _ = _world(ob)
+    x, z = w[:, 0] / FT, -w[:, 1] / FT
+    dx, dz = np.ptp(x), np.ptp(z)
+    if min(dx, dz) < 0.1:                                # in a wall along x or along z
+        return (1.0, 0.0) if dx >= dz else (0.0, 1.0)
+    val, vec = np.linalg.eigh(np.cov(np.vstack([x - x.mean(), z - z.mean()])))   # canted (the bay's sides)
+    v = vec[:, int(np.argmax(val))]
+    if v[0] < 0:
+        v = -v
+    return float(v[0]), float(v[1])
+
+
+def _ww_daylight(p, members, near=0.08, eps=0.012):
+    """The daylight openings of a pane: its rectangle p = (u0, u1, y0, y1), run to the frame members that stop just
+    short of its edges (the shell's panes leave a slit beside the jambs) and divided by the members that cross it
+    (mullions, transom bars). Members are rectangles in the pane's plane. Returns [(u0, u1, y0, y1), ...]."""
+    u0, u1, y0, y1 = p
+    w, h = u1 - u0, y1 - y0
+    tall = [m for m in members if min(y1, m[3]) - max(y0, m[2]) > 0.6 * h]
+    wide = [m for m in members if min(u1, m[1]) - max(u0, m[0]) > 0.6 * w]
+    a = [m[1] for m in tall if m[0] < u0 + eps and abs(m[1] - u0) <= near]
+    b = [m[0] for m in tall if m[1] > u1 - eps and abs(m[0] - u1) <= near]
+    c = [m[3] for m in wide if m[2] < y0 + eps and abs(m[3] - y0) <= near]
+    d = [m[2] for m in wide if m[3] > y1 - eps and abs(m[2] - y1) <= near]
+    u0, u1, y0, y1 = max(a, default=u0), min(b, default=u1), max(c, default=y0), min(d, default=y1)
+    cross = [m for m in members if min(u1, m[1]) - max(u0, m[0]) > eps and min(y1, m[3]) - max(y0, m[2]) > eps]
+
+    def cuts(lo, hi, k):
+        v = sorted({lo, hi} | {min(max(m[k + i], lo), hi) for m in cross for i in (0, 1)})
+        return [t for i, t in enumerate(v) if i == 0 or t - v[i - 1] > 1e-4]
+    us, ys = cuts(u0, u1, 0), cuts(y0, y1, 2)
+    free = {(i, j) for i in range(len(us) - 1) for j in range(len(ys) - 1)
+            if not any(m[0] < (us[i] + us[i + 1]) / 2 < m[1] and m[2] < (ys[j] + ys[j + 1]) / 2 < m[3] for m in cross)}
+    out = []
+    while free:
+        todo, part = [free.pop()], set()
+        while todo:
+            i, j = todo.pop()
+            part.add((i, j))
+            for q in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+                if q in free:
+                    free.discard(q)
+                    todo.append(q)
+        i0, i1 = min(i for i, _ in part), max(i for i, _ in part)
+        j0, j1 = min(j for _, j in part), max(j for _, j in part)
+        if len(part) != (i1 - i0 + 1) * (j1 - j0 + 1):
+            raise RuntimeError(f'a glass opening is not a rectangle: {p}')
+        if us[i1 + 1] - us[i0] > 0.25 and ys[j1 + 1] - ys[j0] > 0.25:
+            out.append((us[i0], us[i1 + 1], ys[j0], ys[j1 + 1]))
+    return sorted(out)
+
+
+def _ww_layout(bays, tiers, cells, lite, max_ratio, keep=None):
+    """Columns per bay and rows per tier of one window. bays: [(u0, u1)], tiers: [(y0, y1, is_transom)], cells: the
+    (bay, tier) pairs that are glass. A transom tier is one row; every other lite is brought as close to the house's
+    lite (width, height) as whole numbers allow, in log space, with no lite wider than max_ratio times its height.
+    Rows are shared by the bays of a tier and columns by the tiers of a bay, so the bars run on in line."""
+    import itertools
+    w0, h0 = lite
+    if keep:
+        return [keep[0]] * len(bays), [1 if t[2] else keep[1] for t in tiers]
+    best = None
+    opts = [[1] if t[2] else range(1, 13) for t in tiers]
+    for rows in itertools.product(*opts):
+        cols, total = [], 0.0
+        for i, (a, b) in enumerate(bays):
+            def cost(c):
+                s = 0.0
+                for j, t in enumerate(tiers):
+                    if (i, j) not in cells or t[2]:
+                        continue
+                    w, h = (b - a) / c, (t[1] - t[0]) / rows[j]
+                    s += abs(math.log(w / w0)) + abs(math.log(h / h0)) + (1000.0 if w / h > max_ratio else 0.0)
+                return s if s else abs(math.log((b - a) / c / w0))
+            c = min(range(1, 13), key=lambda c: (cost(c), c))
+            cols.append(c)
+            total += cost(c)
+        key = (round(total, 9), sum(cols) + sum(rows))
+        if best is None or key < best[0]:
+            best = (key, cols, list(rows))
+    return best[1], best[2]
+
+
+def white_windows(ctx):
+    """Seventh round (2026-11-21), the owner: "Set all windows to white color, and it should have grid line for these
+    windows". One late revision for every window and glazed door of the built model, whoever built it (the shell, the
+    kitchen's W08, the revisions above), so a window that is added or moved later is covered without another edit.
+    Numbers: revision_spec.WINDOW_*.
+
+    * WHITE: every frame piece in the `openings` collection that carries the black aluminium (heads, sills, jambs,
+      mullions, transom bars, the rails and stiles of the primary bedroom's slider and of the living room's garden
+      door D14, the bay's sash jambs and rails, the entry's upper window) gets the library's satin white
+      `window_white`; so do the pieces named in WINDOW_WHITE_ALSO (the primary bath's stool and mullion post, the
+      slider's pull bar). The skylights keep their frames; shower glass, mirrors, cabinet glass, the garage door
+      and the front door are not windows here.
+    * GRID: each daylight opening (the glass between two frame members) is divided into lites as close to the
+      house's lite WINDOW_LITE as whole numbers allow (_ww_layout). The sashes of one window share their rows and a
+      transom keeps the columns of the sash under it and is one row, so the bars run on in line across mullions and
+      transoms, and windows of one height get the same rows all round the house. Bars are WINDOW_BAR_W wide and
+      stand WINDOW_BAR_PROUD off each face of the glass: one piece through the pane (no face of a bar lies in a
+      face of the glass), the vertical bars continuous, the horizontal ones between them, all ending in the frame
+      members. Where a sash is shallower than the bars are proud (the slider's panels) they stop just inside it.
+      The kitchen's W08 keeps the 2 x 4 lites per sash of the owner's kitchen-window picture (WINDOW_GRID_KEEP);
+      its bars are built here like all the others (bl/zones/kitchen_dining_window.py no longer builds black ones).
+    * Two centre mullions that the conversion to the architect's plan left off centre (WINDOW_MULLION_CENTRE) go
+      back to the middle of their windows first: with a grid the two sashes would show lites of two widths.
+    * Shades stay in front of the grid: a roller shade that stands in or beyond its window's bars (the bay's three
+      stood outside the glass) is turned square to its pane and set 0.01 ft on the room side of the bars.
+
+    The glass is not touched: every pane stays the light portal lighting.add_window_portals makes of it (the bars
+    are not glass and are skipped there)."""
+    from mathutils import Matrix
+    from . import revision_spec as RS
+    from .common import DATA_DIR
+    import json
+    import os
+    white = ctx.mat(RS.WINDOW_WHITE)
+    was = bpy.data.materials.get('M_' + RS.WINDOW_FRAME_WAS)
+    skip = re.compile(RS.WINDOW_SKIP, re.I)
+    gone = remove([ob for ob in bpy.data.objects if re.search(RS.WINDOW_OLD_BARS, ob.name)])
+    opens = [ob for ob in ctx.coll(COLL_OPEN).all_objects if ob.type == 'MESH' and len(ob.data.vertices)
+             and not skip.search(ob.name)]
+    frames = [ob for ob in opens if any(m is not None and m in (was, white) for m in ob.data.materials)]
+    glass = [ob for ob in opens if ob.data.materials and ob.data.materials[0] is not None
+             and ob.data.materials[0].name in RS.WINDOW_GLASS]
+    panes = [(ob, u) for ob, u in ((ob, _ww_axis(ob)) for ob in glass)
+             if (lambda r: r[3] - r[2] > 0.5 and r[5] - r[4] < 0.3)(_ww_rect(ob, u))]   # upright and flat
+
+    def in_plane(pr, u):
+        """Frame members in the plane of a pane (rectangle pr, direction u), as rectangles with their object."""
+        out = []
+        for ob in frames:
+            m = _ww_rect(ob, u)
+            if m[5] > pr[4] - 0.02 and m[4] < pr[5] + 0.02 and m[5] - m[4] < 0.7 \
+                    and m[1] > pr[0] - 0.3 and m[0] < pr[1] + 0.3 and m[3] > pr[2] - 0.3 and m[2] < pr[3] + 0.3:
+                out.append(m + (ob,))
+        return out
+
+    # mullions the warp left off centre: back to the middle of their window
+    centred = {}
+    for ob, u in panes:
+        if not any(re.search(p, ob.name) for p in RS.WINDOW_MULLION_CENTRE):
+            continue
+        pr = _ww_rect(ob, u)
+        mem = in_plane(pr, u)
+        tall = [m for m in mem if min(pr[3], m[3]) - max(pr[2], m[2]) > 0.6 * (pr[3] - pr[2])]
+        mid = [m for m in tall if m[0] > pr[0] + 0.2 and m[1] < pr[1] - 0.2]
+        if len(mid) != 1:
+            raise RuntimeError(f'{ob.name!r}: {len(mid)} mullions, expected 1')
+        left = max([m[1] for m in tall if m[1] < mid[0][0]], default=pr[0])
+        right = min([m[0] for m in tall if m[0] > mid[0][1]], default=pr[1])
+        d = (left + right) / 2 - (mid[0][0] + mid[0][1]) / 2
+        mid[0][6].location += Vector((u[0] * d * FT, -u[1] * d * FT, 0.0))
+        centred[re.sub(r'^\d+ ', '', ob.name)] = round(d, 3)
+    bpy.context.view_layer.update()
+
+    # daylight openings of every pane
+    lights, depth = [], {}
+    for ob, u in panes:
+        pr = _ww_rect(ob, u)
+        mem = in_plane(pr, u)
+        depth[ob.name] = [pr[4] - RS.WINDOW_BAR_PROUD, pr[5] + RS.WINDOW_BAR_PROUD]
+        for o in _ww_daylight(pr[:4], [m[:4] for m in mem]):
+            by = [m for m in mem if m[1] > o[0] - 0.02 and m[0] < o[1] + 0.02 and m[3] > o[2] - 0.02 and m[2] < o[3] + 0.02]
+            n0, n1 = pr[4] - RS.WINDOW_BAR_PROUD, pr[5] + RS.WINDOW_BAR_PROUD
+            lo, hi = max([m[4] for m in by], default=n0 - 1) + 0.004, min([m[5] for m in by], default=n1 + 1) - 0.004
+            if lo > n0 and pr[4] - lo >= 0.015:          # the sash is shallower than the bar is proud: stop inside it
+                n0 = lo
+            if hi < n1 and hi - pr[5] >= 0.015:
+                n1 = hi
+            lights.append({'ob': ob, 'u': u, 'r': o, 'n': (n0, n1), 'nm': (pr[4] + pr[5]) / 2})
+            depth[ob.name] = [n0, n1]
+
+    # openings of one window: side by side or one above the other in one plane
+    group = list(range(len(lights)))
+
+    def root(i):
+        while group[i] != i:
+            group[i] = group[group[i]]
+            i = group[i]
+        return i
+    for i, a in enumerate(lights):
+        for j in range(i + 1, len(lights)):
+            b = lights[j]
+            if abs(a['u'][0] * b['u'][0] + a['u'][1] * b['u'][1]) < 0.999 or abs(a['nm'] - b['nm']) > 0.35:
+                continue
+            (au0, au1, ay0, ay1), (bu0, bu1, by0, by1) = a['r'], b['r']
+            ou, oy = min(au1, bu1) - max(au0, bu0), min(ay1, by1) - max(ay0, by0)
+            if a['ob'] is b['ob'] or (-ou <= 0.45 and oy > 0.5 * min(ay1 - ay0, by1 - by0)) \
+                    or (-oy <= 0.45 and ou > 0.5 * min(au1 - au0, bu1 - bu0)):
+                group[root(i)] = root(j)
+    windows = {}
+    for i, a in enumerate(lights):
+        windows.setdefault(root(i), []).append(a)
+
+    # the schedule's number of each window (data/measurements.json, the architect's plan)
+    with open(os.path.join(DATA_DIR, 'measurements.json')) as f:
+        meas = json.load(f)
+
+    def centre(ws):
+        u = ws[0]['u']
+        ua = sum((a['r'][0] + a['r'][1]) / 2 for a in ws) / len(ws)
+        nm = sum(a['nm'] for a in ws) / len(ws)
+        return ua * u[0] - nm * u[1], ua * u[1] + nm * u[0]
+
+    def label(ws):
+        u = ws[0]['u']
+        cx, cz = centre(ws)
+        for w in meas['windows']:
+            if w.get('kind') == 'skylight' or w['axis'] not in ('x', 'z'):
+                continue
+            along, across = (cx, cz) if w['axis'] == 'x' else (cz, cx)
+            if w['start'] - 0.3 <= along <= w['end'] + 0.3 and abs(across - w['c']) < 2.6 \
+                    and abs(u[0] if w['axis'] == 'x' else u[1]) > 0.5:
+                return w['id']
+        for d in meas['doors']:
+            if 'lazed' in d.get('type', '') and d['axis'] in ('x', 'z'):
+                along, across = (cx, cz) if d['axis'] == 'x' else (cz, cx)
+                if d['start'] - 3.0 <= along <= d['end'] + 3.0 and abs(across - d['c']) < 3.0:
+                    return d['id']
+        return re.sub(r'^\d+ ', '', ws[0]['ob'].name)[:24]
+
+    # lay out and build the bars, one mesh per window
+    bw, bars_total, grids = RS.WINDOW_BAR_W, 0, {}
+    named = {}
+    for ws in windows.values():
+        named.setdefault(label(ws), []).append(ws)
+    for name, parts in sorted(named.items()):
+        parts.sort(key=centre)
+        for k, ws in enumerate(parts):
+            tag = name if len(parts) == 1 else f'{name}{"abcdefgh"[k]}'
+            bays, tiers = [], []
+            for a in ws:
+                if not any(abs(a['r'][0] - b[0]) < 0.05 and abs(a['r'][1] - b[1]) < 0.05 for b in bays):
+                    bays.append(a['r'][:2])
+                if not any(abs(a['r'][2] - t[0]) < 0.05 and abs(a['r'][3] - t[1]) < 0.05 for t in tiers):
+                    tiers.append(a['r'][2:])
+            bays.sort()
+            tiers.sort()
+            tiers = [(t[0], t[1], any(s[1] <= t[0] + 0.3 and t[1] - t[0] < RS.WINDOW_TRANSOM_RATIO * (s[1] - s[0]) for s in tiers))
+                     for t in tiers]
+
+            def cell(a):
+                return (next(i for i, b in enumerate(bays) if abs(a['r'][0] - b[0]) < 0.05 and abs(a['r'][1] - b[1]) < 0.05),
+                        next(j for j, t in enumerate(tiers) if abs(a['r'][2] - t[0]) < 0.05 and abs(a['r'][3] - t[1]) < 0.05))
+            cells = {cell(a) for a in ws}
+            keep = next((v for p, v in RS.WINDOW_GRID_KEEP.items() if any(re.search(p, a['ob'].name) for a in ws)), None)
+            cols, rows = _ww_layout(bays, tiers, cells, RS.WINDOW_LITE, RS.WINDOW_LITE_MAX_RATIO, keep)
+            boxes = []
+            for a in ws:
+                i, j = cell(a)
+                (u0, u1, y0, y1), (n0, n1), c, r = a['r'], a['n'], cols[i], rows[j]
+                ucs = [u0 + (u1 - u0) * q / c for q in range(1, c)]
+                for uc in ucs:
+                    boxes.append((a['u'], uc - bw / 2, uc + bw / 2, y0 - 0.004, y1 + 0.004, n0, n1))
+                ends = [u0 - 0.004] + [v for uc in ucs for v in (uc - bw / 2, uc + bw / 2)] + [u1 + 0.004]
+                for q in range(1, r):
+                    yc = y0 + (y1 - y0) * q / r
+                    for s in range(0, len(ends), 2):
+                        boxes.append((a['u'], ends[s], ends[s + 1], yc - bw / 2, yc + bw / 2, n0, n1))
+            sizes = sorted({(round((bays[i][1] - bays[i][0]) / cols[i] * 12, 1), round((tiers[j][1] - tiers[j][0]) / rows[j] * 12, 1))
+                            for i, j in cells})
+            grids[tag] = ' + '.join(f'{cols[i]}x{rows[j]}' for j in range(len(tiers)) for i in range(len(bays)) if (i, j) in cells) \
+                + ' lites ' + ', '.join(f'{w:g}x{h:g}' for w, h in sizes) + ' in'
+            if not boxes:
+                continue
+            verts, faces = [], []
+            for (ux, uz), a0, a1, b0, b1, c0, c1 in boxes:
+                base = len(verts)
+                for cn in (c0, c1):
+                    for bv in (b0, b1):
+                        for av in (a0, a1):
+                            verts.append(ft2bl(av * ux - cn * uz, bv, av * uz + cn * ux))
+                faces += [tuple(base + q for q in f) for f in ((0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6),
+                                                                (0, 2, 6, 4), (1, 5, 7, 3))]
+            org = sum(verts, Vector()) / len(verts)
+            ob = ctx.mesh_object(f'{tag} window grid bars', [v - org for v in verts], faces, RS.WINDOW_WHITE, COLL_OPEN)
+            ob.location = org
+            bm = bmesh.new()
+            bm.from_mesh(ob.data)
+            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+            bm.to_mesh(ob.data)
+            bm.free()
+            ctx.add_bevel(ob, RS.WINDOW_BAR_BEVEL, 2)
+            bars_total += len(boxes)
+
+    # shades hang square to their window, on the room side of its bars
+    shades, seated = {}, {}
+    for ob in bpy.data.objects:
+        m = re.match(RS.WINDOW_SHADES, ob.name)
+        if m and ob.type == 'MESH' and ob.parent is None and len(ob.data.vertices):
+            shades.setdefault(m.group(1), []).append(ob)
+    for tag, obs in sorted(shades.items()):
+        lead = max(obs, key=lambda o: (o.name.endswith('cassette'), max(o.dimensions)))
+        v, best = _ww_axis(lead), None
+        for ob, u in panes:
+            pr, r = _ww_rect(ob, u), _ww_rect(lead, u)
+            over = min(pr[1], r[1]) - max(pr[0], r[0])
+            gap = max(r[4] - pr[5], pr[4] - r[5], 0.0)
+            if abs(u[0] * v[0] + u[1] * v[1]) > 0.99 and over > 0.5 and gap < 0.5 and r[3] > pr[2] and r[2] < pr[3] + 0.3 \
+                    and (best is None or (round(over, 2), -gap) > best[0]):
+                best = ((round(over, 2), -gap), ob, u, pr)
+        if best is None:
+            continue
+        _, pane, u, pr = best
+        if u[0] * v[0] + u[1] * v[1] < 0:
+            v = (-v[0], -v[1])
+        turn = math.atan2(v[0] * u[1] - v[1] * u[0], v[0] * u[0] + v[1] * u[1])      # on the plan, from the shade to the pane
+        if abs(turn) > 1e-4:
+            x0, x1, y0, y1, z0, z1 = bbox(lead)
+            pv = ft2bl((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)
+            rot = Matrix.Translation(pv) @ Matrix.Rotation(-turn, 4, 'Z') @ Matrix.Translation(-pv)
+            for ob in obs:
+                ob.matrix_basis = rot @ ob.matrix_basis
+            bpy.context.view_layer.update()
+        rs = [_ww_rect(ob, u) for ob in obs]
+        lo, hi = min(r[4] for r in rs), max(r[5] for r in rs)
+        ua, nm = (pr[0] + pr[1]) / 2, (pr[4] + pr[5]) / 2
+        room = (RS.WINDOW_HOUSE_CENTRE[0] - (ua * u[0] - nm * u[1])) * -u[1] + (RS.WINDOW_HOUSE_CENTRE[1] - (ua * u[1] + nm * u[0])) * u[0]
+        b0, b1 = depth[pane.name]
+        d = (b0 - 0.01 - hi if hi > b0 else 0.0) if room < 0 else (b1 + 0.01 - lo if lo < b1 else 0.0)
+        if d:
+            for ob in obs:
+                ob.location += Vector((-u[1] * d * FT, -u[0] * d * FT, 0.0))
+        if d or abs(turn) > 1e-4:
+            seated[tag] = (round(math.degrees(turn), 2), round(d, 3))
+    bpy.context.view_layer.update()
+
+    # white frames, sashes, mullions and transom bars; white stools
+    n = 0
+    for ob in frames + [o for p in RS.WINDOW_WHITE_ALSO for o in find(p) if o.type == 'MESH']:
+        if ob.data.users > 1:
+            ob.data = ob.data.copy()
+        every = ob not in frames
+        for s in range(len(ob.data.materials)):
+            if every or ob.data.materials[s] is was:
+                ob.data.materials[s] = white
+        n += 1
+    left = sorted({ob.name for ob in opens if was is not None and was in list(ob.data.materials)})
+    if left:
+        raise RuntimeError(f'frame pieces left black: {left[:5]}')
+    bpy.context.view_layer.update()
+    return {'panes': len(panes), 'windows': len(grids), 'white pieces': n, 'bars': bars_total, 'old bars removed': gone,
+            'mullions centred': centred, 'shades re-seated (deg, ft)': seated, 'grids': grids}
+
+
 def apply(ctx):
     bpy.context.view_layer.update()
     res = {}
@@ -1287,7 +1655,8 @@ def apply(ctx):
               laundry_closet,
               suite_rooms, suite_fit_out,
               primary_bath_fit_out,
-              floor_gaps, skirting_trim):
+              floor_gaps, skirting_trim,
+              white_windows):
         try:
             res[f.__name__] = f(ctx)
         except Exception as e:                       # report, keep building

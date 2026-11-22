@@ -30,6 +30,7 @@ KEYS = {
     'fascia_charcoal':   ('#2a2b2d', 0.55, 0.0, 'charcoal painted fascia / bargeboards'),
     'roof_metal':        ('#2c2e30', 0.58, 0.08, 'matte charcoal (PVDF-painted) standing-seam metal roof, seams ~16in apart running down-slope'),
     'black_aluminum':    ('#1a1b1c', 0.38, 0.4, 'matte black powder-coated aluminum window/door frames'),
+    'window_white':      ('#f5f4f1', 0.36, 0.0, 'satin white window / glazed-door frames, sashes and grid bars (seventh round: every window white)'),
     'glass_clear':       ('#ffffff', 0.0, 0.0, 'clear architectural glass (thin pane, slight green tint, ior 1.52)'),
     'glass_frosted':     ('#ffffff', 0.35, 0.0, 'acid-etched / obscured glass'),
     'glass_picture':     ('#ffffff', 0.0, 0.0, 'anti-reflective picture-frame glass (~1% reflectance, two-sided, shadow rays pass)'),

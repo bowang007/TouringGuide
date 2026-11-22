@@ -1,5 +1,12 @@
 """Primary ensuite (tour stop A0) of zone `baths`; see baths.py for the shared helpers.
 
+Seventh round (2026-11-21), the owner: "The walls in primary bathroom, it's not coherent, some of the wall are
+green, make it coherent be removing these green walls and set it to white". The grey-green board wainscot, its cap
+rail and the cream plaster skins are gone. Every wall except the stone wall is plain white: the shell's own painted
+wall (the house's `paint_wall`), full height, with a low white tile base at the floor; the ceiling is the shell's
+white ceiling; the shower's tile, mosaic and stone trims are white. One white room with one stone wall. Layout,
+stone, beams, vanity, mirrors, lamps, shelf, floor and fixtures are the sixth round's.
+
 Sixth round (2026-11-20). Two things changed at once:
 
 LAYOUT = the architect's sheet SKA002 (the owner: "follow the sheet"): door D08 at the east end of the north
@@ -13,14 +20,17 @@ STYLE = styles/primary bathroom wall style.jpg (rustic, warm, low saturation), t
     the first thing seen from the door. On it: the floating solid-oak slab with two carved troughs (the owner's
     sink image, kept), two oak-framed mirrors, a rough dark timber beam across the wall above them with two
     enamel-shade wall lamps (clear bulbs), deck taps in brushed nickel; the toilet stands in front of its west end.
-  * shower - plain honed cream stone-look tile (24x48in, quiet joints) on its two solid walls, cream mosaic floor
-    with a linear drain behind a flush cream-stone threshold (curbless), frameless glass on the east side (door,
+  * shower - plain matte white tile (24x48in, quiet joints) on its two solid walls, white mosaic floor with a
+    linear drain behind a flush off-white stone threshold (curbless), frameless glass on the east side (door,
     hinged on the north wall, and a short fixed return) and the south side (fixed, into a channel on the window
-    mullion), an exposed brushed-nickel set with rain head and hand shower at the west end, a tiled niche.
-  * other walls (east, north beside the door, west outside the shower) - muted grey-green tongue-and-groove
-    wainscot to 3'-8" with a plain cap rail, warm cream plaster above; cream plaster ceiling with one timber beam.
+    mullion), an exposed brushed-nickel set with rain head and hand shower at the west end, a tiled niche. The
+    tile ends on a white edge profile just outside each glass line; the glass is low-iron, so the white tile
+    behind it stays white.
+  * other walls (east, north beside the door, west outside the shower) - plain white painted wall, floor to
+    ceiling (the shell's wall, nothing on it), with a 5 5/8in base of the shower's white tile at the floor; white
+    ceiling (the shell's) with one timber beam. (The sixth round had grey-green wainscot under cream plaster.)
   * floor - quiet warm-grey honed stone, 24x24in, no pattern.
-  * on the west wall's plaster beside the stone: a reclaimed-timber shelf on black iron brackets with stoneware
+  * on the west wall beside the stone: a reclaimed-timber shelf on black iron brackets with stoneware
     and glass bottles, a framed botanical print and a trailing succulent; a striped bath towel on a nickel bar
     (east wall), a barrel cactus in a galvanised bucket and striped hand towels on the slab, a seagrass basket of
     rolled towels under it, a fringed woven mat in front.
@@ -33,7 +43,8 @@ bath_door (the opening, the niche recess in the north wall, the leaf), bath_wind
 glass) and primary_bath_skylight (W20). build_primary(), called with the other baths before the warp, only
 makes sure the collection exists. Everything goes into collection zone_baths_primary as before.
 
-Names matter to bake_web.py (README, "Web model contract"): wall finishes carry tg_class = 'wall'.
+Names matter to bake_web.py (README, "Web model contract"): wall finishes (stone, tile, tile base) carry
+tg_class = 'wall'.
 """
 import math
 import re
@@ -50,13 +61,16 @@ from .baths import CAN_K, T, ZONE
 C = f'{ZONE}_primary'
 X0, X1, Z0, Z1 = S.PRIMARY_BATH_CLEAR          # wall faces (structure)
 FL = 0.028                                     # top of the shell's floor slab
-CEIL = 7.985                                   # underside of the cream plaster on the ceiling (shell ceiling: 8.0)
-TP = 0.03                                      # cream plaster skin over the shell wall
-WAIN, CAP1, CAPD = 3.667, 3.767, 0.115         # panelling top (3'-8"), cap top, cap depth from the wall
-XW, XE, ZN = X0 + T, X1 - T, Z0 + T            # faces of the west / east / north wall finish (tile, wainscot)
+CEIL = 8.0                                     # the shell's white ceiling (no skin under it since the seventh round)
+BASE_Y = 0.5                                   # top of the white tile base on the painted walls (5 5/8in above the floor)
+XW, XE, ZN = X0 + T, X1 - T, Z0 + T            # faces of the tile on the west / north wall and of the tile base (T thick:
+#                                                it covers the shell's 0.05 ft painted skirting); the painted walls' own
+#                                                faces are X0, X1, Z0
 ZSP = Z1 - 0.06                                # the stone wall's mesh plane (mortar bed), in front of the shell skirting
 GX, GZ = S.BATH_SHOWER[1], S.BATH_SHOWER[3]    # centre lines of the shower's east and south glass
 TILE_E = GX + 0.075                            # the shower tile runs this far east on the north wall (the hinge side)
+TILE_S = GZ + 0.05                             # ... and this far south on the west wall: to the window mullion's south face
+TRIM = 0.012                                   # width of the white edge profile that ends the tile there
 WZ0, WZ1 = S.BATH_WIN_Z                        # window W13
 SILL = S.TALL_SILL
 D0, D1 = S.BATH_DOOR_X
@@ -108,14 +122,20 @@ def _floor(ctx):
 
 # ------------------------------------------------------------------------------------ walls
 def _walls(ctx):
+    """Shower: white tile, full height. Every other wall except the stone wall is the shell's painted wall as it
+    stands (the house's wall white, floor to ceiling): this room adds nothing to it but a low white tile base. The
+    ceiling is the shell's white ceiling."""
     nx0, nx1, ny0, ny1, dep = S.BATH_NICHE
     tile = M.shower_tile(a0_ft=(nx0 + nx1) / 2, floor_ft=FL)     # a vertical joint on the niche's centre line
-    vg, cap, pl = M.vgroove(), M.sage_paint(), M.plaster()
     door = [(DL0, DL1, -1.0, DHEAD)]
-    # --- shower: cream tile, full height, on the north wall (with the niche) and the west wall (with W13's north lite)
+    # --- shower: white tile, full height, on the north wall (with the niche) and the west wall (with W13's north
+    # lite). On each wall the tile runs a little past the glass line and ends on a white edge profile (satin white
+    # like the trim; it was nickel, which mirrored the stone as a brown line on the white wall): on the north wall
+    # behind the door's hinges, on the west wall under the glass channel, to the mullion's south face
     _skin(ctx, 'A0 tile shower north', 'z', Z0, ZN, X0, TILE_E, FL, CEIL, tile, C, holes=[(nx0, nx1, ny0, ny1)])
-    _skin(ctx, 'A0 tile shower west', 'x', X0, XW, ZN, GZ, FL, CEIL, tile, C, holes=[(WZ0, GZ + 1.0, SILL, 99.0)])
-    _box(ctx, 'A0 tile shower edge trim', TILE_E, TILE_E + 0.012, FL, CEIL, Z0, ZN + 0.004, M.nickel(), C)
+    _skin(ctx, 'A0 tile shower west', 'x', X0, XW, ZN, TILE_S, FL, CEIL, tile, C, holes=[(WZ0, TILE_S + 1.0, SILL, 99.0)])
+    _box(ctx, 'A0 tile shower edge trim', TILE_E, TILE_E + TRIM, FL, CEIL, Z0, ZN + 0.004, 'paint_trim', C)
+    _box(ctx, 'A0 tile shower edge trim W', X0, XW + 0.004, FL, SILL - 0.035, TILE_S, TILE_S + TRIM, 'paint_trim', C)
     # niche lining: tiled back, sides and head, a stone sill a little proud of the wall
     zb = Z0 - dep                              # the recess's back (shell)
     lt = 0.02
@@ -124,47 +144,43 @@ def _walls(ctx):
     _box(ctx, 'A0 tile niche side E', nx1 - lt, nx1, ny0 + 0.035, ny1 - lt, zb + lt, ZN, tile, C)
     _box(ctx, 'A0 tile niche head', nx0, nx1, ny1 - lt, ny1, zb + lt, ZN, tile, C)
     _box(ctx, 'A0 tile niche sill', nx0, nx1, ny0, ny0 + 0.035, zb + lt, ZN + 0.012, M.sill(), C, bevel=0.004)
-    # --- north wall east of the shower (the door's wall): wainscot, cap, plaster; over the door plaster only
-    _skin(ctx, 'A0 tile north wainscot', 'z', Z0, ZN, TILE_E, X1, FL, WAIN, vg, C, holes=door)
-    _skin(ctx, 'A0 tile north cap', 'z', Z0, Z0 + CAPD, TILE_E, X1 - CAPD, WAIN, CAP1, cap, C, holes=door)
-    _skin(ctx, 'A0 tile north upper', 'z', Z0, Z0 + TP, TILE_E, X1, CAP1, CEIL, pl, C, holes=door)
-    # --- east wall, full length (it runs into the stone at its south end)
-    _skin(ctx, 'A0 tile east wainscot', 'x', XE, X1, ZN, Z1, FL, WAIN, vg, C)
-    _skin(ctx, 'A0 tile east cap', 'x', X1 - CAPD, X1, Z0, Z1, WAIN, CAP1, cap, C)
-    _skin(ctx, 'A0 tile east upper', 'x', X1 - TP, X1, Z0 + TP, Z1, CAP1, CEIL, pl, C)
-    # --- west wall south of the shower's glass line: wainscot under W13's south lite and beside it, plaster above
-    _skin(ctx, 'A0 tile west wainscot', 'x', X0, XW, GZ, Z1, FL, WAIN, vg, C, holes=[(GZ - 1.0, WZ1, SILL, 99.0)])
-    _skin(ctx, 'A0 tile west cap', 'x', X0, X0 + CAPD, WZ1, Z1, WAIN, CAP1, cap, C)
-    _skin(ctx, 'A0 tile west upper', 'x', X0, X0 + TP, WZ1, Z1, CAP1, CEIL, pl, C)
-    # --- south wall: stacked stone, full width and height: a dense grid (~1cm) the material displaces in world space
-    x0, x1 = X0 + 0.004, X1 - 0.004
+    # --- the painted walls' base: the shower's white tile, BASE_Y high and as thick as the tile (flush with it; it
+    # covers the shell's painted skirting, which has gaps at the old door and the old window): north wall from the
+    # shower's edge trim to the door's liner and from the liner to the east wall, the east wall to the stone, the
+    # west wall from the shower's edge trim to the stone
+    _skin(ctx, 'A0 tile base north', 'z', Z0, ZN, TILE_E, X1, FL, BASE_Y, tile, C, holes=door)
+    _skin(ctx, 'A0 tile base east', 'x', XE, X1, ZN, Z1, FL, BASE_Y, tile, C)
+    _skin(ctx, 'A0 tile base west', 'x', X0, XW, TILE_S + TRIM, Z1, FL, BASE_Y, tile, C)
+    # --- south wall: stacked stone, full width and height: a dense grid (~1cm) the material displaces in world
+    # space; its ends stand a hair inside the painted east and west walls
+    x0, x1 = X0 - 0.01, X1 + 0.01
     nx = int(round((x1 - x0) / 0.034))
     ny = int(round((CEIL - FL) / 0.034))
     _wall(Q.grid_wall_z(ctx, 'A0 tile south stone', ZSP, x0, x1, FL, CEIL, nx, ny, M.stone(), C, facing=-1))
-    # --- ceiling: cream plaster under the shell's white ceiling, around the skylight's shaft
-    sx0, sx1, sz0, sz1 = S.PRIMARY_BATH_SKY
-    for tag, a, b, c0, c1 in (('W', X0, sx0, Z0, Z1), ('E', sx1, X1, Z0, Z1), ('N', sx0, sx1, Z0, sz0), ('S', sx0, sx1, sz1, Z1)):
-        K.box(ctx, f'A0 ceiling plaster {tag}', a, b, CEIL, 8.0, c0, c1, pl, C)
 
 
 def _window(ctx):
     """W13's finish: the shower lite (north of the mullion) gets a tiled reveal and a stone sill, the dry lite an oak
-    stool, a plaster reveal and a linen roman shade; a post on the mullion carries the shower's south glass."""
+    stool on the painted wall, a painted reveal and a linen roman shade; a post on the mullion carries the shower's
+    south glass. Seventh round (every window white): the post is satin white here, and bl/revisions.white_windows,
+    which runs after this, gives the post, the stool and its lip the windows' own white by name
+    (revision_spec.WINDOW_WHITE_ALSO), so in the built house the stool is white, not oak."""
     fx = 0.11                                  # room face of the window frame (bl/revisions.bath_window)
     m0, m1 = GZ - 0.05, GZ + 0.05              # the mullion
-    post = _box(ctx, 'A0 window mullion post', fx, XW + 0.015, SILL, 8.0, m0, m1, 'black_aluminum', C)
+    post = _box(ctx, 'A0 window mullion post', fx, XW + 0.015, SILL, 8.0, m0, m1, 'paint_trim', C)
     _box(ctx, 'A0 tile window return N', fx, XW, SILL + 0.035, 8.0, WZ0, WZ0 + 0.03, M.shower_tile(), C)
     _box(ctx, 'A0 window sill stone', fx, XW + 0.02, SILL, SILL + 0.035, WZ0, m0, M.sill(), C, bevel=0.006)
-    _box(ctx, 'A0 window return S', fx, XW, SILL + 0.04, 8.0, WZ1 - 0.03, WZ1, M.plaster(), C)
+    _box(ctx, 'A0 window return S', fx, X0, SILL + 0.04, 8.0, WZ1 - 0.03, WZ1, 'paint_wall', C)
     oak = M.oak()
-    _box(ctx, 'A0 window stool', fx, XW, SILL, SILL + 0.04, m1, WZ1, oak, C)
-    _box(ctx, 'A0 window stool lip', XW, XW + 0.07, SILL - 0.035, SILL + 0.04, m1, WZ1 + 0.07, oak, C, bevel=0.008)
-    # roman shade over the dry lite, inside-mounted under the head, drawn up to about 6'-4"
+    _box(ctx, 'A0 window stool', fx, X0, SILL, SILL + 0.04, m1, WZ1, oak, C)
+    _box(ctx, 'A0 window stool lip', X0, X0 + 0.07, SILL - 0.035, SILL + 0.04, m1, WZ1 + 0.07, oak, C, bevel=0.008)
+    # roman shade over the dry lite, inside-mounted under the head (the reveal is 0.115 ft deep), drawn up to
+    # about 6'-4"
     a, b = m1 + 0.02, WZ1 - 0.05
-    K.box(ctx, 'A0 roman shade headrail', 0.13, 0.27, 7.74, 7.88, a, b, 'paint_trim', C)
-    K.box(ctx, 'A0 roman shade fabric', 0.215, 0.235, 6.62, 7.74, a + 0.01, b - 0.01, 'fabric_linen_white', C)
+    K.box(ctx, 'A0 roman shade headrail', 0.125, 0.225, 7.74, 7.88, a, b, 'paint_trim', C)
+    K.box(ctx, 'A0 roman shade fabric', 0.185, 0.205, 6.62, 7.74, a + 0.01, b - 0.01, 'fabric_linen_white', C)
     for i, yb in enumerate((6.30, 6.47)):
-        fold = K.box(ctx, f'A0 roman shade fold {i}', 0.20, 0.30 - 0.025 * i, yb, yb + 0.19, a + 0.01, b - 0.01,
+        fold = K.box(ctx, f'A0 roman shade fold {i}', 0.17, 0.27 - 0.025 * i, yb, yb + 0.19, a + 0.01, b - 0.01,
                      'fabric_linen_white', C)
         ctx.add_bevel(fold, 0.06, 4)
     return post
@@ -175,14 +191,14 @@ def _shower(ctx):
     ni = M.nickel()
     t = 0.0155                                 # half the glass thickness
     # south side: one fixed panel from the channel on the window mullion to the corner
-    K.glass_panel(ctx, C, 'A0 shower glass south', (XW + 0.03, GZ), (GX - t - 0.004, GZ), GY0, GY1)
+    Q.glass_panel(ctx, C, 'A0 shower glass south', (XW + 0.03, GZ), (GX - t - 0.004, GZ), GY0, GY1)
     Q.u_channel(ctx, C, 'A0 shower channel south', (XW + 0.02, GZ), (GX - 0.04, GZ), THR)
     K.box(ctx, 'A0 shower channel wall', XW, XW + 0.065, THR, GY1, GZ - 0.0375, GZ + 0.0375, ni, C, bevel=0.006)
     # east side: the door, hinged on the north wall, and a short fixed return that closes the corner
     zr = 23.62
-    K.glass_panel(ctx, C, 'A0 shower glass return', (GX, zr), (GX, GZ + t), GY0, GY1)
+    Q.glass_panel(ctx, C, 'A0 shower glass return', (GX, zr), (GX, GZ + t), GY0, GY1)
     Q.u_channel(ctx, C, 'A0 shower channel return', (GX, zr - 0.01), (GX, GZ + 0.0375), THR)
-    K.glass_panel(ctx, C, 'A0 shower glass door', (GX, ZN + 0.05), (GX, zr - 0.02), GY0 + 0.02, GY1)
+    Q.glass_panel(ctx, C, 'A0 shower glass door', (GX, ZN + 0.05), (GX, zr - 0.02), GY0 + 0.02, GY1)
     for i, yy in enumerate((GY0 + 0.95, GY1 - 0.95)):
         Q.clamp(ctx, C, f'A0 shower hinge {i}', GX, yy, ZN + 0.11, 'z', size=(0.24, 0.26, 0.09))
         K.box(ctx, f'A0 shower hinge {i} plate', GX - 0.1, GX + 0.1, yy - 0.16, yy + 0.16, ZN, ZN + 0.018, ni, C, bevel=0.006)
@@ -214,7 +230,7 @@ def _vanity(ctx):
     """South wall: the floating oak slab with two carved troughs, deck taps, oak-framed mirrors on the stone, the
     timber beam above them with two enamel lamps, and what stands on and under the slab."""
     vx0, vx1, vz0, _ = S.BATH_VANITY
-    vx1 = min(vx1, XE)                         # the slab's east end meets the wainscot
+    vx1 = min(vx1, X1)                         # the slab's east end meets the painted east wall: 6'-6" as on the sheet
     yb, yt = 2.38, 2.83                        # 5.4in thick, top at 34in
     oak = M.oak()
     fv = K.Frame(0.0, ZSP, 0.0, -1.0)          # the stone's mesh plane: u = ZSP - z, v = -x
@@ -234,7 +250,7 @@ def _vanity(ctx):
         Q.wood_mirror(ctx, fm, C, f'A0 mirror {i}', -(xb + 1.0), -(xb - 1.0), 3.85, 6.35)
     # the beam across the wall above the mirrors, let into the stone; a lamp over each basin on its face
     zb = ZSP + 0.01 - BEAM_D / 2
-    Q.hewn_beam(ctx, 'A0 wall beam', 'x', X0 + 0.004, X1 - 0.004, zb, BEAM_Y[0], BEAM_Y[1], BEAM_D, M.beam(), C, seed=1.3)
+    Q.hewn_beam(ctx, 'A0 wall beam', 'x', X0 - 0.02, X1 + 0.02, zb, BEAM_Y[0], BEAM_Y[1], BEAM_D, M.beam(), C, seed=1.3)
     fl = K.Frame(0.0, zb - BEAM_D / 2 + 0.01, 0.0, -1.0)
     for i, xb in enumerate(S.BATH_BASINS_X):
         Q.enamel_lamp(ctx, fl, C, f'A0 lamp {i}', -xb, (BEAM_Y[0] + BEAM_Y[1]) / 2)
@@ -272,14 +288,14 @@ def _toilet(ctx, zf):
     """South-west corner: a floor-standing one-piece WC, its tank to the stone, facing north; paper on the west wall."""
     fw = K.Frame(S.BATH_TOILET_X, zf - 0.02, 0.0, -1.0)      # u = out of the stone (north), v = -x
     K.skirted_wc(ctx, fw, C, 'A0 WC', floor=FL, length=2.15)      # compact: 21in stay clear to the shower glass
-    fww = K.Frame(XW, 0.0, 1.0, 0.0)           # west wainscot face: u = x - XW, v = -z
+    fww = K.Frame(X0, 0.0, 1.0, 0.0)           # the painted west wall: u = x - X0, v = -z
     Q.tp_holder(ctx, fww, C, 'A0 paper', -26.52, 2.2)
 
 
 def _shelf(ctx):
-    """West wall, on the plaster between W13 and the stone: a reclaimed-timber shelf on forged iron brackets with
-    a small still life (stoneware and glass bottles, a framed botanical print, a trailing succulent)."""
-    xp = X0 + TP                               # plaster face
+    """West wall, on the painted wall between W13 and the stone: a reclaimed-timber shelf on forged iron brackets
+    with a small still life (stoneware and glass bottles, a framed botanical print, a trailing succulent)."""
+    xp = X0                                    # the painted wall's face
     fp = K.Frame(xp, 0.0, 1.0, 0.0)            # u = x - xp, v = -z
     ys, z0, z1, dep, th = 4.75, 26.30, 27.92, 0.55, 0.14
     K.fbox(ctx, fp, 'A0 shelf timber', 0.0, dep, -z1, -z0, ys, ys + th, M.timber(), C, bevel=0.012)
@@ -302,13 +318,13 @@ def _shelf(ctx):
 def _east(ctx):
     """East wall: a nickel towel bar with a striped bath towel between the door's leaf and the vanity, an outlet;
     the light switch beside the door."""
-    fe = K.Frame(X1 - TP, 0.0, -1.0, 0.0)      # east plaster face: u = (X1 - TP) - x, v = z
+    fe = K.Frame(X1, 0.0, -1.0, 0.0)           # the painted east wall: u = X1 - x, v = z
     yb = 4.45
     u, rb = Q.towel_bar(ctx, fe, C, 'A0 towel bar', 24.45, 26.10, yb)
     K.draped(ctx, fe, C, 'A0 bath towel', u, u, 24.62, 25.93, yb + rb, 1.55, 1.95,
              M.striped('striped_bath', base='#a79d7e', stripe='#3c3b33', pitch_in=1.6, duty=0.34, axis='z'), th=0.055, rc=rb)
     K.outlet(ctx, fe, C, 'A0 outlet', 27.25, 4.2)
-    fn = K.Frame(0.0, Z0 + TP, 0.0, 1.0)       # north plaster face: u = z - (Z0 + TP), v = x
+    fn = K.Frame(0.0, Z0, 0.0, 1.0)            # the painted north wall: u = z - Z0, v = x
     xs = DL0 - 0.42
     K.fbox(ctx, fn, 'A0 switch plate', 0.0, 0.018, xs - 0.19, xs + 0.19, 4.0, 4.38, 'paint_trim', C, bevel=0.006)
     for k in (-1, 1):
@@ -317,10 +333,10 @@ def _east(ctx):
 
 
 def _ceiling(ctx):
-    """One hewn beam on the ceiling, from the door's wall to the stone, between the shower and the door; cans, the
-    fan grille."""
+    """One hewn beam on the shell's white ceiling, from the door's wall to the stone, between the shower and the
+    door (its north end and its top stand a little inside the wall and the ceiling slab); cans, the fan grille."""
     xb = (TILE_E + DL0) / 2 - 0.2
-    Q.hewn_beam(ctx, 'A0 ceiling beam', 'z', Z0 + 0.01, ZSP - 0.02, xb, 7.50, 7.995, 0.46, M.beam(), C, seed=4.1)
+    Q.hewn_beam(ctx, 'A0 ceiling beam', 'z', Z0 - 0.02, ZSP - 0.02, xb, 7.50, CEIL + 0.03, 0.46, M.beam(), C, seed=4.1)
     cans = [(7.6, 23.0), (7.6, 25.45), (3.2, 25.45), (4.8, 22.7)]
     for x, z in cans:
         lighting.can(ctx, x, z, ceil=CEIL, coll=f'{ZONE}_lights', watts=9.0, kelvin=CAN_K)

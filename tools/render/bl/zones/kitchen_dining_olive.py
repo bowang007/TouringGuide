@@ -1,6 +1,6 @@
 """Indoor olive tree in a large cream stoneware crock planter for the open strip under east window W07
 (kitchen_dining zone). Replaces the earlier walnut sideboard: one calm, tall living element between the
-fireplace ledge and the kitchen run keeps the east wall from reading as a chain of walnut boxes.
+living room's sofa wall (the fireplace until the seventh round) and the kitchen run.
 
 Procedural (no third-party model): three slender, gently twisting trunks (~2in) rise from the planter
 and fork at ~4.1-4.6 ft into tapering branches and twigs that carry ~5000 narrow, opposite olive leaves

@@ -42,13 +42,18 @@ python3 tools/web/build_site_data.py [--version V] [--check] [--out DIR]
   engine's limit; the canted bay becomes a fine staircase), `sweeps` (`id, label, room, p, floor,
   yaw, pitch, links, visible, outdoor`; angles in **degrees**, yaw 0 = north, clockwise), `rooms`
   (`id, label, bounds, at, sweep, tag`: the measured rooms, then living, kitchen + dining, hall and
-  garage) and `highlights` (the reel: the entrance first, each caption once). A room nobody can stand
-  in, such as the laundry closet, owns the sweep in front of it. A room may lie inside another
-  room's rectangle (the closet is cut out of Bedroom 4, whose entry stays a rectangle): a sweep
-  belongs to the smallest room that contains it, and any other lookup by position has to choose
-  the same way. Since the sixth round there are 49 sweeps and 17 rooms: the primary suite's
-  walk-in closet keeps the id `primary_dressing` (tag M05, sweep `C0`) from the open area it
-  replaced, and the vestibule beside it is `primary_vestibule` (M14, sweeps `S0`, `S1`).
+  garage) and `highlights` (the reel: the entrance first, each caption once; a card opens its
+  sweep at the sweep's own `yaw` and `pitch`, the view its thumbnail shows). A room nobody can
+  stand in, such as the laundry closet, owns the sweep in front of it. A room may lie inside
+  another room's rectangle (the closet is cut out of Bedroom 4, whose entry stays a rectangle): a
+  sweep belongs to the smallest room that contains it, and any other lookup by position has to
+  choose the same way. There are 52 sweeps (since the seventh round) and 17 rooms (since the
+  sixth): the primary suite's walk-in closet keeps the id `primary_dressing` (tag M05, sweep
+  `C0`) from the open area it replaced, and the vestibule beside it is `primary_vestibule` (M14,
+  sweeps `S0`, `S1`). An open space (living room, kitchen + dining, hall, garage) is entered on
+  the reel's card of its own name when that card stands in it, else on the sweep `OPEN_ROOMS`
+  names: the living room on `L8` since the seventh round, so a click on its name in the floor
+  plan opens the picture the reel shows.
 * **`design.json`** (`tools/render/data/`) is hand-edited: tab order, and per view `label`, `title`,
   `text`, `refs`, `node`, `opening`, `image`.
 * **Release label.** `tour.json` is fetched without caching and names the release; the page appends
@@ -68,7 +73,7 @@ SITEDATA_ROOT=$R python3 tools/web/build_site_data.py
 ```
 
 `build_site_data.py --out DIR` alone builds the three runtime files from the checkout's data into
-another directory.
+another directory; it never opens `index.html`, also with `--version`.
 
 To look at the result in a browser, complete the root and serve it on another port:
 
@@ -84,12 +89,16 @@ place. For the rehearsal give each a stand-in: any `<ID>.png` equirect, for exam
 low-resolution review render enlarged to 8192×4096 (a narrower source gets fewer levels; one under
 2048 px is published as it is, and `data.test.js` then reports its width; the publisher's seam
 warning on an enlarged picture can be ignored). Publish them into the root and stamp the root
-with a label of its own (the ids are the sixth round's new and moved sweeps):
+with a label of its own (the ids are the seventh round's new sweeps):
 
 ```bash
-tools/render/.cache/venv/bin/python tools/web/publish_panos.py <stand-ins> --repo $R --only C0,S1,P2,P3,P4,P5
+tools/render/.cache/venv/bin/python tools/web/publish_panos.py <stand-ins> --repo $R --only L6,L7,L8,L9
 SITEDATA_ROOT=$R python3 tools/web/build_site_data.py --version rehearsal
 ```
+
+A sweep that left the tour (the seventh round's `L5`) is dropped from the root's manifest by that
+call; its files stay until `--prune`. A sweep whose opening view changed (`D0`) keeps its old
+thumbnail until its own panorama is published again.
 
 The model, the Design stills and the exterior frames of such a root are still the published ones:
 the dollhouse and the floor plan show a rebuilt room as it was, under its new name, and a move

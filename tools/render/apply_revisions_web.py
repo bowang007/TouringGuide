@@ -47,9 +47,28 @@ dressing area until the fifth round, is divided as on the architect's sheet.
     earlier rounds that the round overtakes; `layout_revision` entries of the concept's open dressing area and
     bath layout are marked as superseded. The Design view A0 is hand-edited in design.json (SUPERSEDED reports
     words of the earlier bath).
+
+Seventh round (2026-11-21): the refrigerator visible beside the microwave, every window white with grid lines, the
+primary bath's walls white, the fireplace sealed with the sofa on its wall and the television opposite, the daylight
+for a yard that faces north. No wall and no opening moves, so every size of the schedule stays; the round is texts.
+  * measurements.json: the `type` text of every window and glazed door (W01..W15, W17 and the garden door D14; not
+    the skylights) says what it is and adds the white frame and the grid, as lites wide x high per sash from
+    WINDOW_GRIDS. The kitchen window W08 loses the concept's "segmental arch" (the build has made it flat-headed
+    since the first restyle). The primary bath's note (M03) names its walls. A window without a text stops the tool.
+  * WINDOW_GRIDS repeats what bl/revisions.white_windows lays out on the BUILT model (it divides each sash by the
+    rule of revision_spec.WINDOW_LITE and prints the result as `grids` on the build log's `revisions:` line), because
+    the rule needs the built frame members. `--check-grids BUILD_LOG` compares the table with such a log and writes
+    nothing; run it after the final build.
+  * scene.json: the change list `owner_changes_7` and the entries of earlier rounds that the round overtakes. The
+    concept's fireplace (brick mass, mantel, hearth, logs) is still in scene.objects, as is all the concept's
+    furniture: an object may not be removed (indices are fixed) and nothing on the web side draws either. The tool
+    checks that at every run (fireplace_objects) and stops if one of them is in a group the plan or the page uses.
+  * design.json is hand-edited (views front, B3, K0, A0); SUPERSEDED reports words of the earlier windows, kitchen,
+    bath and living room.
 """
 import argparse
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -89,7 +108,8 @@ CHANGES_3 = [
     'Bedroom 4: the bed is turned across the room, headboard on the north wall, so the room\'s length stays open',
     'Kitchen, primary bathroom, shared bathroom and garage door restyled from the owner\'s style images (styles/); '
     'the primary bathroom\'s finishes of this round (green shower tile, patterned floor) are superseded by the sixth '
-    'round, the oak trough vanity stays',
+    'round, the oak trough vanity stays; the kitchen\'s black steel grid window and its refrigerator behind cabinet '
+    'panels are superseded by the seventh round (a white grid window, a visible stainless-steel refrigerator)',
 ]
 CHANGES_4 = [
     'Laundry closet with a stacked front-load washer and dryer behind a 2\'-6" x 6\'-8" door opening. It was first '
@@ -128,12 +148,16 @@ HOST_TOL = 0.01                 # ft: how far the scene's host wall may be from 
 NODE_MOVES = {'K0': (27.6, 26.9)}
 # the highlight reel: the old page's room stops (tools/web/build_site_data.py HIGHLIGHTS) plus the laundry sweep,
 # after Bedroom 4, which the closet stands next to
-HIGHLIGHTS = ['E0', 'L0', 'D0', 'K0', 'P0', 'B2', 'B3', 'B4', LAUNDRY_NODE, 'A0', 'A1', 'A3', 'S0', 'C0', 'C3', 'G0']
+HIGHLIGHTS = ['E0', 'L8', 'D0', 'K0', 'P0', 'B2', 'B3', 'B4', LAUNDRY_NODE, 'A0', 'A1', 'A3', 'S0', 'C0', 'C3', 'G0']
+# L8 (seventh round): the living room card opens on the television wall, the rear glass and the sofa in one view
 # design.json is edited by hand: words of a layout the owner has replaced, reported when a view still has them
 # (the kitchen-corner laundry closet and the small dining table of the fourth round; the primary bath and the open
-# dressing area as they were until the fifth)
+# dressing area as they were until the fifth; black window frames without grids, the panelled refrigerator beside two
+# wall ovens, the primary bath's wainscot, plaster and cream tile, and the fireplace as they were until the sixth)
 SUPERSEDED = ('kitchen\'s south-west corner', 'behind one door', 'table for four',
-              'Sage tile', 'sage-green', 'encaustic', 'between the vanity and the shower', 'dressing area')
+              'Sage tile', 'sage-green', 'encaustic', 'between the vanity and the shower', 'dressing area',
+              'black frame', 'black grid', 'large clear panes', 'panelled fridge', 'wall ovens',
+              'wainscot', 'cream plaster above', 'cream tile', 'cream ceiling', 'fireplace', 'hearth')
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Sixth round (2026-11-20): the primary suite as the architect's sheet divides it, and the taller shower window of the
@@ -162,6 +186,35 @@ SUITE_ENTRY_OLD_LEAF = 'Primary suite entrance door — south hinged, open inwar
 BATH_DOOR_OLD_LEAF = 'Primary bathroom privacy door — shown open'
 FACES = ('x0', 'x1', 'y0', 'y1', 'z0', 'z1')
 SAME = 1e-4                         # ft: a face this near its new place has been moved already (a re-run)
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Seventh round (2026-11-21): white windows with grid lines (bl/revision_spec.py WINDOW_*; Blender side:
+# bl/revisions.white_windows), the visible refrigerator beside the microwave (bl/zones/kitchen_dining_kitchen.py), the
+# primary bath's white walls (bl/zones/baths_primary.py), the living room without its fireplace (bl/zones/living.py)
+# and the sky turned to the sun (bl/lighting.py). Nothing in it moves a wall or an opening.
+#
+# The grid of each window and glazed door: (lites wide, lites high) of each sash, in the order of the build log (along
+# the wall, the lower tier before the transom). It repeats what white_windows lays out on the built model and prints
+# as `grids` on the build log's `revisions:` line, where the bay's three sashes are W09a, W09b, W09c;
+# `--check-grids BUILD_LOG` compares the two.
+WINDOW_GRIDS = {
+    'W01': ((3, 5), (3, 5)), 'W02': ((2, 4), (2, 4)), 'W03': ((4, 5),), 'W04': ((4, 5),),
+    'W05': ((1, 3), (1, 3)), 'W06': ((1, 3), (1, 3)), 'W07': ((2, 3), (2, 3)), 'W08': ((2, 4), (2, 4), (2, 4)),
+    'W09': ((2, 5), (3, 5), (2, 5)), 'W10': ((2, 3), (2, 3)), 'W11': ((1, 3), (1, 3)), 'W12': ((2, 3), (2, 3)),
+    'W13': ((1, 3), (1, 3), (1, 1), (1, 1)), 'W14': ((2, 1), (2, 1)), 'W15': ((1, 3), (1, 3)), 'W17': ((3, 2),),
+    'D14': ((2, 5),),
+}
+GARDEN_DOOR = 'D14'                 # the living room's glazed door to the deck: white with a grid, like the windows.
+#                                     Its `type` keeps the word "Glazed": white_windows finds the door by it.
+WINDOW_FINISH = 'white frame, white grid bars'
+# The primary bath's walls (a sentence of the room's note): the board wainscot, its cap rail and the plaster are gone.
+PRIMARY_BATH_WALLS = ('Walls: natural stacked stone on the vanity wall (south); every other wall plain white from the '
+                      'floor to the ceiling above a white tile base; matte white tile in the shower; white ceiling.')
+# The concept's fireplace on the living room's east wall (names in scene.objects), and the groups of scene.objects
+# that the web side reads: tools/web/dimension_plan.py (walls, door leaves, foundations) and
+# tools/web/build_site_data.py (walls, foundations).
+FIREPLACE = r'fireplace|hearth|mantel|painted brick'
+DRAWN_GROUPS = ('walls', 'door', 'garageDoor', 'base')
 
 
 def ft(v):
@@ -308,8 +361,9 @@ def changes_5(bed4, cut):
         'Dining table moved from the family-room side of the island to the island\'s west end, the shared-bathroom '
         f'side, in line with the island: {DINING_TABLE}, three chairs on each long side, none at the ends, no rug; the '
         'floor between the island and the family room is open',
-        'Kitchen south wall back to its third-round layout: refrigerator and double ovens at the west (hall) end, then '
-        'the counter under three glass-front uppers and the cooktop under the hood',
+        'Kitchen south wall back to its third-round layout: refrigerator and oven tower at the west (hall) end, then '
+        'the counter under three glass-front uppers and the cooktop under the hood (until the seventh round the '
+        'refrigerator stood behind cabinet panels and the tower held two wall ovens)',
     ]
 
 
@@ -500,10 +554,11 @@ def suite_rooms(rooms):
         f'{ft(nominal(sx1 - sx0))} × {ft(nominal(sz1 - sz0))} curbless shower in the north-west corner under the '
         f'skylight W20, the toilet in the south-west corner, a {ft(vx1 - vx0)} double vanity along the south wall, '
         f'the door {BATH_DOOR} at the east end of the north wall and the window W13 on the west wall, its mullion on '
-        'the shower\'s glass line.')
+        'the shower\'s glass line. ' + PRIMARY_BATH_WALLS)        # the walls: seventh round
     by_id[BEDROOM_3_BATH]['note'] = (
         f'Clear interior size; excludes walls. The shower window W11 on the west wall is {ft(wz1 - wz0)} wide and runs '
-        f'from a {ft(ws)} sill to a {ft(wh)} head ({ft(wh - ws)} tall), in obscured glass.')
+        f'from a {ft(ws)} sill to a {ft(wh)} head ({ft(wh - ws)} tall), in obscured glass with a white frame and '
+        'white grid bars.')
     return {r['id']: r for r in (closet, vestibule, by_id[PRIMARY_BEDROOM], by_id[PRIMARY_BATH], by_id[BEDROOM_3_BATH])}
 
 
@@ -573,7 +628,8 @@ def changes_6(rows):
     return [
         'Front bedroom suite bathroom (tour: Bedroom 3 bathroom): the window in the shower is vertically larger, '
         f'from a {fi(ws)} sill to a {fi(wh)} head ({fi(wh - ws)} tall; it was {fi(who - wso)} tall above a {fi(wso)} '
-        f'sill). Its {fi(wz1 - wz0)} width, the obscured glass and the black frame stay',
+        f'sill). Its {fi(wz1 - wz0)} width and the obscured glass stay (the frame, black in this round, is white with '
+        'grid bars since the seventh)',
         'Primary walk-in closet: a small room with a door, as on the last page of sizes.pdf (sheet SKA002). '
         f'{fi(closet["width_ft"])} x {fi(closet["depth_ft"])} clear behind a new wall, entered from the suite\'s '
         f'vestibule through a sliding pocket door ({fi(RV.SUITE_CLOSET_DOOR_W)} x {fi(RV.SUITE_CLOSET_DOOR_HEAD)}, the '
@@ -595,10 +651,168 @@ def changes_6(rows):
         f'line, and the {fi(kx1 - kx0)} x {fi(kz1 - kz0)} skylight moved with the shower',
         'Primary bathroom in the style of the owner\'s image "primary bathroom wall style" (styles/): natural stacked '
         'stone on the vanity wall, behind the floating oak vanity with its two wooden troughs and the oak-framed '
-        'mirrors, under a dark timber beam with enamel lamps; grey-green board wainscot with cream plaster above on '
-        'the other walls; plain cream tile in the shower; a quiet grey stone floor; brushed nickel fittings. The '
-        'green shower tile and the blue patterned floor are gone',
+        'mirrors, under a dark timber beam with enamel lamps; a quiet grey stone floor; brushed nickel fittings. The '
+        'green shower tile and the blue patterned floor are gone. The grey-green board wainscot with cream plaster '
+        'above it on the other walls and the cream shower tile of this round are superseded by the seventh round '
+        '(white walls, white tile)',
     ]
+
+
+# ------------------------------------------------------------------------------------------------- seventh round
+def in8(feet):
+    """Inches to the nearest eighth, as the change lists write them: 7/8, 14, 16 1/2."""
+    n = round(feet * 96)
+    whole, frac = n // 8, ['', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8'][n % 8]
+    return ' '.join(s for s in (str(whole) if whole or not frac else '', frac) if s)
+
+
+def lites(cell):
+    """One sash's grid in words: '3 lites wide × 5 high'."""
+    c, r = cell
+    return f'{c} {"lite" if c == 1 else "lites"} wide × {r} high'
+
+
+def grid_words(wid, unit='sash'):
+    """The grid of a window or glazed door in words, from WINDOW_GRIDS: one sash, equal sashes, the bay (a centre
+    sash between two equal side sashes) or equal sashes under undivided transom lites."""
+    g = WINDOW_GRIDS[wid]
+    if len(set(g)) == 1:
+        return lites(g[0]) + (f' in each {unit}' if len(g) > 1 else '')
+    if len(g) == 3 and g[0] == g[2]:
+        return f'{lites(g[1])} in the centre {unit} and {lites(g[0])} in each side {unit}'
+    half = len(g) // 2
+    if len(g) % 2 == 0 and len(set(g[:half])) == 1 and set(g[half:]) == {(1, 1)}:
+        return f'{lites(g[0])} in each {unit} below the transom, one lite in each above it'
+    raise SystemExit('seventh round: WINDOW_GRIDS[%r] = %r has no wording in grid_words()' % (wid, g))
+
+
+def window_types(meas):
+    """The `type` text of every window and of the glazed garden door: what it is, then the white frame and the grid
+    (the owner: "Set all windows to white color, and it should have grid line for these windows"). The sizes are the
+    schedule's numbers and stay as they are; the skylights keep their texts. A text ends without a full stop (the
+    page adds one). Stops when the schedule has a window without a text here, or the other way round. Returns the
+    ids written."""
+    def fin(wid, unit='sash'):
+        return f'{WINDOW_FINISH}, {grid_words(wid, unit)}'
+    two = 'Clear glazing, two sashes; '
+    text = {
+        'W01': f'Two-panel sliding glass door to the garden (one fixed, one sliding); {fin("W01", "panel")}; landing '
+               'outside',
+        'W02': f'Tall glazing, two sashes, from a {fi(RV.TALL_SILL)} sill to the ceiling; {fin("W02")}',
+        'W03': f'Fixed glazing; {fin("W03")}',
+        'W04': f'Fixed glazing; {fin("W04")}',
+        'W05': two + fin('W05'), 'W06': two + fin('W06'), 'W07': two + fin('W07'),
+        # the concept's text was a segmental arch; bl/shell.py has built a flat-headed three-sash window since the
+        # first restyle (black steel with a grid in the third round), and its sizes are the schedule's
+        'W08': 'Three-sash window with a flat head, over the sink; white frame, casing and stool, white grid bars, '
+               f'{grid_words("W08")}',
+        'W09': f'Three-sided canted bay glazed to the floor; 8 ft wall opening; 2 ft projection; {fin("W09")}',
+        'W10': two + fin('W10'),
+        'W11': f'Obscured privacy glazing, two sashes; {fin("W11")}',
+        'W12': two + fin('W12'),
+        'W13': f'Tall clear glazing from a {fi(RV.TALL_SILL)} sill to the ceiling, with a transom at '
+               f'{RV.BATH_WIN_TRANSOM_Y:g} ft and a mullion on the shower\'s glass line: the north sash is inside the '
+               f'shower; {fin("W13")}',
+        'W14': f'Two sashes, one above the other; {fin("W14")}',
+        'W15': two + fin('W15'),
+        'W17': f'High window above the front door, 3 ft × 2 ft 3 in; {fin("W17")}; height coordinated with the '
+               'lowered entry roof. Proposed; reference front.PNG',
+        GARDEN_DOOR: f'Glazed hinged door; {fin(GARDEN_DOOR)}',
+    }
+    rows = {w['id']: w for w in meas['windows'] if w.get('kind') != 'skylight'}
+    rows.update({d['id']: d for d in meas['doors'] if d['id'] == GARDEN_DOOR})
+    if set(rows) != set(text) or set(text) != set(WINDOW_GRIDS):
+        odd = sorted((set(rows) ^ set(text)) | (set(text) ^ set(WINDOW_GRIDS)))
+        raise SystemExit('seventh round: every window and the garden door %s get a white frame and a grid, but the '
+                         'schedule, window_types() and WINDOW_GRIDS do not list the same ones: %s'
+                         % (GARDEN_DOOR, ', '.join(odd)))
+    for wid, words in text.items():
+        rows[wid]['type'] = words
+    return sorted(text)
+
+
+def fireplace_objects(objs):
+    """The concept's fireplace in scene.objects (the owner had the fireplace sealed). Its objects stay where they
+    are: an index may not shift (extract_scene.py checks it), and they are furniture and decor like the rest of
+    the concept's furnishing, which neither the plan drawing nor the page's data reads. Stops when one of them is
+    in a group that is drawn or measured: there it would show. Returns their indices."""
+    found = [i for i, o in enumerate(objs) if re.search(FIREPLACE, o.get('name', ''), re.I)]
+    drawn = [i for i in found if objs[i].get('group') in DRAWN_GROUPS]
+    if drawn:
+        o = objs[drawn[0]]
+        raise SystemExit('seventh round: fireplace object %d %r is in group %r, which the plan drawing or the site '
+                         'data reads; the fireplace is gone' % (drawn[0], o.get('name'), o.get('group')))
+    return found
+
+
+def changes_7():
+    """The seventh round (2026-11-21) in the owner's terms: the five items, and the exterior the owner set aside."""
+    lw, lh = RV.WINDOW_LITE
+    return [
+        'Refrigerator next to the microwave: the refrigerator stood behind cabinet panels and read as a pantry. It is '
+        'now a visible stainless-steel French-door refrigerator with a bottom freezer drawer, in the same bay at the '
+        'hall end of the kitchen\'s tall wall, under a two-door cabinet. The unit directly beside it, above the wall '
+        'oven, is a built-in microwave (it was a second wall oven). Nothing else in the kitchen changes',
+        'All windows white, with grid lines: every window frame, sash, mullion and transom bar is white, inside and '
+        f'outside, and every window and glazed door has white grid bars ({in8(RV.WINDOW_BAR_W)} in wide, on both '
+        f'faces of the glass) with lites as near {in8(lw)} x {in8(lh)} in as each sash allows, the bars in line '
+        'across sashes and transoms. That includes the primary bedroom\'s sliding door, the living room\'s rear '
+        'glazing and garden door, the bay, the tall windows of Bedroom 2 and the primary bathroom, the obscured '
+        'bathroom window, the window above the front door and the kitchen window, which was a black steel grid '
+        f'window and keeps its {" x ".join(str(v) for v in WINDOW_GRIDS["W08"][0])} lites per sash, now white. The '
+        'skylights, the shower glass, the garage door and the front door are as they were, shades and curtains stay '
+        'in front of the grids, and no window opening changes its place or size',
+        'Primary bathroom walls coherent and white: the grey-green board wainscot, its cap rail and the cream plaster '
+        'are removed. Every wall except the vanity wall is plain white from the floor to the ceiling, above a white '
+        'tile base; the ceiling is white and the shower tile is matte white (it was cream). The stacked stone on the '
+        'vanity wall stays as the one feature wall, with the timber beams, the oak vanity and mirrors, the lamps, '
+        'the shelf, the grey stone floor, the fittings and the layout',
+        'Fireplace sealed, sofa on that side, television opposite: the living room\'s fireplace is removed with its '
+        'stone surround, firebox and hearth ledge, and the east wall is a plain white wall with its baseboard; the '
+        'east windows are untouched. The sofa stands against that wall, facing west, with a side table and a lamp at '
+        'each end, a round rug and a round coffee table in front of it and an armchair to the north-west, as the '
+        'architect\'s sheet draws it. A 75 in television hangs on the opposite wall, the west wall shared with '
+        'Bedroom 2, centred on the sofa, over a low oak media console. The way from the dining area to the rear '
+        'glass and the garden door stays open',
+        'Daylight corrected for the yard, which faces north: the sun was already in the south-east (late morning), '
+        'but the sky was turned half a circle, with its bright side over the garden. The sky\'s glow now stands at '
+        'the sun, over the street side, and its deep-blue side over the garden. The rear of the house, the deck by '
+        'the house and the near lawn are in the house\'s shade; no direct sun comes in through the north-facing '
+        'glass (the primary bedroom\'s sliding door, Bedroom 2\'s rear window, the living room\'s rear glazing), and '
+        'sun patches fall only through the east windows, the front bay, the window above the front door and the '
+        'skylights',
+        'Exterior: the redesign of the exterior that the owner raised with this round was set aside by the owner. '
+        'Roof, massing, entry and facade are as they were; only the white window frames and grid bars show outside',
+    ]
+
+
+def build_grids(log):
+    """{window id: grid} as bl/revisions.white_windows printed it (`grids`) on the `revisions:` line of a build log.
+    The sashes of a window the build lists in parts (the bay: W09a, W09b, W09c) are joined in that order."""
+    with open(log, encoding='utf-8', errors='replace') as f:
+        found = re.search(r"'white_windows': \{.*?'grids': \{(.*?)\}", f.read(), re.S)
+    if not found:
+        raise SystemExit('%s: no `grids` of white_windows on a `revisions:` line (not a build log, or the revision '
+                         'failed)' % log)
+    out = {}
+    for tag, words in re.findall(r"'([^']+)': '([^']*)'", found.group(1)):
+        wid = re.sub(r'(?<=\d)[a-h]$', '', tag)
+        cells = re.findall(r'(\d+)x(\d+)', words.split(' lites')[0])
+        out[wid] = out.get(wid, ()) + tuple((int(c), int(r)) for c, r in cells)
+    return out
+
+
+def check_grids(log):
+    """--check-grids: WINDOW_GRIDS against the grids of a build. Prints the differences; returns the exit code."""
+    built = build_grids(log)
+    odd = [k for k in sorted(set(built) | set(WINDOW_GRIDS)) if built.get(k) != WINDOW_GRIDS.get(k)]
+    for k in odd:
+        print('DIFFERENT %s: the build has %s, WINDOW_GRIDS has %s'
+              % (k, built.get(k, 'no such window'), WINDOW_GRIDS.get(k, 'no entry')))
+    print('window grids: %d in the build log, %d in WINDOW_GRIDS: %s'
+          % (len(built), len(WINDOW_GRIDS), 'DIFFERENT. Bring WINDOW_GRIDS in %s in line and run the sequence again'
+             % os.path.basename(__file__) if odd else 'the same'))
+    return 1 if odd else 0
 
 
 def laundry_view():
@@ -627,7 +841,7 @@ def laundry_view():
 
 def update_design(design):
     """Add the laundry view when it is absent (after Bedroom 4 in the tab order); returns notes about views that
-    still carry words of a superseded layout. Nothing a person wrote in design.json is changed."""
+    still carry words of a superseded layout or finish. Nothing a person wrote in design.json is changed."""
     notes = []
     views = design.setdefault('views', {})
     if LAUNDRY_VIEW not in views:
@@ -638,7 +852,7 @@ def update_design(design):
     for key, v in views.items():
         for words in SUPERSEDED:
             if words in '%s %s' % (v.get('title', ''), v.get('text', '')):
-                notes.append('design view %s still says "%s" (a layout the owner replaced): edit '
+                notes.append('design view %s still says "%s" (a layout or finish the owner replaced): edit '
                              'tools/render/data/design.json' % (key, words))
     return notes
 
@@ -646,27 +860,28 @@ def update_design(design):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--html', help=argparse.SUPPRESS)
+    ap.add_argument('--check-grids', metavar='BUILD_LOG',
+                    help='compare the window grids of the schedule\'s texts (WINDOW_GRIDS) with the `grids` a build '
+                         'printed on its `revisions:` line; writes nothing; exit code 1 when they differ')
     a = ap.parse_args()
     if a.html:
         ap.error('--html is gone: the data lives in tools/render/data/*.json (see tools/web/sitedata.py)')
+    if a.check_grids:
+        raise SystemExit(check_grids(a.check_grids))
     meas = sitedata.load_measurements()
     win = {w['id']: w for w in meas['windows']}
 
+    # (the `type` texts of the windows are written further down, by window_types)
     w = win['W01']
     w.update(name='Primary bedroom / rear sliding door', sill=0, head=RV.SLIDER_HEAD, height=RV.SLIDER_HEAD,
-             start=RV.SLIDER_X[0], end=RV.SLIDER_X[1], width=round(RV.SLIDER_X[1] - RV.SLIDER_X[0], 4),
-             type='Two-panel sliding glass door to the garden (one fixed, one sliding); landing outside')
+             start=RV.SLIDER_X[0], end=RV.SLIDER_X[1], width=round(RV.SLIDER_X[1] - RV.SLIDER_X[0], 4))
     w = win['W02']
-    w.update(sill=RV.TALL_SILL, head=8.0, height=round(8.0 - RV.TALL_SILL, 4),
-             type='Tall glazing, two panes, from a 2\'-0" sill to the ceiling')
+    w.update(sill=RV.TALL_SILL, head=8.0, height=round(8.0 - RV.TALL_SILL, 4))
     w = win['W09']
-    w.update(sill=0, height=w.get('head', 7.5), type='Three-sided canted bay glazed to the floor; 8 ft wall opening; '
-                                                   '2 ft projection')
+    w.update(sill=0, height=w.get('head', 7.5))
     w = win['W13']
     z0, z1 = RV.BATH_WIN_Z
-    w.update(start=z0, end=z1, width=round(z1 - z0, 4), sill=RV.TALL_SILL, head=8.0, height=round(8.0 - RV.TALL_SILL, 4),
-             type=f'Tall clear glazing from a 2\'-0" sill to the ceiling, with a transom at {RV.BATH_WIN_TRANSOM_Y:g} '
-                  'ft and a mullion on the shower\'s glass line: the north lite is inside the shower')
+    w.update(start=z0, end=z1, width=round(z1 - z0, 4), sill=RV.TALL_SILL, head=8.0, height=round(8.0 - RV.TALL_SILL, 4))
     x0, x1, k0, k1 = RV.KITCHEN_SKY
     w = win['W16']
     w.update(start=x0, end=x1, width=round(x1 - x0, 4), height=round(k1 - k0, 4), c=9.4,
@@ -723,6 +938,8 @@ def main():
     sill, head = RV.BED3_BATH_WIN_Y
     pane = bed3_bath_window(objs)
     w.update(sill=sill, head=head, height=round(head - sill, 4), panes=[{'width': pane[0], 'height': pane[1]}])
+    typed = window_types(meas)          # seventh round: white frames and grids, in every window's `type`
+    fire = fireplace_objects(objs)      # ... and the concept's fireplace, which stays in the scene undrawn
     dr = scene.setdefault('design_revision', {})
     vaults = dr.get('vaults', {})
     if 'bedrooms_3_4' in vaults:
@@ -733,6 +950,7 @@ def main():
     dr['owner_changes_4'] = {'date': '2026-11-19', 'changes': CHANGES_4}
     dr['owner_changes_5'] = {'date': '2026-11-20', 'changes': changes_5(bed4, cut)}
     dr['owner_changes_6'] = {'date': '2026-11-20', 'changes': changes_6(suite)}
+    dr['owner_changes_7'] = {'date': '2026-11-21', 'changes': changes_7()}
     lr = scene.get('layout_revision', {})
     ids = lr.get('dimension_review', {}).get('room_ids')
     for rid in (LAUNDRY_ROOM, SUITE_VESTIBULE_ROOM):
@@ -795,6 +1013,13 @@ def main():
           % (win['W13']['start'], win['W13']['end'], win['W20']['start'], win['W20']['end'],
              win['W20']['p'][2] - win['W20']['height'] / 2, win['W20']['p'][2] + win['W20']['height'] / 2, sill, head,
              pane[0], pane[1]))
+    print('seventh round: %d window and door texts with the white frame and the grid (%s .. %s, %s); note of room %s; '
+          'change list owner_changes_7 (%d entries)'
+          % (len(typed), typed[1], typed[-1], typed[0], PRIMARY_BATH, len(dr['owner_changes_7']['changes'])))
+    print('               the concept\'s fireplace, scene objects %s (%d), stays in the scene: groups %s, which the '
+          'plan drawing and the site data do not read'
+          % ('%d..%d' % (fire[0], fire[-1]) if fire else 'none', len(fire),
+             ' / '.join(sorted({objs[i].get('group') for i in fire})) or '-'))
     for line in notes:
         print('note:', line)
 
