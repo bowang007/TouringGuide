@@ -1,5 +1,5 @@
-"""Indoor olive tree in a large cream stoneware crock planter for the open strip under east window W07
-(kitchen_dining zone). Replaces the earlier walnut sideboard: one calm, tall living element between the
+"""Indoor olive tree in a large cream stoneware crock planter on the east wall's pier north of window W07 (v7
+repair; under W07 until then) (kitchen_dining zone). Replaces the earlier walnut sideboard: one calm, tall living element between the
 living room's sofa wall (the fireplace until the seventh round) and the kitchen run.
 
 Procedural (no third-party model): three slender, gently twisting trunks (~2in) rise from the planter
@@ -15,13 +15,22 @@ import bmesh
 import bpy
 from mathutils import Vector
 
+from . import kitchen_dining_kitchen as _K
 from .kitchen_dining_geo import Geo, P, principled, srgb
 
 COLL = 'kd olive'
-CENTER = (39.42, 20.72)        # planter centre (x, z): 0.24 ft off the east wall, 0.2 ft off the run end
-WALL_LIMIT_X = 40.35           # nothing beyond this (window glass / wall face at 40.61)
-RUN_END_Z = 21.84              # kitchen east base run end panel; worktop at 3.0 ft
 P_H, P_RT, P_RB = 1.72, 0.86, 0.70   # planter height, top and bottom radius (21in x 20.6in)
+WALL_LIMIT_X = 40.35           # nothing beyond this (window glass / wall face at 40.61)
+RUN_END_Z = _K.RUN_E0          # kitchen east base run end panel; worktop at 3.0 ft (21.84 until the eighth round,
+#                                when the run grew to the sheet's 10'-0" and the tree moved north with its end)
+# v7 repair: the tree stands on the east wall's pier north of W07, between the sofa's south side table and the
+# window's north jamb (plan z 14.45: planter z 13.59..15.31, 0.59 ft from the table, 0.76 ft from the jamb at
+# 16.066). Until now it stood in the strip under W07 (0.26 ft off the kitchen run's end) and its crown covered 73 %
+# of the window's width. No branch reaches south of WIN_LIMIT_Z, 0.30 ft north of the window's opening (a leaf is up to
+# 0.26 ft long), so nothing stands in front of the window.
+PLAN_CENTER_Z = 14.45
+CENTER = (39.42, _K._pz(PLAN_CENTER_Z))     # planter centre (x, z): 0.33 ft off the east wall
+WIN_LIMIT_Z = _K._pz(_K._W07_Z[0] - 0.30)   # concept z of the line the branches stay north of
 
 
 def footprint():
@@ -178,6 +187,8 @@ def _limit(p):
         z = RUN_END_Z - 0.3
     if z > 21.95 and y > 5.6 and x > 39.4:       # clear of the brass sconce on the pier beside W08
         z = 21.95
+    if z > WIN_LIMIT_Z:                          # v7 repair: nothing in front of W07 (folded back like the wall limit)
+        z = WIN_LIMIT_Z - (z - WIN_LIMIT_Z) * 0.3
     return (x, y, z)
 
 

@@ -26,7 +26,7 @@ Output GLB contract (consumed by index.html):
       'decor_high' wall art, uppers, mirrors, sconces (centre > 4.8 ft)
       'ceiling'   ceilings, ceiling lights, pendants
       'exterior'  roof, fascia, facade skins
-      'landscape' grounds, deck, fences, paths, the street and the neighbours (incl. their garage doors)
+      'landscape' grounds, the rear landings, fences, paths, the street and the neighbours (incl. their garage doors)
       'glass'     all glazing (not baked; transparent material)            (treated like 'wall')
     An object (or a parent) can force its class with a custom property tg_class = one of the names above.
   * node.extras.tg_region: coarse plan region (for debugging / future per-room streaming)
@@ -48,10 +48,13 @@ import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
+import relayout as R  # noqa: E402  (pure Python: the sheet's wall faces)
+from bl import garage_spec as GS  # noqa: E402  (pure Python: the garage floor's level)
 from bl.common import CACHE_DIR, DATA_DIR, FT, bl2ft  # noqa: E402
 
 VEG = re.compile(r'tree|shrub|grass|bush|fern|weed|plant_bed|hedge|leaf|leaves|foliage|flower|ivy|lawn_blade|'
-                 r'(?<!porch )canopy', re.I)                # (not the covered porch's canopy)
+                 r'(?<!porch )canopy', re.I)                # (a tree's canopy; "porch canopy" was the flat porch
+#                                                             roof's name until the eighth round's gable replaced it)
 INDOOR_PLANT = re.compile(r'potted|pachira|calathea|anthurium|ficus|fiddle|olive|planter|pampas|vase', re.I)
 WALLISH_GROUPS = {'walls', 'trim', 'windows', 'glass', 'garageDoor', 'door'}
 CLASSES = ('base', 'wall', 'glass', 'furniture', 'decor_high', 'ceiling', 'exterior', 'landscape')
@@ -308,8 +311,20 @@ TEXEL_SCALE = {'base': 1.4, 'wall': 1.0, 'furniture': 1.3, 'decor_high': 1.1, 'c
 INSIDE = (-0.05, 39.5, -0.05, 53.95)  # house footprint (ft, architect's plan) for attic-side culling
 
 
+def floor_level(x, z):
+    """The floor's level at a plan point (SCENE ft): the garage floor, 11 in below the house floor since the
+    owner's eighth round (bl/garage_spec.py FLOOR_Y), inside the garage's clear rectangle; the house floor
+    elsewhere. The same rule as floor_y() in check_holes.py."""
+    gx0, gx1, gz0, gz1 = R.ROOMS['garage']
+    return GS.FLOOR_Y if gx0 <= x <= gx1 and gz0 <= z <= gz1 else 0.0
+
+
 def cull_hidden_faces(ob, cls):
-    """Delete faces that can never be seen, so atlases spend texels on visible surfaces only."""
+    """Delete faces that can never be seen, so atlases spend texels on visible surfaces only.
+    An upward face of a 'base' piece below the floor of its place is a foundation top under a floor. The
+    garage's slab and the step at its house door lie below the HOUSE floor and are floors themselves: they
+    are measured against the garage's level (without that the dollhouse and the floor plan show a garage
+    without a floor, a click there finds nothing, and a move projects the panorama onto nothing)."""
     bm = bmesh.new()
     bm.from_mesh(ob.data)
     kill = []
@@ -318,7 +333,7 @@ def cull_hidden_faces(ob, cls):
         c = f.calc_center_median()
         x, y, z = c.x / FT, c.z / FT, -c.y / FT          # SCENE feet
         inside = INSIDE[0] < x < INSIDE[1] and INSIDE[2] < z < INSIDE[3]
-        if cls == 'base' and (n.z < -0.5 or (y < -0.005 and n.z > 0.5)):
+        if cls == 'base' and (n.z < -0.5 or (y < floor_level(x, z) - 0.005 and n.z > 0.5)):
             kill.append(f)                               # slab/foundation undersides, foundation tops under floors
         elif cls == 'wall' and ((n.z > 0.5 and y > 7.95) or (n.z < -0.5 and y < 0.05)):
             kill.append(f)                               # wall tops under ceilings, bottoms on floors

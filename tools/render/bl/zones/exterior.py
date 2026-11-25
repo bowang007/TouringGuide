@@ -53,6 +53,7 @@ def build(ctx):
     t = time.time()
     out['far'] = exterior_far.build(ctx)        # excluded from the view layer; render_exterior.py turns it on
     out['t_far'] = round(time.time() - t, 1)
+    out['settle'] = exterior_site.settle(ctx)   # v7 site: the level site set down on the ground of sheet A1.3
     objs, unique = _tri_stats(root)
     out['objects'] = objs
     out['unique_tris'] = unique

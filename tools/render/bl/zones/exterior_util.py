@@ -13,7 +13,10 @@ from mathutils import Matrix, Vector
 from ..common import FT, ft2bl
 
 ROOT = 'zone_exterior'
-GRADE = -0.60          # finished soil level around the house (ft). Floors are at y=0.
+GRADE = -0.60          # soil level of the LEVEL SITE the fences, the planting, the street and the neighbourhood are
+#                        modelled on (ft; floors are at y=0). v7 site: the real ground is exterior_layout.grade(z)
+#                        (sheet A1.3: -0.917 in front of the house, -1.167 behind it); exterior_site.settle() sets
+#                        everything built with GRADE down on it.
 
 
 def coll(ctx, sub=None):

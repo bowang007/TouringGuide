@@ -2,11 +2,22 @@
 
   $BLENDER -b tools/render/.cache/house.blend --python tools/render/check_holes.py
 
-Casts a grid of rays (every 0.2 ft over the house footprint) up from 7 ft and down from 1 ft against the
-`shell`, `openings` and `exterior_shell` collections only, so furniture and rugs can't hide a hole. An
+Casts a grid of rays (every 0.05 ft over the house footprint) up from 7 ft and down from 1 ft against the
+`shell`, `openings` and `exterior_shell` collections only, so furniture and rugs can't hide a hole. (The grid
+was 0.2 ft until the eighth round. The one known hole, the strip behind the entry vault's infill, is 0.10 ft
+wide since the walls are 5 in, and that grid stepped over it and printed `no holes`.) An
 upward ray must stop on a ceiling-like surface (or on a wall top at 8 ft); a downward ray must stop on
-a floor at grade. Prints one line per object hit instead, with the area it covers. Rays that start
-inside a wall's thickness report the wall's head at 7 ft: those lines are expected.
+a floor at its level: the house floor, or, inside the garage's clear rectangle (relayout.ROOMS['garage']),
+the garage floor, which lies 11 in lower since the eighth round (bl/garage_spec.py FLOOR_Y; the step at
+the house door and the garage's baseboards stand on it and are above it, so they pass). Prints one line
+per object hit instead, with the area it covers. Rays that start inside a wall's thickness report the
+wall's head at 7 ft: those lines are expected.
+
+Baseline: a clean build prints the single line `no holes`. (Until the seventh round the baseline was one
+line, `ceiling 5307 Coordinated entry rear gable ...`, the strip behind the entry vault's infill: the
+eighth round's roof rebuilt that gable square and closed it. Between the garage floor going down and
+this script learning its level, it printed seven `floor` lines, all in the garage: the slab, the step,
+its nosing and three baseboards.)
 
 Two finer checks follow: hairline floor seams (a 0.1 x 0.05 ft grid of downward rays that land on the
 foundation instead of a floor) and baseboards with no wall behind them (each run sampled every 0.1 ft,
@@ -27,6 +38,7 @@ FT = 0.3048
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import relayout as R  # noqa: E402
+from bl import garage_spec as GS  # noqa: E402  (pure Python: the garage floor's level)
 
 KEEP = {'shell', 'openings', 'exterior_shell'}
 CEILING = re.compile(r'ceiling|vault|skylight|lining|infill|soffit', re.I)
@@ -52,7 +64,7 @@ def shell_bvh():
 def main():
     bvh, owner = shell_bvh()
     ex = json.load(open(os.path.join(HERE, 'data', 'scene.json')))['extent'][0]
-    o, wall = R.OUTER, 0.45
+    o, wall = R.OUTER, R.WALL
     foyer = (R.FOYER_WALL[0], R.FOYER_WALL[0] + 6.5)
 
     def front(x):                                   # inside face of the front wall at x
@@ -60,8 +72,12 @@ def main():
             return o['front_bed'] - wall
         return o['front_wall'] - wall if x < foyer[1] else o['garage_front'] - wall
     out = []
+    gx0, gx1, gz0, gz1 = R.ROOMS['garage']
 
-    def scan(y0, d, bad, tag, step=0.2):
+    def floor_y(x, z):                              # the level a floor must have at (x, z)
+        return GS.FLOOR_Y if gx0 <= x <= gx1 and gz0 <= z <= gz1 else 0.0
+
+    def scan(y0, d, bad, tag, step=0.05):
         found = collections.defaultdict(list)
         x = 0.35
         while x < ex - 0.3:
@@ -70,7 +86,7 @@ def main():
                 loc, _, i, _ = bvh.ray_cast(Vector((x * FT, -z * FT, y0 * FT)), Vector((0, 0, d)), 10 * FT)
                 name = owner[i] if loc is not None else 'nothing'
                 y = loc.z / FT if loc is not None else None
-                if bad(name, y):
+                if bad(name, y, x, z):
                     found[name].append((x, z, y))
                 z += step
             x += step
@@ -81,9 +97,10 @@ def main():
             out.append(f'{tag:7s} {name[:48]:48s} {len(v):5d} rays  x {min(xs):6.2f}-{max(xs):6.2f}  '
                        f'z {min(zs):6.2f}-{max(zs):6.2f}  y {y}')
 
-    scan(7.0, 1, lambda n, y: y is None or not (CEILING.search(n) or abs(y - 8.0) < 0.05), 'ceiling')
-    scan(1.0, -1, lambda n, y: y is None or y < -0.06, 'floor')
-    scan(1.0, -1, lambda n, y: y is not None and re.search(r'foundation', n, re.I) and y > -0.5, 'seam', step=0.07)
+    scan(7.0, 1, lambda n, y, x, z: y is None or not (CEILING.search(n) or abs(y - 8.0) < 0.05), 'ceiling')
+    scan(1.0, -1, lambda n, y, x, z: y is None or y < floor_y(x, z) - 0.06, 'floor')
+    scan(1.0, -1, lambda n, y, x, z: y is not None and re.search(r'foundation', n, re.I) and y > floor_y(x, z) - 0.5,
+         'seam', step=0.07)
     out.extend(baseboards())
     print('\n'.join(out) if out else 'no holes', flush=True)
 

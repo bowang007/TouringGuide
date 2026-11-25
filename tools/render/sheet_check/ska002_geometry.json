@@ -1,0 +1,2892 @@
+{
+ "legend": {
+  "units": "SCENE feet: x west -> east, z rear (north) -> street (south); 1 unit = 1 ft. Every number is a sheet coordinate scaled by 1/18 (1/4\" = 1'-0\") and shifted so the west wall's interior face is x 0.225 and the rear wall's interior face is z 0.225.",
+  "transform": {
+   "x_ft": "(X_pt - 1107.075) / 18",
+   "z_ft": "(Y_pt - 361.808) / 18",
+   "sheet_origin_of_scene_0_0_pt": [
+    1107.075,
+    361.808
+   ],
+   "pt_per_ft": 18.0,
+   "note": "sheet_pt values in this file are quoted to 0.01 pt (1111.12 stands for 1111.125, 365.86 for 365.858); they were converted with the origin rounded the same way (1107.07, 361.81)"
+  },
+  "sheet_pt": "[X0, Y0, X1, Y1] in PDF points on page 6 (origin top-left, y down)",
+  "walls": "face to face boxes; every wall on the sheet is 7.5 pt = 5 in thick. status comes from the sheet's 45-degree hatch (new walls).",
+  "doors": "start / end = rough opening between the heavy jamb lines; clear_* = between the 2 in (3 pt) frames = the leaf; hinge_xz = centre of the swing arc; leaf_ft = arc radius",
+  "windows": "start / end = between the heavy jamb lines along the wall",
+  "accuracy": "vector coordinates are exact to 0.01 pt (0.0006 ft); values are rounded to 0.001 ft",
+  "ids": "WL walls, R rooms, DR doors, WN windows, SK skylights, FX fixtures, KT kitchen, FN furniture, LD landings, ST steps"
+ },
+ "overall": {
+  "outer_west_x": -0.192,
+  "outer_east_x": 39.725,
+  "outer_rear_z": -0.192,
+  "outer_garage_front_z": 52.808,
+  "outer_bedroom2_front_z": 54.142,
+  "front_door_wall_outer_z": 47.808,
+  "porch_front_z": 55.142,
+  "width_outer_ft": 39.917,
+  "width_outer": "39'-11\"",
+  "width_inside_ft": 39.083,
+  "width_inside": "39'-1\"",
+  "depth_outer_west_ft": 54.333,
+  "depth_outer_west": "54'-4\"",
+  "depth_outer_east_ft": 53.0,
+  "depth_outer_east": "53'-0\"",
+  "every_wall_thickness_ft": 0.417,
+  "every_wall_thickness": "5\""
+ },
+ "walls": [
+  {
+   "id": "WL01",
+   "name": "rear (north) exterior wall",
+   "runs": "east-west",
+   "x0": -0.192,
+   "x1": 39.725,
+   "z0": -0.192,
+   "z1": 0.225,
+   "sheet_pt": [
+    1103.62,
+    358.36,
+    1822.12,
+    365.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 39.917,
+   "exterior": true,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL02",
+   "name": "west exterior wall, retained house (rear wall to the old front wall line)",
+   "runs": "north-south",
+   "x0": -0.192,
+   "x1": 0.225,
+   "z0": -0.192,
+   "z1": 28.892,
+   "sheet_pt": [
+    1103.62,
+    358.36,
+    1111.12,
+    881.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 29.083,
+   "exterior": true,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL03",
+   "name": "west exterior wall, addition (office, front bath, Bedroom #2)",
+   "runs": "north-south",
+   "x0": -0.192,
+   "x1": 0.225,
+   "z0": 28.892,
+   "z1": 54.142,
+   "sheet_pt": [
+    1103.62,
+    881.86,
+    1111.12,
+    1336.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 25.25,
+   "exterior": true,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL04",
+   "name": "east exterior wall, house (living, kitchen)",
+   "runs": "north-south",
+   "x0": 39.308,
+   "x1": 39.725,
+   "z0": -0.192,
+   "z1": 31.475,
+   "sheet_pt": [
+    1814.62,
+    358.36,
+    1822.12,
+    928.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 31.667,
+   "exterior": true,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL05",
+   "name": "east exterior wall, garage",
+   "runs": "north-south",
+   "x0": 39.308,
+   "x1": 39.725,
+   "z0": 31.475,
+   "z1": 52.808,
+   "sheet_pt": [
+    1814.62,
+    928.36,
+    1822.12,
+    1312.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 21.333,
+   "exterior": true,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL06",
+   "name": "Bedroom #2 front (south) exterior wall",
+   "runs": "east-west",
+   "x0": -0.192,
+   "x1": 14.308,
+   "z0": 53.725,
+   "z1": 54.142,
+   "sheet_pt": [
+    1103.62,
+    1328.86,
+    1364.62,
+    1336.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 14.5,
+   "exterior": true,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL07",
+   "name": "office / Bedroom #2 east wall = foyer west wall (exterior beside the porch south of z 47.81)",
+   "runs": "north-south",
+   "x0": 13.892,
+   "x1": 14.308,
+   "z0": 28.892,
+   "z1": 54.142,
+   "sheet_pt": [
+    1357.12,
+    881.86,
+    1364.62,
+    1336.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 25.25,
+   "exterior": true,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL08",
+   "name": "front door wall (foyer south wall)",
+   "runs": "east-west",
+   "x0": 14.308,
+   "x1": 21.308,
+   "z0": 47.392,
+   "z1": 47.808,
+   "sheet_pt": [
+    1364.62,
+    1214.86,
+    1490.62,
+    1222.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 7.0,
+   "exterior": true,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL09",
+   "name": "garage west wall = foyer east wall (exterior beside the porch south of z 47.81)",
+   "runs": "north-south",
+   "x0": 21.308,
+   "x1": 21.725,
+   "z0": 31.058,
+   "z1": 52.808,
+   "sheet_pt": [
+    1490.62,
+    920.86,
+    1498.12,
+    1312.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 21.75,
+   "exterior": true,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL10",
+   "name": "garage front (south) wall",
+   "runs": "east-west",
+   "x0": 21.308,
+   "x1": 39.725,
+   "z0": 52.392,
+   "z1": 52.808,
+   "sheet_pt": [
+    1490.62,
+    1304.86,
+    1822.12,
+    1312.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 18.417,
+   "exterior": true,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL11",
+   "name": "kitchen / garage wall",
+   "runs": "east-west",
+   "x0": 21.308,
+   "x1": 39.725,
+   "z0": 31.058,
+   "z1": 31.475,
+   "sheet_pt": [
+    1490.62,
+    920.86,
+    1822.12,
+    928.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 18.417,
+   "exterior": false,
+   "hatched_fraction": 0.04,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL12",
+   "name": "primary bedroom / Bedroom #1 partition",
+   "runs": "north-south",
+   "x0": 11.308,
+   "x1": 11.725,
+   "z0": 0.225,
+   "z1": 12.892,
+   "sheet_pt": [
+    1310.62,
+    365.86,
+    1318.12,
+    593.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 12.667,
+   "exterior": false,
+   "hatched_fraction": 0.03,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL13",
+   "name": "suite (vestibule) / hall wall, with the suite entry",
+   "runs": "north-south",
+   "x0": 11.308,
+   "x1": 11.725,
+   "z0": 12.892,
+   "z1": 21.308,
+   "sheet_pt": [
+    1310.62,
+    593.86,
+    1318.12,
+    745.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 8.417,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL14",
+   "name": "Bedroom #1 / living partition (runs on past the closets to z 17.56)",
+   "runs": "north-south",
+   "x0": 22.225,
+   "x1": 22.642,
+   "z0": 0.225,
+   "z1": 17.559,
+   "sheet_pt": [
+    1507.12,
+    365.86,
+    1514.62,
+    677.87
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 17.334,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL15",
+   "name": "W.I.C north wall (primary bedroom side); stops at the vestibule",
+   "runs": "east-west",
+   "x0": 0.225,
+   "x1": 6.714,
+   "z0": 12.475,
+   "z1": 12.892,
+   "sheet_pt": [
+    1111.12,
+    586.36,
+    1227.93,
+    593.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 6.489,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL16",
+   "name": "Bedroom #1 south wall (door, Clo. #2 doors)",
+   "runs": "east-west",
+   "x0": 11.308,
+   "x1": 22.225,
+   "z0": 12.475,
+   "z1": 12.892,
+   "sheet_pt": [
+    1310.62,
+    586.36,
+    1507.12,
+    593.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 10.917,
+   "exterior": false,
+   "hatched_fraction": 0.03,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL17",
+   "name": "(N) W.I.C east wall with the pocket door",
+   "runs": "north-south",
+   "x0": 6.298,
+   "x1": 6.715,
+   "z0": 12.892,
+   "z1": 20.892,
+   "sheet_pt": [
+    1220.44,
+    593.86,
+    1227.94,
+    737.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 8.0,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL18",
+   "name": "W.I.C / primary bath wall and vestibule / primary bath wall (bath door)",
+   "runs": "east-west",
+   "x0": 0.225,
+   "x1": 11.725,
+   "z0": 20.892,
+   "z1": 21.308,
+   "sheet_pt": [
+    1111.12,
+    737.86,
+    1318.12,
+    745.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 11.5,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL19",
+   "name": "(E) bath north wall (bath door)",
+   "runs": "east-west",
+   "x0": 11.725,
+   "x1": 15.558,
+   "z0": 20.892,
+   "z1": 21.308,
+   "sheet_pt": [
+    1318.12,
+    737.86,
+    1387.12,
+    745.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 3.833,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL20",
+   "name": "primary bath / (E) bath partition",
+   "runs": "north-south",
+   "x0": 9.725,
+   "x1": 10.142,
+   "z0": 21.308,
+   "z1": 28.475,
+   "sheet_pt": [
+    1282.12,
+    745.36,
+    1289.62,
+    874.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 7.167,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL21",
+   "name": "(E) bath east wall",
+   "runs": "north-south",
+   "x0": 15.142,
+   "x1": 15.558,
+   "z0": 21.308,
+   "z1": 28.892,
+   "sheet_pt": [
+    1379.62,
+    745.36,
+    1387.12,
+    881.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 7.583,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL22",
+   "name": "old front wall: baths (north) / office (south); ends at the hall, x 15.56",
+   "runs": "east-west",
+   "x0": 0.225,
+   "x1": 15.558,
+   "z0": 28.475,
+   "z1": 28.892,
+   "sheet_pt": [
+    1111.12,
+    874.36,
+    1387.12,
+    881.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 15.333,
+   "exterior": false,
+   "hatched_fraction": 0.02,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL23",
+   "name": "office / front bath + closet wall",
+   "runs": "east-west",
+   "x0": 0.225,
+   "x1": 13.892,
+   "z0": 36.892,
+   "z1": 37.308,
+   "sheet_pt": [
+    1111.12,
+    1025.86,
+    1357.12,
+    1033.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 13.667,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL24",
+   "name": "front bath east wall (bath / closets)",
+   "runs": "north-south",
+   "x0": 8.475,
+   "x1": 8.892,
+   "z0": 37.308,
+   "z1": 42.308,
+   "sheet_pt": [
+    1259.62,
+    1033.36,
+    1267.12,
+    1123.36
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 5.0,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL25",
+   "name": "divider between the two closets",
+   "runs": "east-west",
+   "x0": 8.892,
+   "x1": 13.892,
+   "z0": 39.6,
+   "z1": 40.017,
+   "sheet_pt": [
+    1267.12,
+    1074.61,
+    1357.12,
+    1082.11
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 5.0,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL26",
+   "name": "front bath + closet / Bedroom #2 wall",
+   "runs": "east-west",
+   "x0": 0.225,
+   "x1": 13.892,
+   "z0": 42.308,
+   "z1": 42.725,
+   "sheet_pt": [
+    1111.12,
+    1123.36,
+    1357.12,
+    1130.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 13.667,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL27",
+   "name": "Clo. #2 / FAU + STO wall",
+   "runs": "east-west",
+   "x0": 15.392,
+   "x1": 22.225,
+   "z0": 14.809,
+   "z1": 15.226,
+   "sheet_pt": [
+    1384.12,
+    628.37,
+    1507.12,
+    635.87
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 6.833,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL28",
+   "name": "closet block west wall (Clo. #2 and FAU, towards the hall)",
+   "runs": "north-south",
+   "x0": 14.975,
+   "x1": 15.392,
+   "z0": 12.892,
+   "z1": 17.559,
+   "sheet_pt": [
+    1376.62,
+    593.86,
+    1384.12,
+    677.87
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 4.667,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL29",
+   "name": "FAU / STO divider",
+   "runs": "north-south",
+   "x0": 18.558,
+   "x1": 18.975,
+   "z0": 15.226,
+   "z1": 17.142,
+   "sheet_pt": [
+    1441.12,
+    635.87,
+    1448.62,
+    670.37
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 1.917,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL30",
+   "name": "FAU + STO south wall (STO door)",
+   "runs": "east-west",
+   "x0": 15.392,
+   "x1": 22.642,
+   "z0": 17.142,
+   "z1": 17.559,
+   "sheet_pt": [
+    1384.12,
+    670.37,
+    1514.62,
+    677.87
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 7.25,
+   "exterior": false,
+   "hatched_fraction": 0.0,
+   "status": "existing (not hatched)"
+  },
+  {
+   "id": "WL31",
+   "name": "(N) W / D closet west wall (in line with the garage west wall)",
+   "runs": "north-south",
+   "x0": 21.308,
+   "x1": 21.725,
+   "z0": 27.642,
+   "z1": 31.058,
+   "sheet_pt": [
+    1490.62,
+    859.36,
+    1498.12,
+    920.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 3.417,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL32",
+   "name": "(N) W / D closet east wall",
+   "runs": "north-south",
+   "x0": 24.725,
+   "x1": 25.142,
+   "z0": 27.642,
+   "z1": 31.058,
+   "sheet_pt": [
+    1552.12,
+    859.36,
+    1559.62,
+    920.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 3.417,
+   "exterior": false,
+   "hatched_fraction": 1.0,
+   "status": "new (hatched on the sheet)"
+  },
+  {
+   "id": "WL33",
+   "name": "(N) W / D closet front (north) wall with its door",
+   "runs": "east-west",
+   "x0": 21.725,
+   "x1": 24.725,
+   "z0": 27.642,
+   "z1": 28.058,
+   "sheet_pt": [
+    1498.12,
+    859.36,
+    1552.12,
+    866.86
+   ],
+   "thickness_ft": 0.417,
+   "thickness": "0'-5\"",
+   "length_ft": 3.0,
+   "exterior": false,
+   "hatched_fraction": 0.22,
+   "status": "new (the two jamb stubs are hatched; the rest of the wall is the door)"
+  }
+ ],
+ "rooms": [
+  {
+   "id": "R01",
+   "label": "(N) PRI. BEDROOM",
+   "x0": 0.225,
+   "x1": 11.308,
+   "z0": 0.225,
+   "z1": 12.475,
+   "sheet_pt": [
+    1111.12,
+    365.86,
+    1310.62,
+    586.36
+   ],
+   "width_x_ft": 11.083,
+   "depth_z_ft": 12.25,
+   "width_x": "11'-1\"",
+   "depth_z": "12'-3\"",
+   "dimensions_on_sheet": "11'-1\" x 12'-3\" printed",
+   "note": "open to the vestibule between x 6.71 and 11.31 on its south side (no wall there)"
+  },
+  {
+   "id": "R02",
+   "label": "(E) W.I.C",
+   "x0": 0.225,
+   "x1": 6.298,
+   "z0": 12.892,
+   "z1": 20.892,
+   "sheet_pt": [
+    1111.12,
+    593.86,
+    1220.44,
+    737.86
+   ],
+   "width_x_ft": 6.073,
+   "depth_z_ft": 8.0,
+   "width_x": "6'-0 7/8\"",
+   "depth_z": "8'-0\"",
+   "dimensions_on_sheet": "6'-1\" x 8'-0\" printed (drawn 6'-0 7/8\")",
+   "note": "enclosed by the (N) east wall; pocket door"
+  },
+  {
+   "id": "R03",
+   "label": "vestibule (not labelled; holds \"(E) 30X22 ATTIC ACCESS\")",
+   "x0": 6.715,
+   "x1": 11.308,
+   "z0": 12.475,
+   "z1": 20.892,
+   "sheet_pt": [
+    1227.94,
+    586.36,
+    1310.62,
+    737.86
+   ],
+   "width_x_ft": 4.593,
+   "depth_z_ft": 8.417,
+   "width_x": "4'-7 1/8\"",
+   "depth_z": "8'-5\"",
+   "dimensions_on_sheet": "4'-7\" printed",
+   "note": "north edge taken at the line of the W.I.C north wall's north face (z 12.475); open to the bedroom"
+  },
+  {
+   "id": "R04",
+   "label": "(N) PRI. BATH",
+   "x0": 0.225,
+   "x1": 9.725,
+   "z0": 21.308,
+   "z1": 28.475,
+   "sheet_pt": [
+    1111.12,
+    745.36,
+    1282.12,
+    874.36
+   ],
+   "width_x_ft": 9.5,
+   "depth_z_ft": 7.167,
+   "width_x": "9'-6\"",
+   "depth_z": "7'-2\"",
+   "dimensions_on_sheet": "9'-6\" x 7'-2\" printed"
+  },
+  {
+   "id": "R05",
+   "label": "(E) BATH",
+   "x0": 10.142,
+   "x1": 15.142,
+   "z0": 21.308,
+   "z1": 28.475,
+   "sheet_pt": [
+    1289.62,
+    745.36,
+    1379.62,
+    874.36
+   ],
+   "width_x_ft": 5.0,
+   "depth_z_ft": 7.167,
+   "width_x": "5'-0\"",
+   "depth_z": "7'-2\"",
+   "dimensions_on_sheet": "7'-2\" printed; 5'-0\" wide (A1.1)"
+  },
+  {
+   "id": "R06",
+   "label": "(E) BEDROOM #1",
+   "x0": 11.725,
+   "x1": 22.225,
+   "z0": 0.225,
+   "z1": 12.475,
+   "sheet_pt": [
+    1318.12,
+    365.86,
+    1507.12,
+    586.36
+   ],
+   "width_x_ft": 10.5,
+   "depth_z_ft": 12.25,
+   "width_x": "10'-6\"",
+   "depth_z": "12'-3\"",
+   "dimensions_on_sheet": "10'-6\" printed; 12'-3\" deep"
+  },
+  {
+   "id": "R07",
+   "label": "hall, west leg (not labelled)",
+   "x0": 11.725,
+   "x1": 14.975,
+   "z0": 12.892,
+   "z1": 20.892,
+   "sheet_pt": [
+    1318.12,
+    593.86,
+    1376.62,
+    737.86
+   ],
+   "width_x_ft": 3.25,
+   "depth_z_ft": 8.0,
+   "width_x": "3'-3\"",
+   "depth_z": "8'-0\"",
+   "dimensions_on_sheet": "3'-3\" wide; 4'-8\" + 3'-4\" = 8'-0\" long"
+  },
+  {
+   "id": "R08",
+   "label": "hall, east leg south of the closets (not labelled)",
+   "x0": 14.975,
+   "x1": 22.642,
+   "z0": 17.559,
+   "z1": 20.892,
+   "sheet_pt": [
+    1376.62,
+    677.87,
+    1514.62,
+    737.86
+   ],
+   "width_x_ft": 7.667,
+   "depth_z_ft": 3.333,
+   "width_x": "7'-8\"",
+   "depth_z": "3'-4\"",
+   "dimensions_on_sheet": "3'-4\" printed",
+   "note": "open to the living / dining room on the east and to the hall beside the (E) bath on the south"
+  },
+  {
+   "id": "R09",
+   "label": "(E) CLO. #2",
+   "x0": 15.392,
+   "x1": 22.225,
+   "z0": 12.892,
+   "z1": 14.809,
+   "sheet_pt": [
+    1384.12,
+    593.86,
+    1507.12,
+    628.37
+   ],
+   "width_x_ft": 6.833,
+   "depth_z_ft": 1.917,
+   "width_x": "6'-10\"",
+   "depth_z": "1'-11\"",
+   "dimensions_on_sheet": "undimensioned on SKA002 (A1.1: 6'-10\" x 1'-11\")"
+  },
+  {
+   "id": "R10",
+   "label": "(E) FAU",
+   "x0": 15.392,
+   "x1": 18.558,
+   "z0": 15.226,
+   "z1": 17.142,
+   "sheet_pt": [
+    1384.12,
+    635.87,
+    1441.12,
+    670.37
+   ],
+   "width_x_ft": 3.166,
+   "depth_z_ft": 1.916,
+   "width_x": "3'-2\"",
+   "depth_z": "1'-11\"",
+   "dimensions_on_sheet": "undimensioned"
+  },
+  {
+   "id": "R11",
+   "label": "(E) STO.",
+   "x0": 18.975,
+   "x1": 22.225,
+   "z0": 15.226,
+   "z1": 17.142,
+   "sheet_pt": [
+    1448.62,
+    635.87,
+    1507.12,
+    670.37
+   ],
+   "width_x_ft": 3.25,
+   "depth_z_ft": 1.916,
+   "width_x": "3'-3\"",
+   "depth_z": "1'-11\"",
+   "dimensions_on_sheet": "undimensioned"
+  },
+  {
+   "id": "R12",
+   "label": "(E) LIVING ROOM + (N) KITCHEN & DINING (one space)",
+   "x0": 22.642,
+   "x1": 39.308,
+   "z0": 0.225,
+   "z1": 31.058,
+   "sheet_pt": [
+    1514.62,
+    365.86,
+    1814.62,
+    920.86
+   ],
+   "width_x_ft": 16.666,
+   "depth_z_ft": 30.833,
+   "width_x": "16'-8\"",
+   "depth_z": "30'-10\"",
+   "dimensions_on_sheet": "16'-8\" x 30'-10\" printed",
+   "note": "the west side is open to the hall south of z 17.56; the W / D closet stands in its south-west corner"
+  },
+  {
+   "id": "R13",
+   "label": "(N) OFFICE",
+   "x0": 0.225,
+   "x1": 13.892,
+   "z0": 28.892,
+   "z1": 36.892,
+   "sheet_pt": [
+    1111.12,
+    881.86,
+    1357.12,
+    1025.86
+   ],
+   "width_x_ft": 13.667,
+   "depth_z_ft": 8.0,
+   "width_x": "13'-8\"",
+   "depth_z": "8'-0\"",
+   "dimensions_on_sheet": "8'-0\" deep printed; 13'-8\" wide by scaling"
+  },
+  {
+   "id": "R14",
+   "label": "front bath (not labelled)",
+   "x0": 0.225,
+   "x1": 8.475,
+   "z0": 37.308,
+   "z1": 42.308,
+   "sheet_pt": [
+    1111.12,
+    1033.36,
+    1259.62,
+    1123.36
+   ],
+   "width_x_ft": 8.25,
+   "depth_z_ft": 5.0,
+   "width_x": "8'-3\"",
+   "depth_z": "5'-0\"",
+   "dimensions_on_sheet": "3'-0\" + 2'-6\" + 2'-9\" = 8'-3\" x 5'-0\" printed"
+  },
+  {
+   "id": "R15",
+   "label": "closet opening to the office (not labelled)",
+   "x0": 8.892,
+   "x1": 13.892,
+   "z0": 37.308,
+   "z1": 39.6,
+   "sheet_pt": [
+    1267.12,
+    1033.36,
+    1357.12,
+    1074.61
+   ],
+   "width_x_ft": 5.0,
+   "depth_z_ft": 2.292,
+   "width_x": "5'-0\"",
+   "depth_z": "2'-3 1/2\"",
+   "dimensions_on_sheet": "5'-0\" wide printed"
+  },
+  {
+   "id": "R16",
+   "label": "closet opening to Bedroom #2 (not labelled)",
+   "x0": 8.892,
+   "x1": 13.892,
+   "z0": 40.017,
+   "z1": 42.308,
+   "sheet_pt": [
+    1267.12,
+    1082.11,
+    1357.12,
+    1123.36
+   ],
+   "width_x_ft": 5.0,
+   "depth_z_ft": 2.291,
+   "width_x": "5'-0\"",
+   "depth_z": "2'-3 1/2\"",
+   "dimensions_on_sheet": "5'-0\" wide printed"
+  },
+  {
+   "id": "R17",
+   "label": "(N ) BEDROOM #2",
+   "x0": 0.225,
+   "x1": 13.892,
+   "z0": 42.725,
+   "z1": 53.725,
+   "sheet_pt": [
+    1111.12,
+    1130.86,
+    1357.12,
+    1328.86
+   ],
+   "width_x_ft": 13.667,
+   "depth_z_ft": 11.0,
+   "width_x": "13'-8\"",
+   "depth_z": "11'-0\"",
+   "dimensions_on_sheet": "11'-0\" deep printed; 14'-1\" printed to the far face of the east wall; 13'-8\" clear"
+  },
+  {
+   "id": "R18",
+   "label": "(N) FOYER",
+   "x0": 14.308,
+   "x1": 21.308,
+   "z0": 28.892,
+   "z1": 47.392,
+   "sheet_pt": [
+    1364.62,
+    881.86,
+    1490.62,
+    1214.86
+   ],
+   "width_x_ft": 7.0,
+   "depth_z_ft": 18.5,
+   "width_x": "7'-0\"",
+   "depth_z": "18'-6\"",
+   "dimensions_on_sheet": "7'-0\" x 18'-6\" printed",
+   "note": "north end open to the hall; the hall there is 1'-3\" narrower on the west ((E) bath east wall at x 15.56)"
+  },
+  {
+   "id": "R19",
+   "label": "(N) COVERED PORCH",
+   "x0": 14.308,
+   "x1": 21.308,
+   "z0": 47.808,
+   "z1": 55.142,
+   "sheet_pt": [
+    1364.62,
+    1222.36,
+    1490.62,
+    1354.36
+   ],
+   "width_x_ft": 7.0,
+   "depth_z_ft": 7.334,
+   "width_x": "7'-0\"",
+   "depth_z": "7'-4\"",
+   "dimensions_on_sheet": "7'-0\" wide; 5'-0\" + 2'-4\" = 7'-4\" deep printed",
+   "note": "exterior"
+  },
+  {
+   "id": "R20",
+   "label": "garage (not labelled on SKA002; \"(E) GARAGE\" on A1.1)",
+   "x0": 21.725,
+   "x1": 39.308,
+   "z0": 31.475,
+   "z1": 52.392,
+   "sheet_pt": [
+    1498.12,
+    928.36,
+    1814.62,
+    1304.86
+   ],
+   "width_x_ft": 17.583,
+   "depth_z_ft": 20.917,
+   "width_x": "17'-7\"",
+   "depth_z": "20'-11\"",
+   "dimensions_on_sheet": "20'-11\" deep printed; 17'-7\" wide (A1.1)"
+  },
+  {
+   "id": "R21",
+   "label": "W / D closet, inside",
+   "x0": 21.725,
+   "x1": 24.725,
+   "z0": 28.058,
+   "z1": 31.058,
+   "sheet_pt": [
+    1498.12,
+    866.86,
+    1552.12,
+    920.86
+   ],
+   "width_x_ft": 3.0,
+   "depth_z_ft": 3.0,
+   "width_x": "3'-0\"",
+   "depth_z": "3'-0\"",
+   "dimensions_on_sheet": "3'-10\" x 3'-5\" printed over the walls"
+  }
+ ],
+ "doors": [
+  {
+   "id": "DR01",
+   "name": "Primary bedroom rear sliding glass door",
+   "type": "sliding glass door, two panels of 3'-2\" (drawn open: both panels stacked at the west end)",
+   "wall": "WL01",
+   "axis": "x",
+   "wall_z0": -0.192,
+   "wall_z1": 0.225,
+   "wall_centre_z": 0.017,
+   "start": 2.439,
+   "end": 8.772,
+   "width_ft": 6.333,
+   "width": "6'-4\"",
+   "sheet_pt": [
+    1150.97,
+    358.36,
+    1264.97,
+    365.86
+   ],
+   "note": "jamb lines to jamb lines; a 7'-0\" x 3'-0\" landing outside (LD1)"
+  },
+  {
+   "id": "DR02",
+   "name": "Living room rear sliding glass door",
+   "type": "sliding glass door, four panels of 3'-2\": end panels on the inner track, two middle panels on the outer track, drawn part open (2'-6 1/2\" gap in the middle)",
+   "wall": "WL01",
+   "axis": "x",
+   "wall_z0": -0.192,
+   "wall_z1": 0.225,
+   "wall_centre_z": 0.017,
+   "start": 25.528,
+   "end": 37.862,
+   "width_ft": 12.333,
+   "width": "12'-4\"",
+   "sheet_pt": [
+    1566.58,
+    358.36,
+    1788.58,
+    365.86
+   ],
+   "note": "jamb lines to jamb lines; a 13'-0\" x 3'-0\" landing outside (LD2)"
+  },
+  {
+   "id": "DR03",
+   "name": "Bedroom #1 door",
+   "type": "hinged",
+   "wall": "WL16",
+   "axis": "x",
+   "wall_z0": 12.475,
+   "wall_z1": 12.892,
+   "wall_centre_z": 12.683,
+   "start": 11.892,
+   "end": 14.892,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1321.12,
+    586.36,
+    1375.12,
+    593.86
+   ],
+   "clear_start": 12.058,
+   "clear_end": 14.725,
+   "clear_width_ft": 2.667,
+   "clear_width": "2'-8\"",
+   "leaf_ft": 2.667,
+   "hinge_xz": [
+    12.058,
+    12.475
+   ],
+   "hinge_side": "west jamb",
+   "swings": "north, into Bedroom #1",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR04",
+   "name": "Primary suite entry (hall to vestibule)",
+   "type": "sliding (barn) panel on the hall face of the wall",
+   "wall": "WL13",
+   "axis": "z",
+   "wall_x0": 11.308,
+   "wall_x1": 11.725,
+   "wall_centre_x": 11.517,
+   "start": 13.443,
+   "end": 16.443,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1310.62,
+    603.79,
+    1318.12,
+    657.79
+   ],
+   "clear_start": 13.61,
+   "clear_end": 16.277,
+   "clear_width_ft": 2.667,
+   "clear_width": "2'-8\"",
+   "panel": {
+    "x0": 11.779,
+    "x1": 11.902,
+    "z0": 15.977,
+    "z1": 19.31,
+    "length_ft": 3.333,
+    "note": "drawn part open: it covers the south 0.47 ft of the opening and parks to the south"
+   },
+   "track": {
+    "x": 11.841,
+    "z0": 13.277,
+    "z1": 19.61,
+    "length_ft": 6.333,
+    "note": "dashed line"
+   }
+  },
+  {
+   "id": "DR05",
+   "name": "W.I.C pocket door",
+   "type": "pocket door, pocket to the south",
+   "wall": "WL17",
+   "axis": "z",
+   "wall_x0": 6.298,
+   "wall_x1": 6.715,
+   "wall_centre_x": 6.507,
+   "start": 15.472,
+   "end": 18.305,
+   "width_ft": 2.833,
+   "width": "2'-10\"",
+   "sheet_pt": [
+    1220.44,
+    640.3,
+    1227.94,
+    691.3
+   ],
+   "clear_start": 15.638,
+   "clear_end": 18.138,
+   "clear_width_ft": 2.5,
+   "clear_width": "2'-6\"",
+   "pocket": {
+    "z0": 18.305,
+    "z1": 20.638,
+    "x0": 6.41,
+    "x1": 6.618
+   }
+  },
+  {
+   "id": "DR06",
+   "name": "Primary bath door",
+   "type": "hinged",
+   "wall": "WL18",
+   "axis": "x",
+   "wall_z0": 20.892,
+   "wall_z1": 21.308,
+   "wall_centre_z": 21.1,
+   "start": 6.732,
+   "end": 9.565,
+   "width_ft": 2.833,
+   "width": "2'-10\"",
+   "sheet_pt": [
+    1228.24,
+    737.86,
+    1279.24,
+    745.36
+   ],
+   "clear_start": 6.898,
+   "clear_end": 9.401,
+   "clear_width_ft": 2.502,
+   "clear_width": "2'-6\"",
+   "leaf_ft": 2.502,
+   "hinge_xz": [
+    9.401,
+    21.302
+   ],
+   "hinge_side": "east jamb",
+   "swings": "south, into the primary bath",
+   "drawn_open_deg": 90,
+   "note": "west jamb against the east face of the W.I.C east wall"
+  },
+  {
+   "id": "DR07",
+   "name": "(E) bath door",
+   "type": "hinged",
+   "wall": "WL19",
+   "axis": "x",
+   "wall_z0": 20.892,
+   "wall_z1": 21.308,
+   "wall_centre_z": 21.1,
+   "start": 12.308,
+   "end": 14.975,
+   "width_ft": 2.667,
+   "width": "2'-8\"",
+   "sheet_pt": [
+    1328.62,
+    737.86,
+    1376.62,
+    745.36
+   ],
+   "clear_start": 12.475,
+   "clear_end": 14.808,
+   "clear_width_ft": 2.333,
+   "clear_width": "2'-4\"",
+   "leaf_ft": 2.333,
+   "hinge_xz": [
+    14.808,
+    21.308
+   ],
+   "hinge_side": "east jamb",
+   "swings": "south, into the bath",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR08",
+   "name": "(E) Clo. #2 sliding doors",
+   "type": "two bypass panels (3'-0\" each drawn)",
+   "wall": "WL16",
+   "axis": "x",
+   "wall_z0": 12.475,
+   "wall_z1": 12.892,
+   "wall_centre_z": 12.683,
+   "start": 15.642,
+   "end": 21.976,
+   "width_ft": 6.333,
+   "width": "6'-4\"",
+   "sheet_pt": [
+    1388.63,
+    586.36,
+    1502.63,
+    593.86
+   ],
+   "clear_start": 15.809,
+   "clear_end": 21.809,
+   "clear_width_ft": 6.0,
+   "clear_width": "6'-0\""
+  },
+  {
+   "id": "DR09",
+   "name": "(E) FAU closet door",
+   "type": "hinged",
+   "wall": "WL28",
+   "axis": "z",
+   "wall_x0": 14.975,
+   "wall_x1": 15.392,
+   "wall_centre_x": 15.183,
+   "start": 15.226,
+   "end": 17.142,
+   "width_ft": 1.917,
+   "width": "1'-11\"",
+   "sheet_pt": [
+    1376.62,
+    635.87,
+    1384.12,
+    670.37
+   ],
+   "clear_start": 15.351,
+   "clear_end": 17.017,
+   "clear_width_ft": 1.667,
+   "clear_width": "1'-8\"",
+   "leaf_ft": 1.667,
+   "hinge_xz": [
+    14.975,
+    15.351
+   ],
+   "hinge_side": "north jamb",
+   "swings": "west, into the hall",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR10",
+   "name": "(E) STO. closet door",
+   "type": "hinged",
+   "wall": "WL30",
+   "axis": "x",
+   "wall_z0": 17.142,
+   "wall_z1": 17.559,
+   "wall_centre_z": 17.351,
+   "start": 19.142,
+   "end": 21.809,
+   "width_ft": 2.667,
+   "width": "2'-8\"",
+   "sheet_pt": [
+    1451.63,
+    670.37,
+    1499.63,
+    677.87
+   ],
+   "clear_start": 19.309,
+   "clear_end": 21.642,
+   "clear_width_ft": 2.333,
+   "clear_width": "2'-4\"",
+   "leaf_ft": 2.333,
+   "hinge_xz": [
+    21.642,
+    17.559
+   ],
+   "hinge_side": "east jamb",
+   "swings": "south, into the hall",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR11",
+   "name": "(N) Office door",
+   "type": "hinged",
+   "wall": "WL07",
+   "axis": "z",
+   "wall_x0": 13.892,
+   "wall_x1": 14.308,
+   "wall_centre_x": 14.1,
+   "start": 29.058,
+   "end": 32.058,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1357.12,
+    884.86,
+    1364.62,
+    938.86
+   ],
+   "clear_start": 29.225,
+   "clear_end": 31.892,
+   "clear_width_ft": 2.667,
+   "clear_width": "2'-8\"",
+   "leaf_ft": 2.667,
+   "hinge_xz": [
+    13.892,
+    29.225
+   ],
+   "hinge_side": "north jamb",
+   "swings": "west, into the office",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR12",
+   "name": "(N) Bedroom #2 door",
+   "type": "hinged",
+   "wall": "WL07",
+   "axis": "z",
+   "wall_x0": 13.892,
+   "wall_x1": 14.308,
+   "wall_centre_x": 14.1,
+   "start": 42.892,
+   "end": 45.892,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1357.12,
+    1133.86,
+    1364.62,
+    1187.86
+   ],
+   "clear_start": 43.058,
+   "clear_end": 45.725,
+   "clear_width_ft": 2.667,
+   "clear_width": "2'-8\"",
+   "leaf_ft": 2.667,
+   "hinge_xz": [
+    13.892,
+    43.058
+   ],
+   "hinge_side": "north jamb",
+   "swings": "west, into Bedroom #2",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR13",
+   "name": "Front bath door (from Bedroom #2)",
+   "type": "hinged",
+   "wall": "WL26",
+   "axis": "x",
+   "wall_z0": 42.308,
+   "wall_z1": 42.725,
+   "wall_centre_z": 42.517,
+   "start": 5.642,
+   "end": 8.308,
+   "width_ft": 2.667,
+   "width": "2'-8\"",
+   "sheet_pt": [
+    1208.62,
+    1123.36,
+    1256.62,
+    1130.86
+   ],
+   "clear_start": 5.808,
+   "clear_end": 8.142,
+   "clear_width_ft": 2.333,
+   "clear_width": "2'-4\"",
+   "leaf_ft": 2.333,
+   "hinge_xz": [
+    8.142,
+    42.308
+   ],
+   "hinge_side": "east jamb",
+   "swings": "north, into the bath",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR14",
+   "name": "Closet doors to the office",
+   "type": "two bypass panels (2'-6\" each, both drawn at the east end)",
+   "wall": "WL23",
+   "axis": "x",
+   "wall_z0": 36.892,
+   "wall_z1": 37.308,
+   "wall_centre_z": 37.1,
+   "start": 8.892,
+   "end": 13.892,
+   "width_ft": 5.0,
+   "width": "5'-0\"",
+   "sheet_pt": [
+    1267.12,
+    1025.86,
+    1357.12,
+    1033.36
+   ],
+   "clear_start": 9.058,
+   "clear_end": 13.725,
+   "clear_width_ft": 4.667,
+   "clear_width": "4'-8\""
+  },
+  {
+   "id": "DR15",
+   "name": "Closet doors to Bedroom #2",
+   "type": "two bypass panels (2'-6\" each, both drawn at the east end)",
+   "wall": "WL26",
+   "axis": "x",
+   "wall_z0": 42.308,
+   "wall_z1": 42.725,
+   "wall_centre_z": 42.517,
+   "start": 8.892,
+   "end": 13.892,
+   "width_ft": 5.0,
+   "width": "5'-0\"",
+   "sheet_pt": [
+    1267.12,
+    1123.36,
+    1357.12,
+    1130.86
+   ],
+   "clear_start": 9.058,
+   "clear_end": 13.725,
+   "clear_width_ft": 4.667,
+   "clear_width": "4'-8\""
+  },
+  {
+   "id": "DR16",
+   "name": "Front door",
+   "type": "hinged door 3'-0\" with a sidelight on each side",
+   "wall": "WL08",
+   "axis": "x",
+   "wall_z0": 47.392,
+   "wall_z1": 47.808,
+   "wall_centre_z": 47.6,
+   "start": 15.079,
+   "end": 20.538,
+   "width_ft": 5.458,
+   "width": "5'-5 1/2\"",
+   "sheet_pt": [
+    1378.5,
+    1214.86,
+    1476.75,
+    1222.36
+   ],
+   "clear_start": 16.308,
+   "clear_end": 19.308,
+   "clear_width_ft": 3.0,
+   "clear_width": "3'-0\"",
+   "leaf_ft": 3.0,
+   "hinge_xz": [
+    19.308,
+    47.475
+   ],
+   "hinge_side": "east jamb",
+   "swings": "north, into the foyer",
+   "drawn_open_deg": 90,
+   "sidelights": [
+    {
+     "start": 15.163,
+     "end": 16.142
+    },
+    {
+     "start": 19.475,
+     "end": 20.454
+    }
+   ],
+   "note": "start / end = the whole door-and-sidelight unit (5'-5 1/2\"); clear = the door leaf; the leaf is centred on the 7'-0\" foyer (x 17.808)"
+  },
+  {
+   "id": "DR17",
+   "name": "Foyer / garage door",
+   "type": "hinged",
+   "wall": "WL09",
+   "axis": "z",
+   "wall_x0": 21.308,
+   "wall_x1": 21.725,
+   "wall_centre_x": 21.517,
+   "start": 36.162,
+   "end": 39.496,
+   "width_ft": 3.333,
+   "width": "3'-4\"",
+   "sheet_pt": [
+    1490.62,
+    1012.73,
+    1498.12,
+    1072.73
+   ],
+   "clear_start": 36.329,
+   "clear_end": 39.329,
+   "clear_width_ft": 3.0,
+   "clear_width": "3'-0\"",
+   "leaf_ft": 3.0,
+   "hinge_xz": [
+    21.725,
+    36.329
+   ],
+   "hinge_side": "north jamb",
+   "swings": "east, into the garage",
+   "drawn_open_deg": 90,
+   "note": "a 1'-0\" x 3'-8\" step is drawn on the garage side (ST1)"
+  },
+  {
+   "id": "DR18",
+   "name": "Garage side door (east wall)",
+   "type": "hinged",
+   "wall": "WL05",
+   "axis": "z",
+   "wall_x0": 39.308,
+   "wall_x1": 39.725,
+   "wall_centre_x": 39.517,
+   "start": 35.642,
+   "end": 38.308,
+   "width_ft": 2.667,
+   "width": "2'-8\"",
+   "sheet_pt": [
+    1814.62,
+    1003.36,
+    1822.12,
+    1051.36
+   ],
+   "clear_start": 35.808,
+   "clear_end": 38.142,
+   "clear_width_ft": 2.333,
+   "clear_width": "2'-4\"",
+   "leaf_ft": 2.333,
+   "hinge_xz": [
+    39.308,
+    38.142
+   ],
+   "hinge_side": "south jamb",
+   "swings": "west, into the garage",
+   "drawn_open_deg": 90
+  },
+  {
+   "id": "DR19",
+   "name": "Garage vehicle door",
+   "type": "overhead door; drawn dashed in the open position",
+   "wall": "WL10",
+   "axis": "x",
+   "wall_z0": 52.392,
+   "wall_z1": 52.808,
+   "wall_centre_z": 52.6,
+   "start": 22.975,
+   "end": 37.975,
+   "width_ft": 15.0,
+   "width": "15'-0\"",
+   "sheet_pt": [
+    1520.62,
+    1304.86,
+    1790.62,
+    1312.36
+   ],
+   "clear_start": 23.058,
+   "clear_end": 37.892,
+   "clear_width_ft": 14.833,
+   "clear_width": "14'-10\"",
+   "open_position": {
+    "x0": 23.058,
+    "x1": 37.892,
+    "z0": 45.475,
+    "z1": 52.392
+   }
+  },
+  {
+   "id": "DR20",
+   "name": "W / D closet door",
+   "type": "hinged",
+   "wall": "WL33",
+   "axis": "x",
+   "wall_z0": 27.642,
+   "wall_z1": 28.058,
+   "wall_centre_z": 27.85,
+   "start": 21.892,
+   "end": 24.558,
+   "width_ft": 2.667,
+   "width": "2'-8\"",
+   "sheet_pt": [
+    1501.12,
+    859.36,
+    1549.12,
+    866.86
+   ],
+   "clear_start": 22.058,
+   "clear_end": 24.393,
+   "clear_width_ft": 2.334,
+   "clear_width": "2'-4\"",
+   "leaf_ft": 2.334,
+   "hinge_xz": [
+    24.393,
+    27.642
+   ],
+   "hinge_side": "east jamb",
+   "swings": "north, out of the closet",
+   "drawn_open_deg": 45
+  }
+ ],
+ "windows": [
+  {
+   "id": "WN01",
+   "name": "(E) Bedroom #1 rear window",
+   "wall": "WL01",
+   "axis": "x",
+   "wall_z0": -0.192,
+   "wall_z1": 0.225,
+   "wall_centre_z": 0.017,
+   "start": 13.923,
+   "end": 19.923,
+   "width_ft": 6.0,
+   "width": "6'-0\"",
+   "sheet_pt": [
+    1357.69,
+    358.36,
+    1465.69,
+    365.86
+   ],
+   "sashes": "two sliding sashes (mullion at x 16.84 .. 17.01)"
+  },
+  {
+   "id": "WN02",
+   "name": "Primary bedroom west window",
+   "wall": "WL02",
+   "axis": "z",
+   "wall_x0": -0.192,
+   "wall_x1": 0.225,
+   "wall_centre_x": 0.017,
+   "start": 1.225,
+   "end": 4.225,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1103.62,
+    383.86,
+    1111.12,
+    437.86
+   ],
+   "sashes": "two sashes (mullion at z 2.64 .. 2.81)",
+   "note": "the only west window drawn in the primary bedroom"
+  },
+  {
+   "id": "WN03",
+   "name": "Primary bath west window",
+   "wall": "WL02",
+   "axis": "z",
+   "wall_x0": -0.192,
+   "wall_x1": 0.225,
+   "wall_centre_x": 0.017,
+   "start": 22.983,
+   "end": 25.983,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1103.62,
+    775.5,
+    1111.12,
+    829.5
+   ],
+   "sashes": "two sashes (mullion at z 24.45 .. 24.52)"
+  },
+  {
+   "id": "WN04",
+   "name": "Office west window",
+   "wall": "WL03",
+   "axis": "z",
+   "wall_x0": -0.192,
+   "wall_x1": 0.225,
+   "wall_centre_x": 0.017,
+   "start": 30.392,
+   "end": 35.392,
+   "width_ft": 5.0,
+   "width": "5'-0\"",
+   "sheet_pt": [
+    1103.62,
+    908.86,
+    1111.12,
+    998.86
+   ],
+   "sashes": "two sashes (mullion at z 32.81 .. 32.98)"
+  },
+  {
+   "id": "WN05",
+   "name": "Front bath west window",
+   "wall": "WL03",
+   "axis": "z",
+   "wall_x0": -0.192,
+   "wall_x1": 0.225,
+   "wall_centre_x": 0.017,
+   "start": 38.308,
+   "end": 41.308,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1103.62,
+    1051.36,
+    1111.12,
+    1105.36
+   ],
+   "sashes": "two sashes (mullion at z 39.78 .. 39.84)"
+  },
+  {
+   "id": "WN06",
+   "name": "Bedroom #2 front window",
+   "wall": "WL06",
+   "axis": "x",
+   "wall_z0": 53.725,
+   "wall_z1": 54.142,
+   "wall_centre_z": 53.933,
+   "start": 3.35,
+   "end": 11.35,
+   "width_ft": 8.0,
+   "width": "8'-0\"",
+   "sheet_pt": [
+    1167.37,
+    1328.86,
+    1311.37,
+    1336.36
+   ],
+   "sashes": "three lights: 3.48 .. 5.38, 5.44 .. 9.26, 9.32 .. 11.23"
+  },
+  {
+   "id": "WN07",
+   "name": "Living room east window, north",
+   "wall": "WL04",
+   "axis": "z",
+   "wall_x0": 39.308,
+   "wall_x1": 39.725,
+   "wall_centre_x": 39.517,
+   "start": 0.368,
+   "end": 6.368,
+   "width_ft": 6.0,
+   "width": "6'-0\"",
+   "sheet_pt": [
+    1814.62,
+    368.43,
+    1822.12,
+    476.43
+   ],
+   "sashes": "two sashes (mullion at z 3.28 .. 3.45)"
+  },
+  {
+   "id": "WN08",
+   "name": "Living / dining east window",
+   "wall": "WL04",
+   "axis": "z",
+   "wall_x0": 39.308,
+   "wall_x1": 39.725,
+   "wall_centre_x": 39.517,
+   "start": 16.066,
+   "end": 21.066,
+   "width_ft": 5.0,
+   "width": "5'-0\"",
+   "sheet_pt": [
+    1814.62,
+    651.0,
+    1822.12,
+    741.0
+   ],
+   "sashes": "two unequal lights (mullion at z 19.38 .. 19.50)",
+   "note": "new on SKA002; the fireplace of A1.1 (z 11.64 .. 16.64) is not drawn on SKA002"
+  },
+  {
+   "id": "WN09",
+   "name": "Kitchen east window",
+   "wall": "WL04",
+   "axis": "z",
+   "wall_x0": 39.308,
+   "wall_x1": 39.725,
+   "wall_centre_x": 39.517,
+   "start": 24.225,
+   "end": 28.225,
+   "width_ft": 4.0,
+   "width": "4'-0\"",
+   "sheet_pt": [
+    1814.62,
+    797.86,
+    1822.12,
+    869.86
+   ],
+   "sashes": "two sashes (mullion at z 26.14 .. 26.31)"
+  },
+  {
+   "id": "WN10",
+   "name": "(E) bath south window symbol (leftover)",
+   "wall": "WL22",
+   "axis": "x",
+   "wall_z0": 28.475,
+   "wall_z1": 28.892,
+   "wall_centre_z": 28.683,
+   "start": 11.142,
+   "end": 14.142,
+   "width_ft": 3.0,
+   "width": "3'-0\"",
+   "sheet_pt": [
+    1307.62,
+    874.36,
+    1361.62,
+    881.86
+   ],
+   "note": "left over from A1.1, where this wall was the exterior front wall. On SKA002 the office is behind it and the symbol runs 0.25 ft into the office / foyer wall. A sheet inconsistency, not a real opening"
+  }
+ ],
+ "skylights": [
+  {
+   "id": "SK1",
+   "name": "(N) SKYLIGHT, living room",
+   "room": "R12",
+   "x0": 34.644,
+   "x1": 36.478,
+   "z0": 6.767,
+   "z1": 10.6,
+   "sheet_pt": [
+    1730.67,
+    483.61,
+    1763.67,
+    552.61
+   ],
+   "width_x_ft": 1.834,
+   "depth_z_ft": 3.833,
+   "width_x": "1'-10\"",
+   "depth_z": "3'-10\"",
+   "centre_xz": [
+    35.561,
+    8.684
+   ]
+  },
+  {
+   "id": "SK2",
+   "name": "(N) SKYLIGHT, kitchen (between the island and the east counter)",
+   "room": "R12",
+   "x0": 34.644,
+   "x1": 36.478,
+   "z0": 21.058,
+   "z1": 24.892,
+   "sheet_pt": [
+    1730.67,
+    740.86,
+    1763.67,
+    809.86
+   ],
+   "width_x_ft": 1.834,
+   "depth_z_ft": 3.834,
+   "width_x": "1'-10\"",
+   "depth_z": "3'-10\"",
+   "centre_xz": [
+    35.561,
+    22.975
+   ]
+  },
+  {
+   "id": "SK3",
+   "name": "(N) SKYLIGHT, foyer north",
+   "room": "R18",
+   "x0": 16.793,
+   "x1": 19.293,
+   "z0": 33.316,
+   "z1": 35.149,
+   "sheet_pt": [
+    1409.35,
+    961.5,
+    1454.35,
+    994.5
+   ],
+   "width_x_ft": 2.5,
+   "depth_z_ft": 1.833,
+   "width_x": "2'-6\"",
+   "depth_z": "1'-10\"",
+   "centre_xz": [
+    18.043,
+    34.233
+   ]
+  },
+  {
+   "id": "SK4",
+   "name": "(N) SKYLIGHT, foyer south",
+   "room": "R18",
+   "x0": 16.793,
+   "x1": 19.293,
+   "z0": 41.149,
+   "z1": 42.983,
+   "sheet_pt": [
+    1409.35,
+    1102.5,
+    1454.35,
+    1135.5
+   ],
+   "width_x_ft": 2.5,
+   "depth_z_ft": 1.834,
+   "width_x": "2'-6\"",
+   "depth_z": "1'-10\"",
+   "centre_xz": [
+    18.043,
+    42.066
+   ]
+  }
+ ],
+ "fixtures": [
+  {
+   "id": "FX01",
+   "name": "primary bath shower",
+   "room": "R04",
+   "x0": 0.225,
+   "x1": 5.225,
+   "z0": 21.318,
+   "z1": 24.318,
+   "sheet_pt": [
+    1111.12,
+    745.54,
+    1201.12,
+    799.54
+   ],
+   "width_x_ft": 5.0,
+   "depth_z_ft": 3.0,
+   "width_x": "5'-0\"",
+   "depth_z": "3'-0\"",
+   "note": "north-west corner; drain at x 2.73, z 22.82"
+  },
+  {
+   "id": "FX02",
+   "name": "primary bath toilet",
+   "room": "R04",
+   "x0": 0.833,
+   "x1": 2.12,
+   "z0": 26.142,
+   "z1": 28.471,
+   "sheet_pt": [
+    1122.07,
+    832.37,
+    1145.23,
+    874.28
+   ],
+   "width_x_ft": 1.287,
+   "depth_z_ft": 2.329,
+   "width_x": "1'-3 7/16\"",
+   "depth_z": "2'-3 15/16\"",
+   "note": "tank against the south wall; centre line x 1.477"
+  },
+  {
+   "id": "FX03",
+   "name": "primary bath double vanity",
+   "room": "R04",
+   "x0": 3.225,
+   "x1": 9.725,
+   "z0": 26.725,
+   "z1": 28.475,
+   "sheet_pt": [
+    1165.12,
+    842.86,
+    1282.12,
+    874.36
+   ],
+   "width_x_ft": 6.5,
+   "depth_z_ft": 1.75,
+   "width_x": "6'-6\"",
+   "depth_z": "1'-9\"",
+   "basins_x": [
+    [
+     3.804,
+     5.313
+    ],
+    [
+     7.637,
+     9.147
+    ]
+   ]
+  },
+  {
+   "id": "FX04",
+   "name": "(E) bath vanity",
+   "room": "R05",
+   "x0": 10.142,
+   "x1": 11.975,
+   "z0": 21.308,
+   "z1": 23.225,
+   "sheet_pt": [
+    1289.62,
+    745.36,
+    1322.62,
+    779.86
+   ],
+   "width_x_ft": 1.833,
+   "depth_z_ft": 1.917,
+   "width_x": "1'-10\"",
+   "depth_z": "1'-11\"",
+   "basin_x": [
+    10.564,
+    11.745
+   ]
+  },
+  {
+   "id": "FX05",
+   "name": "(E) bath toilet",
+   "room": "R05",
+   "x0": 10.151,
+   "x1": 12.459,
+   "z0": 23.831,
+   "z1": 25.118,
+   "sheet_pt": [
+    1289.78,
+    790.77,
+    1331.34,
+    813.93
+   ],
+   "width_x_ft": 2.308,
+   "depth_z_ft": 1.287,
+   "width_x": "2'-3 11/16\"",
+   "depth_z": "1'-3 7/16\"",
+   "note": "tank against the west wall; centre line z 24.475"
+  },
+  {
+   "id": "FX06",
+   "name": "(E) bath tub",
+   "room": "R05",
+   "x0": 10.142,
+   "x1": 15.142,
+   "z0": 25.725,
+   "z1": 28.475,
+   "sheet_pt": [
+    1289.62,
+    824.86,
+    1379.62,
+    874.36
+   ],
+   "width_x_ft": 5.0,
+   "depth_z_ft": 2.75,
+   "width_x": "5'-0\"",
+   "depth_z": "2'-9\"",
+   "note": "wall to wall; basin oval x 10.475 .. 14.809, z 26.058 .. 28.142"
+  },
+  {
+   "id": "FX07",
+   "name": "front bath shower",
+   "room": "R14",
+   "x0": 0.225,
+   "x1": 3.225,
+   "z0": 37.308,
+   "z1": 42.308,
+   "sheet_pt": [
+    1111.12,
+    1033.36,
+    1165.12,
+    1123.36
+   ],
+   "width_x_ft": 3.0,
+   "depth_z_ft": 5.0,
+   "width_x": "3'-0\"",
+   "depth_z": "5'-0\""
+  },
+  {
+   "id": "FX08",
+   "name": "front bath toilet",
+   "room": "R14",
+   "x0": 3.831,
+   "x1": 5.117,
+   "z0": 37.312,
+   "z1": 39.641,
+   "sheet_pt": [
+    1176.02,
+    1033.43,
+    1199.18,
+    1075.35
+   ],
+   "width_x_ft": 1.286,
+   "depth_z_ft": 2.329,
+   "width_x": "1'-3 7/16\"",
+   "depth_z": "2'-3 15/16\"",
+   "note": "tank against the north wall; centre line x 4.474"
+  },
+  {
+   "id": "FX09",
+   "name": "front bath vanity",
+   "room": "R14",
+   "x0": 5.725,
+   "x1": 8.475,
+   "z0": 37.308,
+   "z1": 39.058,
+   "sheet_pt": [
+    1210.12,
+    1033.36,
+    1259.62,
+    1064.86
+   ],
+   "width_x_ft": 2.75,
+   "depth_z_ft": 1.75,
+   "width_x": "2'-9\"",
+   "depth_z": "1'-9\"",
+   "basin_x": [
+    6.348,
+    7.857
+   ]
+  },
+  {
+   "id": "FX10",
+   "name": "stacked W / D",
+   "room": "R21",
+   "x0": 22.147,
+   "x1": 24.397,
+   "z0": 28.081,
+   "z1": 30.817,
+   "sheet_pt": [
+    1505.72,
+    867.26,
+    1546.22,
+    916.51
+   ],
+   "width_x_ft": 2.25,
+   "depth_z_ft": 2.736,
+   "width_x": "2'-3\"",
+   "depth_z": "2'-8 13/16\"",
+   "note": "in the (N) W / D closet beside the refrigerator"
+  },
+  {
+   "id": "FX11",
+   "name": "water heater (circle, 1'-8\" diameter)",
+   "room": "R20",
+   "x0": 37.189,
+   "x1": 38.856,
+   "z0": 32.079,
+   "z1": 33.746,
+   "sheet_pt": [
+    1776.47,
+    939.24,
+    1806.47,
+    969.24
+   ],
+   "width_x_ft": 1.667,
+   "depth_z_ft": 1.667,
+   "width_x": "1'-8\"",
+   "depth_z": "1'-8\"",
+   "centre_xz": [
+    38.022,
+    32.913
+   ]
+  },
+  {
+   "id": "FX12",
+   "name": "(E) 30X22 attic access (dashed, in the ceiling)",
+   "room": "R03",
+   "x0": 8.642,
+   "x1": 10.475,
+   "z0": 13.379,
+   "z1": 15.879,
+   "sheet_pt": [
+    1262.62,
+    602.64,
+    1295.62,
+    647.64
+   ],
+   "width_x_ft": 1.833,
+   "depth_z_ft": 2.5,
+   "width_x": "1'-10\"",
+   "depth_z": "2'-6\""
+  },
+  {
+   "id": "FX13",
+   "name": "(E) FAU unit (dashed)",
+   "room": "R10",
+   "x0": 17.058,
+   "x1": 18.475,
+   "z0": 15.309,
+   "z1": 17.059,
+   "sheet_pt": [
+    1414.12,
+    637.37,
+    1439.62,
+    668.87
+   ],
+   "width_x_ft": 1.417,
+   "depth_z_ft": 1.75,
+   "width_x": "1'-5\"",
+   "depth_z": "1'-9\""
+  }
+ ],
+ "kitchen": [
+  {
+   "id": "KT01",
+   "name": "island",
+   "room": "R12",
+   "x0": 26.808,
+   "x1": 33.808,
+   "z0": 21.058,
+   "z1": 25.058,
+   "sheet_pt": [
+    1589.62,
+    740.86,
+    1715.62,
+    812.86
+   ],
+   "width_x_ft": 7.0,
+   "depth_z_ft": 4.0,
+   "width_x": "7'-0\"",
+   "depth_z": "4'-0\"",
+   "note": "printed 7'-0\" x 4'-0\""
+  },
+  {
+   "id": "KT02",
+   "name": "east counter run",
+   "room": "R12",
+   "x0": 37.308,
+   "x1": 39.308,
+   "z0": 21.058,
+   "z1": 31.058,
+   "sheet_pt": [
+    1778.62,
+    740.86,
+    1814.62,
+    920.86
+   ],
+   "width_x_ft": 2.0,
+   "depth_z_ft": 10.0,
+   "width_x": "2'-0\"",
+   "depth_z": "10'-0\"",
+   "note": "2'-0\" deep, against the east wall, from z 21.06 to the kitchen / garage wall"
+  },
+  {
+   "id": "KT03",
+   "name": "south counter run",
+   "room": "R12",
+   "x0": 25.142,
+   "x1": 39.308,
+   "z0": 29.058,
+   "z1": 31.058,
+   "sheet_pt": [
+    1559.62,
+    884.86,
+    1814.62,
+    920.86
+   ],
+   "width_x_ft": 14.166,
+   "depth_z_ft": 2.0,
+   "width_x": "14'-2\"",
+   "depth_z": "2'-0\"",
+   "note": "2'-0\" deep, against the kitchen / garage wall, from the W / D closet to the east wall"
+  },
+  {
+   "id": "KT04",
+   "name": "DW (dashed)",
+   "room": "R12",
+   "x0": 37.48,
+   "x1": 39.168,
+   "z0": 23.071,
+   "z1": 25.032,
+   "sheet_pt": [
+    1781.71,
+    777.08,
+    1812.09,
+    812.39
+   ],
+   "width_x_ft": 1.688,
+   "depth_z_ft": 1.961,
+   "width_x": "1'-8 1/4\"",
+   "depth_z": "1'-11 9/16\""
+  },
+  {
+   "id": "KT05",
+   "name": "sink",
+   "room": "R12",
+   "x0": 37.48,
+   "x1": 38.98,
+   "z0": 25.225,
+   "z1": 27.225,
+   "sheet_pt": [
+    1781.71,
+    815.86,
+    1808.71,
+    851.86
+   ],
+   "width_x_ft": 1.5,
+   "depth_z_ft": 2.0,
+   "width_x": "1'-6\"",
+   "depth_z": "2'-0\"",
+   "note": "centred on the kitchen window (z 26.225)"
+  },
+  {
+   "id": "KT06",
+   "name": "range / cooktop",
+   "room": "R12",
+   "x0": 30.32,
+   "x1": 33.308,
+   "z0": 28.821,
+   "z1": 31.058,
+   "sheet_pt": [
+    1652.83,
+    880.58,
+    1706.62,
+    920.86
+   ],
+   "width_x_ft": 2.988,
+   "depth_z_ft": 2.237,
+   "width_x": "2'-11 7/8\"",
+   "depth_z": "2'-2 7/8\""
+  },
+  {
+   "id": "KT07",
+   "name": "REF.",
+   "room": "R12",
+   "x0": 25.272,
+   "x1": 28.272,
+   "z0": 28.892,
+   "z1": 31.058,
+   "sheet_pt": [
+    1561.97,
+    881.86,
+    1615.97,
+    920.86
+   ],
+   "width_x_ft": 3.0,
+   "depth_z_ft": 2.166,
+   "width_x": "3'-0\"",
+   "depth_z": "2'-2\"",
+   "note": "first thing east of the W / D closet"
+  },
+  {
+   "id": "KT08",
+   "name": "(N) W / D closet, outside of its walls",
+   "room": "R12",
+   "x0": 21.308,
+   "x1": 25.142,
+   "z0": 27.642,
+   "z1": 31.058,
+   "sheet_pt": [
+    1490.62,
+    859.36,
+    1559.62,
+    920.86
+   ],
+   "width_x_ft": 3.834,
+   "depth_z_ft": 3.416,
+   "width_x": "3'-10\"",
+   "depth_z": "3'-5\"",
+   "note": "printed 3'-10\" x 3'-5\""
+  }
+ ],
+ "garage": {
+  "interior": {
+   "x0": 21.725,
+   "x1": 39.308,
+   "z0": 31.475,
+   "z1": 52.392,
+   "sheet_pt": [
+    1498.12,
+    928.36,
+    1814.62,
+    1304.86
+   ]
+  },
+  "clear_width": "17'-7\" (A1.1; not dimensioned on SKA002)",
+  "clear_depth": "20'-11\" (printed)",
+  "outer": {
+   "x0": 21.308,
+   "x1": 39.725,
+   "z0": 31.058,
+   "z1": 52.808,
+   "sheet_pt": [
+    1490.62,
+    920.86,
+    1822.12,
+    1312.36
+   ]
+  },
+  "vehicle_door": "DR19",
+  "vehicle_door_opening_ft": 15.0,
+  "vehicle_door_leaf_ft": 14.833,
+  "side_door": "DR18",
+  "house_door": "DR17",
+  "floor_level": "-0'-11\" (A1.3: \"G.F.F.\" = garage finished floor, 11 in below the main level finished floor)"
+ },
+ "porch": {
+  "floor": {
+   "x0": 14.308,
+   "x1": 21.308,
+   "z0": 47.808,
+   "z1": 55.142,
+   "sheet_pt": [
+    1364.62,
+    1222.36,
+    1490.62,
+    1354.36
+   ]
+  },
+  "width": "7'-0\"",
+  "depth": "5'-0\" + 2'-4\" = 7'-4\"",
+  "slab_front_edge_z": 55.142,
+  "slab_x": [
+   12.892,
+   22.725
+  ],
+  "west_pier": {
+   "x0": 12.892,
+   "x1": 14.308,
+   "z0": 53.725,
+   "z1": 55.142,
+   "sheet_pt": [
+    1339.12,
+    1328.86,
+    1364.62,
+    1354.36
+   ]
+  },
+  "east_pier": {
+   "x0": 21.308,
+   "x1": 22.725,
+   "z0": 52.808,
+   "z1": 55.142,
+   "sheet_pt": [
+    1490.62,
+    1312.36,
+    1516.12,
+    1354.36
+   ]
+  },
+  "post_marks_xz": [
+   [
+    13.6,
+    54.433
+   ],
+   [
+    22.017,
+    53.975
+   ]
+  ],
+  "note": "piers are 1'-5\" wide (printed); the front edge is 1'-0\" beyond Bedroom #2's front wall and 2'-4\" beyond the garage front (printed)"
+ },
+ "landings": [
+  {
+   "id": "LD1",
+   "name": "(N ) LANDING, primary bedroom",
+   "x0": 2.106,
+   "x1": 9.106,
+   "z0": -3.192,
+   "z1": -0.192,
+   "sheet_pt": [
+    1144.97,
+    304.36,
+    1270.97,
+    358.36
+   ],
+   "width_x_ft": 7.0,
+   "depth_z_ft": 3.0,
+   "width_x": "7'-0\"",
+   "depth_z": "3'-0\"",
+   "note": "outside DR01; 4 in wider than the door on each side"
+  },
+  {
+   "id": "LD2",
+   "name": "(N ) LANDING, living room",
+   "x0": 25.195,
+   "x1": 38.195,
+   "z0": -3.192,
+   "z1": -0.192,
+   "sheet_pt": [
+    1560.58,
+    304.36,
+    1794.58,
+    358.36
+   ],
+   "width_x_ft": 13.0,
+   "depth_z_ft": 3.0,
+   "width_x": "13'-0\"",
+   "depth_z": "3'-0\"",
+   "note": "outside DR02; 4 in wider than the door on each side"
+  }
+ ],
+ "steps": [
+  {
+   "id": "ST1",
+   "name": "step on the garage side of the foyer / garage door",
+   "x0": 21.725,
+   "x1": 22.725,
+   "z0": 35.983,
+   "z1": 39.649,
+   "sheet_pt": [
+    1498.12,
+    1009.5,
+    1516.12,
+    1075.5
+   ],
+   "width_x_ft": 1.0,
+   "depth_z_ft": 3.666,
+   "width_x": "1'-0\"",
+   "depth_z": "3'-8\""
+  }
+ ],
+ "furniture": [
+  {
+   "id": "FN01",
+   "name": "primary bedroom bed (headboard on the west wall)",
+   "room": "R01",
+   "x0": 0.564,
+   "x1": 7.298,
+   "z0": 2.954,
+   "z1": 9.746,
+   "sheet_pt": [
+    1117.23,
+    414.98,
+    1238.43,
+    537.23
+   ],
+   "width_x_ft": 6.734,
+   "depth_z_ft": 6.792,
+   "width_x": "6'-8 13/16\"",
+   "depth_z": "6'-9 1/2\""
+  },
+  {
+   "id": "FN02",
+   "name": "primary bedroom nightstand, north",
+   "room": "R01",
+   "x0": 0.225,
+   "x1": 1.892,
+   "z0": 0.812,
+   "z1": 2.812,
+   "sheet_pt": [
+    1111.12,
+    376.43,
+    1141.12,
+    412.43
+   ],
+   "width_x_ft": 1.667,
+   "depth_z_ft": 2.0,
+   "width_x": "1'-8\"",
+   "depth_z": "2'-0\""
+  },
+  {
+   "id": "FN03",
+   "name": "primary bedroom nightstand, south",
+   "room": "R01",
+   "x0": 0.225,
+   "x1": 1.892,
+   "z0": 9.887,
+   "z1": 11.887,
+   "sheet_pt": [
+    1111.12,
+    539.78,
+    1141.12,
+    575.78
+   ],
+   "width_x_ft": 1.667,
+   "depth_z_ft": 2.0,
+   "width_x": "1'-8\"",
+   "depth_z": "2'-0\""
+  },
+  {
+   "id": "FN04",
+   "name": "Bedroom #1 bed (headboard on the east wall)",
+   "room": "R06",
+   "x0": 14.975,
+   "x1": 22.225,
+   "z0": 3.6,
+   "z1": 9.1,
+   "sheet_pt": [
+    1376.62,
+    426.61,
+    1507.12,
+    525.61
+   ],
+   "width_x_ft": 7.25,
+   "depth_z_ft": 5.5,
+   "width_x": "7'-3\"",
+   "depth_z": "5'-6\""
+  },
+  {
+   "id": "FN05",
+   "name": "Bedroom #2 bed (headboard on the west wall)",
+   "room": "R17",
+   "x0": 0.225,
+   "x1": 7.475,
+   "z0": 45.475,
+   "z1": 50.975,
+   "sheet_pt": [
+    1111.12,
+    1180.36,
+    1241.62,
+    1279.36
+   ],
+   "width_x_ft": 7.25,
+   "depth_z_ft": 5.5,
+   "width_x": "7'-3\"",
+   "depth_z": "5'-6\""
+  },
+  {
+   "id": "FN06",
+   "name": "office desk",
+   "room": "R13",
+   "x0": 3.957,
+   "x1": 9.957,
+   "z0": 32.007,
+   "z1": 35.007,
+   "sheet_pt": [
+    1178.3,
+    937.93,
+    1286.3,
+    991.93
+   ],
+   "width_x_ft": 6.0,
+   "depth_z_ft": 3.0,
+   "width_x": "6'-0\"",
+   "depth_z": "3'-0\""
+  },
+  {
+   "id": "FN07",
+   "name": "dining table (four chairs, two on each long side)",
+   "room": "R12",
+   "x0": 28.642,
+   "x1": 31.975,
+   "z0": 15.058,
+   "z1": 21.058,
+   "sheet_pt": [
+    1622.62,
+    632.86,
+    1682.62,
+    740.86
+   ],
+   "width_x_ft": 3.333,
+   "depth_z_ft": 6.0,
+   "width_x": "3'-4\"",
+   "depth_z": "6'-0\"",
+   "note": "touches the island's north edge"
+  },
+  {
+   "id": "FN08",
+   "name": "sofa against the east wall",
+   "room": "R12",
+   "x0": 35.934,
+   "x1": 38.721,
+   "z0": 4.955,
+   "z1": 11.622,
+   "sheet_pt": [
+    1753.88,
+    451.0,
+    1804.04,
+    571.0
+   ],
+   "width_x_ft": 2.787,
+   "depth_z_ft": 6.667,
+   "width_x": "2'-9 7/16\"",
+   "depth_z": "6'-8\""
+  },
+  {
+   "id": "FN09",
+   "name": "TV on the living room west wall",
+   "room": "R12",
+   "x0": 22.683,
+   "x1": 23.042,
+   "z0": 5.556,
+   "z1": 10.764,
+   "sheet_pt": [
+    1515.37,
+    461.81,
+    1521.83,
+    555.56
+   ],
+   "width_x_ft": 0.359,
+   "depth_z_ft": 5.208,
+   "width_x": "0'-4 5/16\"",
+   "depth_z": "5'-2 1/2\""
+  },
+  {
+   "id": "FN10",
+   "name": "console in the foyer (east wall, by the front door)",
+   "room": "R18",
+   "x0": 20.142,
+   "x1": 21.308,
+   "z0": 43.392,
+   "z1": 47.392,
+   "sheet_pt": [
+    1469.62,
+    1142.86,
+    1490.62,
+    1214.86
+   ],
+   "width_x_ft": 1.166,
+   "depth_z_ft": 4.0,
+   "width_x": "1'-2\"",
+   "depth_z": "4'-0\""
+  },
+  {
+   "id": "FN11",
+   "name": "W.I.C hanging / shelf line (U shape along north, west and south walls)",
+   "room": "R02",
+   "x0": 1.313,
+   "x1": 6.143,
+   "z0": 13.816,
+   "z1": 19.967,
+   "sheet_pt": [
+    1130.7,
+    610.5,
+    1217.64,
+    721.21
+   ],
+   "width_x_ft": 4.83,
+   "depth_z_ft": 6.151,
+   "width_x": "4'-9 15/16\"",
+   "depth_z": "6'-1 13/16\""
+  }
+ ],
+ "addition": {
+  "outline_xz": [
+   [
+    -0.192,
+    28.892
+   ],
+   [
+    14.308,
+    28.892
+   ],
+   [
+    14.308,
+    31.058
+   ],
+   [
+    21.308,
+    31.058
+   ],
+   [
+    21.308,
+    47.808
+   ],
+   [
+    14.308,
+    47.808
+   ],
+   [
+    14.308,
+    54.142
+   ],
+   [
+    -0.192,
+    54.142
+   ]
+  ],
+  "area_sqft": 483.37,
+  "printed": "ADDITION: 483 S.F.",
+  "note": "red dashed outline, outer wall faces; its area by scaling agrees with the printed 483 S.F."
+ },
+ "transform_check": "see transform_check.json"
+}

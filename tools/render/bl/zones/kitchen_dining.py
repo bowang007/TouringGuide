@@ -10,7 +10,8 @@ gallery rails on whitewashed brick; honed grey-veined marble worktops and a scal
 with a brass pot filler behind the gas cooktop; a cream plaster hood with a dentil band; a fireclay
 apron sink and brass bridge faucet under the white grid-glazed window W08 with a white casing, brass
 gooseneck sconces and cafe curtains; a white-oak drawer island with a thick quartzite top under two
-brass-and-glass bell pendants; a madder-red Persian runner in the work aisle; the dining table in
+brass-and-glass bell pendants (7'-0" x 4'-0" at the architect's place since the eighth round, the counters
+2'-0" deep); a madder-red Persian runner in the work aisle; the dining table in
 line with the island at its west end (the shared-bathroom / hall side; owner's correction of 2026-11-20: it
 stood north of the island before and crowded the family room) in warm oak with six striped-linen
 oak chairs and a brass lantern; the indoor olive tree by W07 in a cream crock. The floor between
@@ -24,6 +25,7 @@ import time
 import bpy
 
 from .. import lighting
+from .. import revision_spec as RS
 from . import kitchen_dining_console as console
 from . import kitchen_dining_decor as decor
 from . import kitchen_dining_dining as dining
@@ -34,21 +36,54 @@ from . import kitchen_dining_olive as olive
 from . import kitchen_dining_window as window
 from .kitchen_dining_geo import ZONE, Geo
 
-# Recessed 4in cans (x, z): tidy grid aligned to the room, clear of the skylight shaft
-# (x 29.24-33.56, z 25.39-28.71), the tall units (x<28.16, z>29.21) and the pendant line. The dining
-# table at the island's west end (concept x 22.26-28.26, z 22.1-24.9) is lit by its lantern: no can over
-# it; two cans light the walkway between its south chairs and the pantry wall.
+# Recessed 4in cans (x, z): tidy grid aligned to the room, clear of the tall units (x<28.16, z>29.3) and the
+# pendant line. The dining table at the island's west end (concept x 21.47-27.47, z 21.94-24.69) is lit by
+# its lantern: no can over it (cans are loose: one over the table would join its cluster in bl/warp.py); two
+# cans light the walkway between its south chairs and the pantry wall.
+# Eighth round: the island is 7'-0" x 4'-0" on the sheet's place, so the east aisle is 3'-6" wide (built
+# x 33.808-37.308) and its can stands on the aisle's centre line. The aisle's second can (36.4, 26.4) is gone
+# from the list: the skylight revision has removed it since the first round (it stood in the shaft over the
+# sink run), and beside the 1'-10" skylight of this round it would stand on the shaft's west edge. The north
+# can over the sink run (39.45, 24.1) was removed by that revision too; beside the narrower well (built
+# x 35.73-37.80, z 23.56-27.64) it would stand 4in off the well's east edge, so it moved 0.94 ft north, as far
+# beyond the well's north end (0.67 ft) as its twin stands beyond the south end (0.64 ft).
+# v7 final: the well moved east over the sink (revision_spec.KITCHEN_SKY; its lining is x 36.56-38.63,
+# z 23.56-27.64 on the built plan), over the two sink-run cans' column (built x 38.19; they stood 0.67 / 0.64 ft
+# beyond the lining's ends). The cans of the east side now stand on ONE line through the living room, the open
+# strip and the kitchen: the living room's east column (bl/zones/living.SOFA_CANS, x 37.980 on the built plan,
+# 1.33 ft off the east wall's face), at the living room's three rows, on the open strip's row (below) and one
+# beyond each end of the kitchen's well, the same distance from it: the south one on the south counter's row
+# (z 29.218 built), the north one on that row's mirror image about the well's centre (z 21.982), each 1.58 ft from
+# the lining (1.41 ft from the can's trim). The east aisle's can moved 0.37 ft north onto the north one's row (it
+# stood at 22.6 = z 22.347 built). The south-east counter's can (38.6, 29.55) and the sink run's south can
+# (39.45, 28.6) became the one south can: they would stand 0.7 ft apart. Along the column the cans are 4.55,
+# 4.55, 4.17, 4.58 ft apart, then 7.24 ft across the well. The line passes 0.38 ft east of the well's centre line
+# (the well is 1.83 ft wide; the living room's column was laid out about the living room's well).
+_AISLE_E_X = (kitchen.ISLAND[1] + kitchen.CT_FRONT_E) / 2
+_EAST_COL_X = kitchen._px(RS.LIVING_SKY[0] + RS.LIVING_SKY[1] - kitchen.R.X_REAR(34.2))   # v7 final: living.SOFA_CANS' x
+#                                                                 (the third column's mirror image about the living
+#                                                                 room's well), carried back to the concept plan: 39.231
+_ROW_S_Z = 29.55                                                 # the south counter's row
+_ROW_N_Z = kitchen._pz(RS.KITCHEN_SKY[2] + RS.KITCHEN_SKY[3] - kitchen.R.Z_RIGHT(_ROW_S_Z))   # v7 final: its mirror image
+#                                                                 about the well's centre z 25.600, concept 22.231
 CANS_KITCHEN = [
     (24.14, 27.5), (26.89, 27.5),          # walkway hall -> kitchen: centred on the fridge and on the ovens
-    (36.4, 22.6), (36.4, 26.4),            # east aisle (island <-> sink run)
-    (30.0, 29.55), (32.8, 29.55),          # south counter, aligned with the pendant ends
-    (38.6, 29.55),                         # south-east counter / shelves
-    (39.45, 24.1), (39.45, 28.6),          # over the sink run, flanking the window centre
+    (_AISLE_E_X, _ROW_N_Z),                # east aisle (island <-> sink run), north of the skylight
+    (30.0, _ROW_S_Z), (32.8, _ROW_S_Z),    # south counter
+    (_EAST_COL_X, _ROW_N_Z), (_EAST_COL_X, _ROW_S_Z),   # v7 final: the east column, one beyond each end of the well
 ]
 CANS_DINING = [(26.2, 17.6), (30.2, 17.6)]   # x matches the living zone's can columns
 # Open strip without a dining set: the living zone's can columns (x 26.2 / 30.2 / 34.2) carried one
 # row south, plus a can on the living zone's wall-wash column (x 38.45) that accents the olive tree.
-CANS_OPEN = [(26.2, 17.6), (30.2, 17.6), (34.2, 17.6), (38.45, 19.8)]
+# (the olive's can stands 0.92 ft north of the planter's centre, as before the tree moved with the run's end)
+# v7 repair: the tree moved to the pier north of W07 (kitchen_dining_olive.CENTER), under the living zone's own
+# sofa-side can; this can stays where it has been, over the strip in front of W07 (0.92 ft north of the centre of
+# the planter's old place 0.26 ft off the run's end).
+# v7 final: that can is the fourth of this row now, on the living room's east column (_EAST_COL_X): the living
+# room's 4 x 3 field of cans runs on one row south as 4 x 4. It stood alone at (37.230, 19.074) on the built plan,
+# 0.75 ft west of the column the repair moved and 1.67 ft south of this row; at (37.980, 17.404) it is 1.34 ft
+# south of W07's north jamb and 1.33 ft off the east wall, over the strip in front of that window.
+CANS_OPEN = [(26.2, 17.6), (30.2, 17.6), (34.2, 17.6), (_EAST_COL_X, 17.6)]
 
 CAMERAS = ('K0', 'D0', 'H2', 'L2', 'H3')
 
@@ -92,7 +127,7 @@ def _console_clearances(ctx):
         return math.hypot(dx, dz)
     out = {'sideboard_xz': [round(v, 2) for v in (x0, x1, z0, z1)]}
     out['stool3_to_sideboard_ft'] = round(rect_dist(33.4, 21.7) - 0.70, 2)
-    out['sideboard_to_east_run_end_ft'] = round(21.84 - z1, 2)
+    out['sideboard_to_east_run_end_ft'] = round(kitchen.RUN_E0 - z1, 2)
     out['sideboard_to_living_ledge_ft'] = round(z0 - 16.9, 2)
     out['east_aisle_open_width_ft'] = round(x0 - 34.4, 2)
     out['camera_to_sideboard_ft'] = {nid: round(rect_dist(ctx.nodes[nid]['p'][0], ctx.nodes[nid]['p'][2]), 2)
@@ -106,9 +141,9 @@ def _olive_clearances(ctx):
     cx, cz = olive.CENTER
     r = (x1 - x0) / 2
     out = {'planter_xz': [round(v, 2) for v in (x0, x1, z0, z1)]}
-    out['planter_to_east_run_end_ft'] = round(21.84 - z1, 2)
+    out['planter_to_east_run_end_ft'] = round(kitchen.RUN_E0 - z1, 2)
     out['planter_to_living_ledge_end_ft'] = round(z0 - 16.4, 2)
-    out['planter_west_of_counter_front_ft'] = round(38.405 - x0, 2)   # >0: pokes into the aisle line
+    out['planter_west_of_counter_front_ft'] = round(kitchen.CT_FRONT_E - x0, 2)   # >0: pokes into the aisle line
     out['camera_to_planter_ft'] = {nid: round(math.hypot(ctx.nodes[nid]['p'][0] - cx, ctx.nodes[nid]['p'][2] - cz) - r, 2)
                                    for nid in CAMERAS if nid in ctx.nodes}
     return out
@@ -137,11 +172,16 @@ def _clearances(ctx):
     return out
 
 
-# Island pendants (x, z) over the island centre line, glass rim 3'-2" above the 36in worktop.
-PENDANTS = ((30.0, 23.5), (32.8, 23.5))
+# Island pendants (x, z) over the island's centre line, at the quarter points of its 7'-0" (1'-9" either
+# side of the centre on the built plan), glass rim 3'-2" above the 36in worktop.
+_ISL_C = ((kitchen.ISLAND[0] + kitchen.ISLAND[1]) / 2, (kitchen.ISLAND[2] + kitchen.ISLAND[3]) / 2)
+PENDANT_DX = kitchen._px(kitchen.PLAN_ISLAND[0] + 0.75 * kitchen.PLAN_ISLAND_L) - _ISL_C[0]      # concept feet
+PENDANTS = ((_ISL_C[0] - PENDANT_DX, _ISL_C[1]), (_ISL_C[0] + PENDANT_DX, _ISL_C[1]))
 PENDANT_BOTTOM = 6.15
-# Persian runner in the work aisle between the island and the cooktop run (8 ft x 2'-6").
-RUNNER = (28.5, 36.5, 25.85, 28.35)
+# Persian runner in the work aisle between the island and the cooktop run (8 ft x 2'-6"), on the centre line
+# of the 4'-0" aisle.
+_AISLE_S_Z = (kitchen.ISLAND[3] + kitchen.CT_FRONT_S) / 2
+RUNNER = (28.5, 36.5, _AISLE_S_Z - 1.25, _AISLE_S_Z + 1.25)
 
 
 def _pendants_and_runner(ctx, g):

@@ -9,9 +9,10 @@ tools/render/data/scene.json (the full scene), measurements.json and scene_class
 reads or writes index.html any more. Architecture (walls, floors, ceilings, openings, roof, facade) is
 mapped corner by corner, so rooms take their new sizes; movable things (furniture, decor, lights,
 landscape) are translated, keeping their size. It always starts from the concept data, so it can be re-run
-after relayout.py changes, and it REPLACES scene.json and measurements.json: everything later tools add
-(owner's changes, new sweeps, the laundry closet) must be re-applied afterwards. The sequence is
-apply_relayout.py, apply_revisions_web.py, extract_scene.py (a check), tools/web/dimension_plan.py,
+after relayout.py changes, and it REPLACES scene.json, measurements.json and scene_classification.json:
+everything later tools add (owner's changes, the sweeps, the laundry closet) must be re-applied afterwards.
+The sequence is apply_relayout.py, apply_revisions_web.py, apply_sweeps.py (after place_sweeps.py when the
+model or a seed stop changed), extract_scene.py (a check), tools/web/dimension_plan.py,
 tools/web/build_site_data.py.
 """
 import argparse
@@ -212,8 +213,12 @@ def main():
     scene['extent'] = [round(R.X_REAR(ex[0]), 6), round(R.Z_LEFT(ex[1]), 6)]
     scene.setdefault('layout_revision', {})['architect_plan'] = {
         'source': 'sizes/sizes.pdf, sheet SKA002 (N) FLOOR PLAN, Option A (HW Architecture, Nov 13 2026)',
-        'method': 'tools/render/relayout.py: old wall faces mapped to the plan\'s clear dimensions',
-        'outer_width_ft': 39.87,
+        'method': 'tools/render/relayout.py: old wall faces mapped onto the sheet\'s wall faces; the model\'s frame '
+                  'is the sheet\'s, every wall 5 in thick',
+        'outer_width_ft': round(R.OUTER_SIZE[0], 4),          # 39'-11"
+        'outer_depth_ft': round(R.OUTER_SIZE[1], 4),          # 54'-4" (Bedroom 3 side)
+        'outer_depth_garage_side_ft': round(R.OUTER_SIZE[2], 4),   # 53'-0"
+        'wall_thickness_ft': round(R.WALL, 4),
     }
     meas = json.load(open(os.path.join(DATA, 'concept', 'measurements.json')))
     remap_measurements(meas)

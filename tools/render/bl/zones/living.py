@@ -12,31 +12,40 @@ PLAN FEET. Unlike the zones written on the concept plan, every number here is SC
 everything hangs under one root Empty (ROOT, at the SCENE origin). The warp skips objects named 'TG ...' and objects
 that have a parent, so nothing here is moved or reshaped.
 
-Room as built: west wall face x 22.528 (the Bedroom 2 divider, z 0.225..15.151; the hall opens south of it), east
-wall face x 39.195, rear wall face z 0.225, ceiling 8.0, open to the dining area in the south.
-  rear wall   deck door x 24.454..26.933 (its glass leaf stands open into the room along x 24.45, z 0..2.56),
-              glass x 27.807..32.939 and x 33.551..38.770, y 0.2..7.5
-  east wall   windows z 0.481..3.349 and z 4.096..6.965, sill 2.5, head 7.0; solid from z 6.965 to 17.615
+Room as built (the sheet's frame since the eighth round, tools/render/relayout.py): west wall face x 22.642 (the
+Bedroom 2 divider and the closet block, z 0.225..17.558, WEST_WALL_END_Z; the hall opens south of it; v7 final:
+comment, it said 15.151), east wall face x 39.308, rear wall face z 0.225,
+ceiling 8.0, open to the dining area in the south. Every x below is written from one of the two wall faces
+(WEST_X, EAST_X), so the furniture keeps its place in the room wherever the room stands.
+  rear wall   v7 glazing (eighth round): ONE four-panel sliding glass door, wall opening x 25.528..37.861, head 7.5
+              (revision_spec.LIVING_SLIDER_*); its east centre panel stands 2'-3" open: the way out is
+              x 31.694..33.944. (Until the seventh round: a hinged deck door at x 24.568..27.046 and two fixed lights.)
+  east wall   v7 glazing: ONE window z 0.368..6.368, sill 2.5, head 7.0 (revision_spec.LIVING_EAST_WIN_Z; two windows
+              with a pier at z 3.349..4.096 before); solid from z 6.368 to 16.066
 
 Layout (the sofa / television axis is z 8.05, as on the sheet):
-  sofa        x 35.80..39.05, z 4.40..11.70, back to the east wall, faces west. Its back ends below the sill of the
+  sofa        x 35.91..39.16, z 4.40..11.70, back to the east wall, faces west. Its back ends below the sill of the
               window it stands under, and the pillows on that half are a low lumbar and the throw
-  side tables round, r 0.62, at (38.35, 3.72) and (38.35, 12.38), a lamp on each; the north lamp stands in front of
-              the pier between the two east windows
-  art         canvas z 7.55..11.55, y 3.55..5.95 on the east wall above the sofa, clear of the window (jamb 6.965)
-  rug         round, r 4.6, centre (33.1, 7.45), drawn north of the axis toward the armchair like the sheet's
-  coffee tbl  round, r 1.42 (34 in), centre (33.0, 8.05), top 15 in
-  armchair    barrel chair at (30.4, 3.75), turned between the coffee table and the television; its front stands
-              on the rug's edge
-  television  75 in on the west wall, z 5.308..10.792, y 2.321..5.435, screen face x 22.681
-  console     white oak, 7'-6" x 1'-4 3/4" x 1'-8 1/2", x 22.603..24.003, z 4.30..11.80, on black steel legs
-  tree        money tree, 4.6 ft, in the fluted planter at (23.7, 13.0): on the west wall beside the console's
+  side tables round, r 0.62, at (38.46, 3.72) and (38.46, 12.38). The south one carries a lamp. The north one stands
+              under the east window since that is one 6'-0" unit (v7 glazing; the pier its lamp stood in front of
+              is gone): two books and a low bowl, nothing above the sill
+  art         canvas z 7.00..11.00, y 3.55..5.95 on the east wall above the sofa, between the window's jamb (6.368)
+              and the sofa's south end (v7 repair)
+  rug         round, r 4.6, centre (33.21, 7.45), drawn north of the axis toward the armchair like the sheet's
+  coffee tbl  round, r 1.42 (34 in), centre (33.11, 8.05), top 15 in
+  armchair    barrel chair at (30.16, 3.75), turned between the coffee table and the television; its front stands
+              on the rug's edge. v7 glazing: 0.35 ft further west than in the seventh round, so that it stands 0.33 ft
+              clear of the sliding door's way instead of on its edge
+  television  75 in on the west wall, z 5.308..10.792, y 2.321..5.435, screen face x 22.795
+  console     white oak, 7'-6" x 1'-4 3/4" x 1'-8 1/2", x 22.717..24.117, z 4.30..11.80, on black steel legs
+  tree        money tree, 4.6 ft, in the fluted planter at (23.81, 13.0): on the west wall beside the console's
               south end, its crown 0.8 ft short of the corner where the hall opens
   lights      the 3 x 3 grid of 4 in cans as before (CANS_X / CANS_Z, in line with the dining area's cans) and
               three cans over the sofa side on the old wall-wash column, on the grid's rows (SOFA_CANS): one even
               4 x 3 field; a lamp on each side table
-Kept clear: 7.6 ft of floor between the coffee table and the console for the walk from the dining area to the deck
-door, 4.5 ft between the console and the rug, 2.3 ft between the armchair and the rear glass; the armchair stands
+Kept clear: 7.6 ft of floor between the coffee table and the console for the walk from the dining area to the
+sliding door and its landing (v7 final: comment, it said "the deck door"), 4.5 ft between the console and the rug,
+2.3 ft between the armchair and the rear glass; the armchair stands
 north of every line from a sofa seat to the screen. build() checks these on the built meshes and lists, with the
 tour stops of data/sweeps.json that stand closer than 1.2 ft to a piece of furniture, what does not hold.
 
@@ -46,55 +55,75 @@ living_media (television, console), living_decor (art, planter + tree, vases).
 import json
 import math
 import os
+import sys
 import time
 
 import bpy
 import numpy as np
 
 from .. import lighting
+from .. import revision_spec as RS
 from ..common import DATA_DIR, FT, place
 from . import living_decor as DEC
 from . import living_furniture as F
 from . import living_geo as G
 from . import living_media as M
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import relayout as R  # noqa: E402  (the sheet's wall faces; the shell's openings carried through its maps)
+
 COLL = 'zone_living'
 LIGHTS = 'zone_living_lights'
 ROOT = 'TG living root'
 
-# ---- the room as built (plan feet)
-WEST_X, EAST_X = 22.528, 39.195
-REAR_Z = 0.225
-WEST_WALL_END_Z = 15.151
-EAST_WINDOWS = ((0.481, 3.349), (4.096, 6.965))      # z extents; sill 2.5, head 7.0
-EAST_SILL = 2.5
-REAR_GLASS = ((27.807, 32.939), (33.551, 38.770))    # x extents
-DECK_DOOR = (24.454, 26.933)                         # x extent of the opening
+# ---- the room as built (plan feet): the wall faces are the sheet's, the openings the shell's (concept numbers
+# carried through relayout's maps, like the pieces themselves)
+WEST_X, EAST_X = R.ROOMS['living'][:2]               # 22.642, 39.308
+REAR_Z = R.ZN                                        # 0.225
+WEST_WALL_END_Z = R.Z_BLOCK_S                        # 17.558: the wall runs to the closet block's south face (v7 hall)
+# v7 glazing (eighth round): the rear and east openings are the sheet's (revision_spec, "v7 glazing")
+EAST_WINDOWS = (RS.LIVING_EAST_WIN_Z,)               # z extent of the one 6'-0" unit; sill 2.5, head 7.0
+EAST_SILL = RS.GLAZING_WIN_Y[0]
+REAR_GLASS = (RS.slider_clear(RS.LIVING_SLIDER_X),)  # x extent of the sliding door between its jambs
+DECK_DOOR = RS.living_slider_way()                   # x extent of the way through its open centre panel
+WAY_DEPTH = 3.0                                      # ... kept clear this far into the room
 
 # ---- layout
 AXIS_Z = 8.05                                        # sofa and television centre line (sheet: sofa z 4.4..11.7)
 RUG_T = 0.045
-SOFA = dict(back_x=39.05, z=AXIS_Z, L=7.3, D=3.25)   # its puffed base ends 0.02 ft before the baseboard
+SOFA = dict(back_x=EAST_X - 0.145, z=AXIS_Z, L=7.3, D=3.25)   # its puffed base ends 0.02 ft before the baseboard
 SIDE_R = 0.62
-SIDE_X = 38.35
+SIDE_X = EAST_X - 0.845
 SIDE_N = (SIDE_X, AXIS_Z - SOFA['L'] / 2 - 0.06 - SIDE_R)     # z 3.72: the pier between the east windows
 SIDE_S = (SIDE_X, AXIS_Z + SOFA['L'] / 2 + 0.06 + SIDE_R)     # z 12.38
 SIDE_H = 1.85
 LAMP_SHADE_R = 0.45
-RUG = dict(x=33.1, z=7.45, r=4.6)
-TABLE = dict(x=33.0, z=AXIS_Z, r=1.42, top=1.25)
-CHAIR = dict(x=30.4, z=3.75, aim=(29.6, 8.0))
+RUG = dict(x=EAST_X - 6.095, z=7.45, r=4.6)
+TABLE = dict(x=EAST_X - 6.195, z=AXIS_Z, r=1.42, top=1.25)
+CHAIR = dict(x=EAST_X - 9.145, z=3.75, aim=(EAST_X - 9.595, 8.0))     # v7 glazing: 0.35 ft west, clear of the door's way
 TV = dict(diag_in=75.0, yc=3.885)
 CONSOLE = dict(L=7.5, D=1.4, top=1.7, leg_h=0.5)
-ART_Z, ART_Y = (7.55, 11.55), (3.55, 5.95)
-TREE = (23.7, 13.0)                                  # beside the console's south end, clear of the hall corner
+# v7 repair: the canvas hangs in the middle of the wall that the sofa has to itself, between the one east window's
+# jamb (6.368 since the eighth round; it was set clear of the old second window's jamb, 6.965) and the sofa's south
+# end (11.70): 0.63 / 0.70 ft each side. It was z 7.55..11.55, 1.5 ft off the sofa's axis; 0.95 ft now.
+ART_Z, ART_Y = (7.0, 11.0), (3.55, 5.95)
+TREE = (WEST_X + 1.172, 13.0)                        # beside the console's south end, clear of the hall corner
 TREE_ROT = math.radians(215.0)                       # the crown's fuller side toward the room
 TREE_H = 4.6
-CANS_X = (25.338, 29.184, 33.030)                    # the concept's 26.2 / 30.2 / 34.2 on the plan (kitchen zone's too)
-CANS_Z = (2.969, 7.517, 12.064)                      # the concept's 3.0 / 7.6 / 12.2
-# The concept's wall-wash column x 38.45, on the grid's three rows: with the 3 x 3 grid the ceiling carries one
-# even 4 x 3 field of cans (two cans here left the north-east corner of the field empty).
-SOFA_CANS = ((37.116, 2.969), (37.116, 7.517), (37.116, 12.064))
+CANS_X = tuple(R.X_REAR(v) for v in (26.2, 30.2, 34.2))    # the concept's 26.2 / 30.2 / 34.2 on the plan (kitchen zone's too)
+# v7 repair: the field is laid out about the new skylight well (revision_spec.LIVING_SKY, lining 0.12 ft all round).
+# The three rows keep their 4.548 ft spacing and stand about the well's centre line z 8.684 (4.135, 8.684, 13.232;
+# they were the concept's 3.0 / 7.6 / 12.2 = 2.969, 7.517, 12.064, 1.17 ft north of it), and the sofa-side column is
+# the third column's mirror image about the well's centre line x 35.562 (37.980; it was the concept's wall-wash
+# column 38.45 = 37.230, whose middle can stood 0.47 ft from the lining while its twin stood 1.22 ft from it). The
+# two middle cans now stand 1.22 ft from the lining each side; no can is closer to it.
+_SKY_XC = (RS.LIVING_SKY[0] + RS.LIVING_SKY[1]) / 2
+_SKY_ZC = (RS.LIVING_SKY[2] + RS.LIVING_SKY[3]) / 2
+_ROW = R.Z_RIGHT(7.6) - R.Z_RIGHT(3.0)                     # 4.548
+CANS_Z = (_SKY_ZC - _ROW, _SKY_ZC, _SKY_ZC + _ROW)
+# With the 3 x 3 grid the ceiling carries one 4 x 3 field of cans (two cans here left the north-east corner of the
+# field empty).
+SOFA_CANS = tuple((2 * _SKY_XC - CANS_X[-1], z) for z in CANS_Z)
 
 EYE_Y = 3.6                                          # seated eye height for the sightline check
 STOP_CLEAR = 1.2
@@ -133,7 +162,12 @@ def _checks(coll, tv, con):
     chair = np.concatenate([p for n, p in pts.items() if n.startswith(('chair ', 'chair pillow'))])
     res['armchair_xz'] = [round(float(v), 2) for v in (chair[:, 0].min(), chair[:, 0].max(), chair[:, 2].min(), chair[:, 2].max())]
     res['armchair_to_rear_glass_ft'] = round(float(chair[:, 2].min()) - REAR_Z, 2)
-    res['armchair_to_deck_door_jamb_ft'] = round(float(chair[:, 0].min()) - DECK_DOOR[1], 2)
+    # v7 glazing: the way through the sliding door's open panel, WAY_DEPTH into the room
+    res['armchair_to_slider_way_ft'] = round(DECK_DOOR[0] - float(chair[:, 0].max()), 2)
+    for name, p in low.items():
+        m = (p[:, 0] > DECK_DOOR[0] + 0.01) & (p[:, 0] < DECK_DOOR[1] - 0.01) & (p[:, 2] < REAR_Z + WAY_DEPTH)
+        if m.any():
+            notes.append(f'{name} stands in the sliding door\'s way (x {DECK_DOOR[0]:.2f}..{DECK_DOOR[1]:.2f})')
     cx0, cx1 = float(chair[:, 0].min()), float(chair[:, 0].max())
     res['armchair_before_rear_glass_x'] = [[round(max(a, cx0), 2), round(min(b, cx1), 2)] for a, b in REAR_GLASS
                                            if min(b, cx1) > max(a, cx0)]
@@ -141,11 +175,18 @@ def _checks(coll, tv, con):
     res['tree_to_hall_corner_ft'] = round(WEST_WALL_END_Z - float(crown[:, 2].max()), 2)
     res['tree_to_console_ft'] = round(float(crown[:, 2].min()) - con['z1'], 2)
     # the sofa stands under the south-east window: nothing on that half may rise into the glass (0.1 ft above the sill)
-    under = [p[p[:, 2] < EAST_WINDOWS[1][1]] for n, p in pts.items() if n.startswith(('sofa', 'pillow'))]
+    under = [p[p[:, 2] < EAST_WINDOWS[-1][1]] for n, p in pts.items() if n.startswith(('sofa', 'pillow'))]
     top = max(float(p[:, 1].max()) for p in under if len(p))
     res['sofa_top_under_window_ft'] = round(top, 2)
     if top > EAST_SILL + 0.1:
         notes.append(f'sofa reaches y {top:.2f} under the east window (glass from {EAST_SILL + 0.1:.2f})')
+    # v7 glazing: nothing else within 3 ft of the east wall rises into that window's glass either
+    for name, p in pts.items():
+        if name.startswith(('sofa', 'pillow', 'can ')):
+            continue
+        q = p[(p[:, 0] > EAST_X - 3.0) & (p[:, 2] > EAST_WINDOWS[0][0]) & (p[:, 2] < EAST_WINDOWS[-1][1])]
+        if len(q) and float(q[:, 1].max()) > EAST_SILL + 0.1:
+            notes.append(f'{name} reaches y {float(q[:, 1].max()):.2f} in front of the east window')
     # sightlines: from three seats on the sofa to the screen's corners and centre, against everything below them
     seat_x = SOFA['back_x'] - 1.6
     half = SOFA['L'] / 2 - F.ARM_T
@@ -211,7 +252,15 @@ def build(ctx):
     for tag, (sx, sz) in (('N', SIDE_N), ('S', SIDE_S)):
         stg = G.group(ctx, f'living side table {tag}')
         F.side_table(ctx, stg, r=SIDE_R, h=SIDE_H)
-        F.table_lamp(ctx, stg, (sx, sz), SIDE_H, LIGHTS, shade_r=LAMP_SHADE_R)
+        if tag == 'S':
+            F.table_lamp(ctx, stg, (sx, sz), SIDE_H, LIGHTS, shade_r=LAMP_SHADE_R)
+        else:
+            # v7 glazing: this table stands under the 6'-0" east window (sill 2.5): two books and a low bowl
+            F.book(ctx, stg, -0.03, SIDE_H, 0.02, 0.62, 0.84, 0.09, F.BOOK_COLORS[3], yaw=0.32, name='side table book 1')
+            F.book(ctx, stg, -0.02, SIDE_H + 0.09, 0.03, 0.54, 0.76, 0.07, F.BOOK_COLORS[0], yaw=0.18, name='side table book 2')
+            prof = [(0.0, 0.0), (0.12, 0.0), (0.2, 0.03), (0.26, 0.1), (0.248, 0.108), (0.19, 0.05), (0.0, 0.03)]
+            v, f = G.lathe([(r, y + SIDE_H + 0.16) for r, y in prof], n=48, cap_bottom=False)
+            G.obj(ctx, 'side table bowl', G.translate(v, 0.02, 0, 0.0), f, F.mat_ceramic_white(), COLL, stg)
         place(stg, sx, 0, sz, 0)
 
     # ---------------------------------------------------------------- coffee table + styling

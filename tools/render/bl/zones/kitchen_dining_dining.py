@@ -140,12 +140,21 @@ def _chandelier(g, cx, cz, col, lights):
 # The set is loose furniture: bl/warp.py moves the whole cluster (table, chairs, lantern, centrepiece) by the
 # shift of its plan centre and keeps its size. The plan numbers are therefore given on the ARCHITECT'S plan
 # and the cluster centre is carried back to the concept plan with the inverse of the kitchen's maps
-# (relayout.X_HALL / Z_RIGHT, region 'kitchen + dining'). Built (new-plan feet): island worktop x 27.453..33.222,
-# z 21.754..24.720; table x 21.433..27.433, z 21.862..24.612; chairs x 21.838..27.028, their backs at z 20.80
-# (north) and 25.67 (south); pantry-wall fronts z 28.882 (3.21 ft south of the chair backs; refrigerator doors
-# 3.01, its handles 2.81, oven handle 3.01); hall line x 21.2 (0.23 ft west of the table's end).
+# (relayout.X_HALL / Z_RIGHT, region 'kitchen + dining').
+#
+# Eighth round (2026-11-24): the island is the sheet's 7'-0" x 4'-0" (worktop x 26.808..33.808,
+# z 21.058..25.058), so its west end and its centre line moved and the set moved with them, 0.758 ft west and
+# 0.179 ft north. Built (new-plan feet): table x 20.788..26.788, z 21.683..24.433; chairs x 21.193..26.383,
+# their backs at z 20.623 (north) and 25.493 (south). Routes past the set, all 3 ft or more:
+#   north, hall -> living room: 3.06 ft between the north chairs' backs and the south face of the closet block
+#          beside Bedroom 2 (sheet WL30, z 17.559; the block ends at x 22.642, east of it the floor is open);
+#   south, foyer / hall -> kitchen: 3.30 ft to the refrigerator's doors (z 28.797), 3.10 to its handles,
+#          3.31 to the oven's handle, 3.50 to the pantry-wall fronts (z 28.997);
+#   west, hall -> foyer: 5.23 ft between the table's end and the shared bath's east wall (x 15.558).
+# The table's west end stands 1.85 ft west of the living room's west wall line (x 22.642), in the open floor
+# where the hall, the foyer and the kitchen meet. A table wider than 2'-9" does not keep 3 ft on the north.
 RECT_LEN = 6.0                # 72in: three chairs a side between the legs
-RECT_W = 2.75                 # 33in, a little narrower than the island's worktop (2.97 ft built)
+RECT_W = 2.75                 # 33in (the island's worktop is 4'-0"): wider would not leave 3 ft past the north chairs
 RECT_TOP = 2.5                # 30in
 RECT_GAP = 0.02               # between the table's east end and the island worktop's west edge (built feet)
 RECT_CHAIR_OUT = 0.20         # chair centre beyond the table's long edge: seats pushed well in, which keeps

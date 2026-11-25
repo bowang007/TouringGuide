@@ -97,7 +97,7 @@ test('Dimensions: select a room and a door on the plan, lists, units, CSV, Visit
   const dir = await s.downloads();
   await s.press(s.testid('btn-dimensions'));
   await s.waitFor(() => !!document.querySelector('#planmodal.open'), { what: 'the Dimensions sheet' });
-  const data = await s.page.evaluate(() => ({ rooms: window.MEASURE.data.rooms.map((x) => ({ id: x.id, name: x.name, node: x.node })), doors: window.MEASURE.data.doors.map((x) => ({ id: x.id, name: x.name, node: x.node })), windows: window.MEASURE.data.windows.length }));
+  const data = await s.page.evaluate(() => ({ rooms: window.MEASURE.data.rooms.map((x) => ({ id: x.id, name: x.name, node: x.node })), doors: window.MEASURE.data.doors.map((x) => ({ id: x.id, name: x.name, node: x.node })), windows: window.MEASURE.data.windows.length, spaces: (window.MEASURE.data.spaces || []).length }));
   const total = data.rooms.length + data.doors.length + data.windows;
   const hits = await s.page.$$eval('#dimensionPlan [data-measure]', (e) => new Set(e.map((x) => x.dataset.measure)).size);
   assert.equal(hits, total, 'the plan has one target per room, window and door');
@@ -128,7 +128,8 @@ test('Dimensions: select a room and a door on the plan, lists, units, CSV, Visit
   await s.press('#dimensionCsv');
   const csv = (await s.waitFile(dir + '/1095-mckinley-review-dimensions.csv')).toString('utf8');
   const lines = csv.split('\r\n');
-  assert.equal(lines.length, total + 1, 'the CSV has a header and one line per item');
+  assert.equal(lines.length, total + data.spaces + 1, 'the CSV has a header, one line per item and one per space the plan shows without a tag (' + data.spaces + ')');
+  assert.equal(lines.filter((l) => l.startsWith('"Space"')).length, data.spaces, 'the spaces are marked as such');
   assert.match(lines[0], /^"Category","ID","Description"/);
   assert.ok(lines.some((l) => l.includes('"' + door.id + '"')), 'the CSV contains ' + door.id);
   // Visit in 3D
@@ -221,6 +222,167 @@ test('Dimensions: the walk-in closet M05, the vestibule M14 and the pocket door 
   assert.equal(await s.page.$eval('#chip', (e) => e.textContent), data.closet.name, 'the room chip names the closet');
   await s.settle(8000);
   await s.shot('M05-visit');
+});
+
+// The owner's eighth round brought the model to the architect's sheet, and the schedule says more than a
+// width: a door's width is its clear opening and the cut in the wall is given beside it, the sliding glass
+// door has its clear width and its open way, the garage's doors stand on a floor 11 in below the house
+// floor, and the sheet lists what the plan shows without a tag (closed closets, the hall's legs, the garage
+// and its step, the porch, the landings) and the outside size of the house. Everything is read from the
+// data the page has; data without these fields (before the round) has nothing to show.
+const feet = (v) => { const n = Math.round(v * 96); return Math.floor(n / 96) + '′' + Math.floor(n % 96 / 8) + ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'][n % 8] + '″'; };      // as the page writes a length
+test('Dimensions: wall opening beside the clear width, the sliding door\'s open way, the floor a door stands on, the closets, levels and landings, the outside size', async (s) => {
+  await s.open();
+  await s.enter();
+  await s.press(s.testid('btn-dimensions'));
+  await s.waitFor(() => !!document.querySelector('#planmodal.open'), { what: 'the Dimensions sheet' });
+  const M = await s.page.evaluate(() => ({ doors: window.MEASURE.data.doors, spaces: window.MEASURE.data.spaces || [], overall: window.MEASURE.data.overall || null }));
+  if (!M.overall && !M.spaces.length && !M.doors.some((d) => Number.isFinite(d.wall_start))) { s.note('this data has no wall openings, spaces or outside size (it predates the eighth round)'); return; }
+  // the figures of the detail panel by their captions
+  const stats = async (id, click) => {
+    if (click) await s.press('#dimensionPlan [data-measure="' + id + '"]'); else await s.page.evaluate((id) => window.MEASURE.select(id), id);
+    await s.waitFor((id) => window.MEASURE.selected === id, { what: id + ' to be selected' }, id);
+    return s.page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#dimensionDetail .dimension-stats > div')].map((e) => [e.querySelector('small').textContent, e.querySelector('strong').textContent])));
+  };
+  const said = [];
+  // a door between liners or frames: its clear width, and the wall opening beside it
+  const lined = M.doors.filter((d) => Number.isFinite(d.wall_start) && d.wall_end - d.wall_start > d.width + 0.004);
+  assert.ok(lined.length >= 1, 'the schedule has doors with a wall opening wider than the door');
+  const door = lined.find((d) => /laundry/i.test(d.name)) || lined[0];
+  let st = await stats(door.id, true);
+  assert.equal(st['Opening width'], feet(door.width), door.id + ': the opening width is the clear width');
+  assert.equal(st['Wall opening'], feet(door.wall_end - door.wall_start), door.id + ': the wall opening stands beside it');
+  said.push(door.id + ' ' + st['Opening width'] + ' in a wall opening of ' + st['Wall opening']);
+  await s.shot('door-wall-opening');
+  // a door without liners shows no second figure
+  const plain = M.doors.find((d) => Number.isFinite(d.wall_start) && Math.abs(d.wall_end - d.wall_start - d.width) <= 0.004 && !Number.isFinite(d.way_start));
+  if (plain) assert.ok(!('Wall opening' in await stats(plain.id)), plain.id + ' is as wide as its wall opening: no second figure');
+  // the sliding glass door: the unit's wall opening, the clear width between its jambs, the way as shown open
+  const slider = M.doors.find((d) => Number.isFinite(d.way_start));
+  if (slider) {
+    st = await stats(slider.id);
+    assert.equal(st['Opening width'], feet(slider.width));
+    assert.equal(st['Clear between the frame’s jambs'], feet(slider.clear_end - slider.clear_start));
+    assert.equal(st['Open way as shown'], feet(slider.way_end - slider.way_start));
+    assert.match(await s.page.$eval('#dimensionDetail', (e) => e.textContent), /four-panel/i, 'the detail says what kind of door it is');
+    said.push(slider.id + ' ' + st['Opening width'] + ', ' + st['Clear between the frame’s jambs'] + ' clear, way ' + st['Open way as shown']);
+    await s.shot('sliding-door');
+  }
+  // a door that stands on another floor says which
+  const low = M.doors.filter((d) => Number.isFinite(d.floor) && Math.abs(d.floor) > 0.004);
+  for (const d of low) {
+    st = await stats(d.id);
+    const want = feet(Math.abs(d.floor)).replace(/^0′/, '') + (d.floor < 0 ? ' below' : ' above') + ' the house floor';
+    assert.equal(st['Floor it stands on'], want, d.id + ' says which floor it stands on');
+    said.push(d.id + ' ' + want);
+  }
+  if (low.length) await s.shot('door-on-the-garage-floor');
+  const high = M.doors.find((d) => !low.includes(d));
+  assert.ok(!('Floor it stands on' in await stats(high.id)), high.id + ' stands on the house floor: nothing said');
+  // millimetres reach the new figures too
+  await s.page.select('#dimensionUnits', 'mm');
+  st = await stats(door.id);
+  assert.equal(st['Wall opening'], Math.round((door.wall_end - door.wall_start) * 304.8).toLocaleString() + ' mm');
+  await s.page.select('#dimensionUnits', 'ft');
+  // under the rooms: closets, levels and landings, one row each, the floor level in words
+  await s.page.$eval('#planmodal', (e) => { e.scrollTop = 0; });
+  await s.press('[data-dimension-tab="rooms"]');
+  const rows = await s.page.$$eval('#dimensionSpaces tbody tr', (e) => e.map((r) => ({ key: r.dataset.space, cells: [...r.children].map((c) => c.textContent) })));
+  assert.equal(rows.length, M.spaces.length, 'the Rooms tab lists every space of the data under the rooms');
+  for (const x of M.spaces) {
+    const row = rows.find((r) => r.key === x.key);
+    assert.ok(row && row.cells[0].startsWith(x.name), 'a row for "' + x.name + '"');
+    assert.equal(row.cells[1], feet(x.width_ft) + ' × ' + feet(x.depth_ft), x.name + ': its size');
+    const level = x.floor || 0;
+    assert.equal(row.cells[2], Math.abs(level) < 0.004 ? 'The house floor' : feet(Math.abs(level)).replace(/^0′/, '') + (level < 0 ? ' below' : ' above') + ' the house floor', x.name + ': its floor level');
+  }
+  if (M.spaces.length) {
+    assert.match(await s.page.$eval('#dimensionSpacesTitle', (e) => e.textContent), /closets, levels and landings/i);
+    await s.page.$eval('#dimensionSpaces', (e) => e.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await s.shot('spaces');
+    // the search box filters them with the rooms
+    const one = M.spaces[0], word = one.name.split(' ')[0];
+    await s.page.$eval('#dimensionSearch', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')); }, word);
+    const left = await s.page.$$eval('#dimensionSpaces tbody tr', (e) => e.map((r) => r.dataset.space));
+    assert.deepEqual(left, M.spaces.filter((x) => (x.name + ' ' + (x.label || '')).toLowerCase().includes(word.toLowerCase())).map((x) => x.key), 'the search for "' + word + '" leaves the spaces that match');
+    await s.page.$eval('#dimensionSearch', (e) => { e.value = ''; e.dispatchEvent(new Event('input')); });
+    // only the rooms list carries them
+    await s.press('[data-dimension-tab="doors"]');
+    assert.equal(await s.page.$$eval('#dimensionSpaces tbody tr', (e) => e.length), 0, 'the Doors tab lists doors only');
+    assert.equal(await s.page.$$eval('#dimensionListing tbody tr', (e) => e.length), M.doors.length);
+  }
+  // the outside size: in the sheet's footnote, and printed on the plan drawing
+  if (M.overall) {
+    const o = M.overall, note = await s.page.$eval('#dimensionOverall', (e) => ({ text: e.textContent, shown: !e.hidden && e.getClientRects().length > 0 }));
+    assert.ok(note.shown, 'the footnote gives the outside size');
+    for (const v of [o.outer_width_ft, o.outer_depth_ft, o.outer_depth_garage_side_ft]) assert.ok(note.text.includes(feet(v)), 'it says ' + feet(v) + ': "' + note.text + '"');
+    if (o.garage_floor_ft) assert.ok(note.text.includes(feet(Math.abs(o.garage_floor_ft)).replace(/^0′/, '') + ' below the house floor'), 'and the garage floor\'s level');
+    const printed = await s.page.$$eval('#dimensionPlan text', (e) => e.map((t) => t.textContent).filter((t) => /overall/.test(t)));
+    for (const v of [o.outer_width_ft, o.outer_depth_ft, o.outer_depth_garage_side_ft]) assert.ok(printed.some((t) => t.includes(feet(v))), 'the plan prints "' + feet(v) + ' overall" (' + [...new Set(printed)].join(', ') + ')');
+    await s.page.$eval('.dimension-footnote', (e) => e.scrollIntoView({ block: 'end', behavior: 'instant' }));
+    await s.shot('footnote');
+    said.push('footnote: ' + note.text.trim());
+  }
+  s.note(said.join('; '));
+});
+
+// "Visit in 3D" from an opening of the schedule stands on the sweep the schedule names for it. That sweep's
+// own view was chosen for its room and looks away from most of the room's doors and windows (the front
+// door and its sidelights are behind the visitor who stands in the foyer, a skylight is overhead), so the
+// page turns the visitor toward the opening: its middle is in the middle of the picture. A sweep whose own
+// view already faces the opening (the laundry closet's, in front of its doors) keeps that view, pitch and
+// all. Openings and sweeps are read from the data; what the page looks at is MEASURE.lookAt(item).
+test('Dimensions: "Visit in 3D" from an opening turns the visitor toward it; a sweep that already faces it keeps its own view', { timeout: 180000 }, async (s) => {
+  await s.open();
+  await s.enter();
+  const tour = await s.tour(), all = new Map(tour.sweeps.map((x) => [x.id, x]));
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a)), deg = (a) => (a * 180 / Math.PI).toFixed(1);
+  const items = await s.page.evaluate(() => [...window.MEASURE.data.windows, ...window.MEASURE.data.doors].map((o) => ({ id: o.id, name: o.name, node: o.node, kind: o.kind, at: window.MEASURE.lookAt(o) })));
+  assert.deepEqual(items.filter((o) => !o.at).map((o) => o.id), [], 'openings the page has no place to look at');
+  // from its sweep: the direction of each opening, how far up it is, and how far that is from the sweep's own view
+  const plan = items.filter((o) => all.has(o.node)).map((o) => {
+    const sw = all.get(o.node), y = Array.isArray(o.at.y) ? Math.min(Math.max(sw.p[1], Math.min(...o.at.y)), Math.max(...o.at.y)) : o.at.y;
+    const dx = o.at.x - sw.p[0], dz = o.at.z - sw.p[2], d = Math.hypot(dx, dz), yaw = Math.atan2(dx, -dz);
+    return Object.assign(o, { sw, d, yaw, up: Math.atan2(y - sw.p[1], Math.max(d, 0.01)), off: Math.abs(wrap(yaw - sw.yaw * Math.PI / 180)), point: [o.at.x, y, o.at.z] });
+  });
+  const away = plan.filter((o) => o.kind !== 'skylight' && o.off > 1 && o.d > 1.5 && Math.abs(o.up) < 0.3).sort((a, b) => b.off - a.off);      // behind the sweep's own view
+  const above = plan.filter((o) => o.kind === 'skylight' && o.d > 1 && o.up > 0.45 && o.up < 1.3);                                           // overhead
+  const faced = plan.filter((o) => o.off < 0.2 && Math.abs(o.up) < 0.3);                                                                     // in the sweep's own picture
+  assert.ok(away.length >= 2 && above.length >= 1 && faced.length >= 1, 'the schedule has openings behind their sweep\'s view (' + away.length + '), skylights overhead (' + above.length + ') and openings their sweep faces (' + faced.length + ')');
+  const visit = async (o) => {
+    await s.press(s.testid('btn-dimensions'));
+    await s.waitFor(() => !!document.querySelector('#planmodal.open'), { what: 'the Dimensions sheet' });
+    await s.page.evaluate((id) => window.MEASURE.select(id), o.id);
+    await s.press('#dimensionVisit');
+    const st = await s.waitRest(o.node, 15000);
+    assert.equal(await modal(s), null, 'the sheet closes');
+    return st;
+  };
+  const { width: W, height: H } = s.viewport, done = [];
+  const side = away.find((o) => /sidelight/i.test(o.name));
+  for (const o of [...new Set([away[0], side, away[away.length - 1], ...above.slice(0, 2)].filter(Boolean))]) {
+    const st = await visit(o);
+    assert.ok(Math.abs(wrap(st.yaw - o.yaw)) < 0.03, o.id + ' ' + o.name + ': the visitor on ' + o.node + ' is turned toward it (yaw ' + deg(st.yaw) + ', the opening lies at ' + deg(o.yaw) + ', the sweep\'s own view at ' + o.sw.yaw + ')');
+    assert.ok(Math.abs(st.pitch - o.up) < 0.03, o.id + ': and looks ' + (o.up > 0.3 ? 'up at it' : 'at its height') + ' (pitch ' + deg(st.pitch) + ', wanted ' + deg(o.up) + ')');
+    // (the cut may hold the picture of the view left behind for a moment: wait for the frame drawn from the sweep)
+    await s.waitFor((p) => { const v = window.TOUR.viewer.view; return !!v && Math.hypot(v.eye[0] - p[0], v.eye[1] - p[1], v.eye[2] - p[2]) < 0.01; }, { what: 'the picture drawn from ' + o.node, timeout: 8000 }, o.sw.p);
+    await s.settle(8000);
+    const q = await s.page.evaluate((p) => window.TOUR.project(p), o.point);
+    assert.ok(q && Math.abs(q.x - W / 2) < W * 0.05 && Math.abs(q.y - H / 2) < H * 0.08, o.id + ': its middle is in the middle of the picture (' + JSON.stringify(q && { x: Math.round(q.x), y: Math.round(q.y) }) + ' of ' + W + ' x ' + H + ')');
+    await s.shot('visit-' + o.id);
+    done.push(o.id + ' from ' + o.node + ': turned ' + deg(o.off) + ' deg' + (o.up > 0.3 ? ', ' + deg(o.up) + ' deg up' : ''));
+  }
+  for (const o of faced.slice(0, 2)) {
+    const st = await visit(o);
+    assert.ok(Math.abs(wrap(st.yaw - o.sw.yaw * Math.PI / 180)) < 0.02 && Math.abs(st.pitch - o.sw.pitch * Math.PI / 180) < 0.02, o.id + ' ' + o.name + ': ' + o.node + ' already faces it (' + deg(o.off) + ' degrees off) and keeps its own view (yaw ' + deg(st.yaw) + ', pitch ' + deg(st.pitch) + ' against ' + o.sw.yaw + ', ' + o.sw.pitch + ')');
+    done.push(o.id + ' from ' + o.node + ': its own view');
+  }
+  // a room is entered on its sweep's own view
+  const room = await s.page.evaluate(() => { const r = window.MEASURE.data.rooms[0]; return { id: r.id, node: r.node, at: window.MEASURE.lookAt(r) || null }; });
+  assert.equal(room.at, null, 'a room names nothing to look at');
+  const st = await visit(room), own = all.get(room.node);
+  assert.ok(Math.abs(wrap(st.yaw - own.yaw * Math.PI / 180)) < 0.02 && Math.abs(st.pitch - own.pitch * Math.PI / 180) < 0.02, room.id + ' opens ' + room.node + ' on its own view');
+  s.note(done.join('; '));
 });
 
 test('Design: the tabs follow design.json and each shows its picture and text', async (s) => {

@@ -127,7 +127,11 @@ def build(ctx, g: Geo, dining=True, herb=True):
     brass = KM.brass()
 
     # --------------------------------------------------- island: bowl of lemons
-    bx, bz = 32.75, 23.30
+    # (both island pieces stand under the pendants, a little off the island's centre line, as before the
+    # island grew to 7'-0" x 4'-0": concept feet, from the island's centre)
+    icx, icz = (K.ISLAND[0] + K.ISLAND[1]) / 2, (K.ISLAND[2] + K.ISLAND[3]) / 2
+    pdx = K._px(K.PLAN_ISLAND[0] + 0.75 * K.PLAN_ISLAND_L) - icx
+    bx, bz = icx + pdx - 0.05, icz - 0.20
     bowl_prof = [(0.0, 0.0), (0.16, 0.0), (0.17, 0.012), (0.30, 0.10), (0.42, 0.22), (0.46, 0.27), (0.455, 0.278),
                  (0.40, 0.235), (0.28, 0.13), (0.15, 0.04), (0.0, 0.035)]
     g.lathe('kd decor bowl', bowl_prof, bx, bz, glaze, 72, col, y_base=TOP, sharp_deg=70)
@@ -143,7 +147,7 @@ def build(ctx, g: Geo, dining=True, herb=True):
         bl = (base.x / FT, base.z / FT, -base.y / FT)
         _import(g, 'lemon', L, bl, col=col, matrix=M)
     # ------------------------------- island: cream crock with tall leafy branches
-    vx, vz = 30.05, 23.45
+    vx, vz = icx - pdx + 0.05, icz - 0.05
     ch = 0.78
     g.lathe('kd decor crock vase', [(0.0, 0.0), (0.27, 0.0), (0.29, 0.02), (0.31, 0.1), (0.31, ch - 0.12), (0.29, ch - 0.05),
                                     (0.27, ch - 0.02), (0.275, ch), (0.255, ch), (0.24, ch - 0.06), (0.0, ch - 0.1)],

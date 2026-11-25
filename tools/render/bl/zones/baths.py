@@ -3,23 +3,26 @@
 Design:
   * primary (baths_primary.py) - laid out on the architect's sheet and styled after the owner's image
     (styles/primary bathroom wall style.jpg): stacked-stone vanity wall with the floating solid-oak slab,
-    oak-framed mirrors, a timber beam and enamel lamps; cream-tiled shower in the north-west corner;
-    grey-green board wainscot under cream plaster; grey stone floor; brushed nickel. Unlike the other two
+    oak-framed mirrors, a timber beam and enamel lamps; white-tiled shower in the north-west corner;
+    every other wall plain white with a low white tile base (seventh round; v7 final: comment, it still
+    described the sixth round's cream tile and grey-green wainscot); grey stone floor; brushed nickel.
+    Unlike the other two
     it is fitted out AFTER the warp, in plan feet (baths_primary.build_room, called by
     bl/revisions.primary_bath_fit_out); build_primary() below only makes its collection.
   * shared (baths_shared.py) - the owner's restyle: rustic-oak wood-look tile feature wall with a lit
     niche behind the WC, warm Spanish-cream stone-look porcelain, light-oak vanity with a travertine
     trough basin, backlit mirror, limestone-look floor; the alcove tub keeps its glass screen.
-  * suite3 - compact curbless shower with a fixed walk-in panel (ceiling stay keeps the A3 camera
-    clear) and a furred wet wall with a recessed LED niche over the valve, wall-hung WC, black
-    fluted feature wall behind the small floating walnut vanity (undermount basin) and pill
-    mirror.
+  * suite3 (baths_suite3.py) - laid out on the architect's sheet and, like the primary bath, fitted out
+    AFTER the warp in plan feet: compact curbless shower across the west end with a fixed walk-in panel
+    (ceiling stay) and a furred wet wall with a recessed LED niche over the valve, wall-hung WC and the
+    small floating walnut vanity (undermount basin, pill mirror) on the north wall, a black fluted
+    panel behind the vanity.
   * suite3's plain wall tile is the zone material Z_baths_porcelain (baths_kit.porcelain_material):
     honed vein-cut limestone-look 24x48 porcelain (1077 W McKinley language, DESIGN.md).
 
-The shared bath and suite3 follow the anchors in scene_classification / layout_revision (shared WC
-centreline z=24.8 on the west wall; suite3 shower at the west end, WC on the north wall, vanity on the
-east wall); the primary bath follows the architect's sheet (bl/revision_spec.py, BATH_* / PRIMARY_BATH_*).
+The shared bath follows the anchors in scene_classification / layout_revision (WC centreline z=24.8 on
+the west wall); the primary bath and suite3 follow the architect's sheet (bl/revision_spec.py, BATH_* /
+PRIMARY_BATH_* and BED3_BATH_*).
 """
 import time
 
@@ -82,88 +85,11 @@ def _toe_glow(ctx, f, coll, name, u0, u1, v0, v1, y_bot):
 
 # -------------------------------------------------------------------------------- suite 3
 def build_suite3(ctx):
-    c = f'{ZONE}_suite3'
-    X0, X1, Z0, Z1 = _bounds(ctx, 'M09')
-    FL = 0.10
-    XW, ZN, XE, ZS = X0 + T, Z0 + T, X1 - T, Z1 - T
-    SX = 3.23
-    FB, FD = 0.055, 0.035                      # fluted tile: bed + rib depth (as in the shared bath)
-    FCE = X1 - FB - FD                         # rib crest plane of the fluted east (vanity) wall
-    ZNF = ZN + 0.30                            # furred shower wet wall (3.6in) for the LED niche
-    NX0, NX1, NY0, NY1 = 1.15, 2.35, 4.30, 5.25
-    por = K.porcelain_material(ctx)
-
-    # W11, the window in the shower (concept z 38.70..41.70): the owner's sixth-round opening, sill 3'-0" and head
-    # 7'-6" (it was 5'-0" / 7'-0"); bl/revisions.bedroom3_bath_window reshapes wall, frame and pane to it
-    from ..revision_spec import BED3_BATH_WIN_Y
-    WY0, WY1 = BED3_BATH_WIN_Y
-    K.skin(ctx, 'A3 tile west', 'x', X0, XW, Z0, Z1, FL, CEIL, por, c, holes=[(38.70, 41.70, WY0, WY1)])
-    # shower back wall: furred wet wall with a recessed LED niche over the valve
-    K.skin(ctx, 'A3 wetwall', 'z', Z0, ZNF, XW, SX, FL, CEIL, por, c, holes=[(NX0, NX1, NY0, NY1)])
-    K.box(ctx, 'A3 niche back', NX0 + 0.001, NX1 - 0.001, NY0, NY1, Z0, ZN + 0.02, por, c)
-    K.box(ctx, 'A3 niche sill', NX0 + 0.002, NX1 - 0.002, NY0 - 0.03, NY0 + 0.012, ZN + 0.02, ZNF + 0.004,
-          'quartz_white', c, bevel=0.004)
-    s = K.box(ctx, 'A3 niche led', NX0 + 0.02, NX1 - 0.02, NY1 - 0.022, NY1 - 0.004, ZNF - 0.14, ZNF - 0.03, None, c)
-    s.data.materials.append(lighting.emitter('niche_led', 3500, 16.0))
-    K.bottle(ctx, c, 'A3 niche bottle 1', 1.58, NY0 + 0.012, ZN + 0.17, r=0.075, h=0.5)
-    K.bottle(ctx, c, 'A3 niche bottle 2', 1.90, NY0 + 0.012, ZN + 0.17, r=0.075, h=0.5,
-             mat=K.matte_material('bottle_white', (0.80, 0.79, 0.76), 0.5))
-    K.skin(ctx, 'A3 tile north', 'z', Z0, ZN, SX, FCE, FL, CEIL, por, c)
-    # feature wall: black fluted porcelain behind the floating vanity and pill mirror (east)
-    K.fluted_wall(ctx, 'A3 fluted east', 'x', X1, -1, Z0, Z1, FL, CEIL, FB, FD, 0.10, K.fluted_material(ctx), c)
-    K.skin(ctx, 'A3 tile south', 'z', ZS, Z1, XW, FCE, FL, CEIL, por, c, holes=[(3.42, 6.15, 0.0, 6.72)])
-    # W11 sits inside the shower: tiled reveal returns on the jambs and a quartz sill over the frame's inner rail.
-    # (The sill's name must read as a fitted piece to bl/warp.py: as 'A3 window stool' it was moved like a loose
-    # stool and stood 0.18 ft south of the opening.)
-    K.box(ctx, 'A3 window return sill', 0.08, XW + 0.012, WY0, WY0 + 0.09, 38.70, 41.70, 'quartz_white', c, bevel=0.006)
-    for z0, z1 in ((38.70, 38.735), (41.665, 41.70)):
-        K.box(ctx, 'A3 window return', 0.08, XW, WY0 + 0.09, WY1, z0, z1, por, c)
-
-    # --- curbless shower: mosaic floor, walk-in fixed panel, black trim -------------------
-    K.box(ctx, 'A3 shower floor', X0, SX, FL, FL + 0.015, Z0, Z1, 'tile_shower_floor', c)
-    sy = FL + 0.015
-    K.linear_drain(ctx, c, 'A3 drain', 'z', ZNF + 0.15, 42.45, XW + 0.18, sy)
-    gx = SX - 0.016
-    K.glass_panel(ctx, c, 'A3 glass', (gx, ZNF + 0.006), (gx, 40.40), sy + 0.02, 6.75)
-    K.u_channel(ctx, c, 'A3 channel', (gx, ZNF + 0.004), (gx, 40.40), sy)
-    for yy in (1.1, 5.9):
-        K.clamp(ctx, c, 'A3 wall clamp', gx, yy, ZNF + 0.07, 'z')
-    K.clamp(ctx, c, 'A3 post clamp', gx, 6.72, 40.30, 'z', size=(0.10, 0.08, 0.07))
-    ctx.cylinder('A3 ceiling stay', (gx, (6.76 + 8.0) / 2, 40.30), 0.025, 8.0 - 6.76, K.BLACK, c, verts=24)
-    ctx.cylinder('A3 ceiling stay rose', (gx, 7.99, 40.30), 0.055, 0.02, K.BLACK, c, verts=24)
-    fn = K.Frame(0.0, ZN, 0.0, 1.0)            # north wall: u = z - ZN, v = x
-    fnf = K.Frame(0.0, ZNF, 0.0, 1.0)          # furred shower wall
-    K.valve_trim(ctx, fnf, c, 'A3 valve', 1.75, 3.65)
-    K.rain_head_wall(ctx, fnf, c, 'A3 rain', 1.75, 6.72, arm=1.1, dia=0.70)
-
-    # --- wall-hung WC on the north wall ----------------------------------------------------
-    fw = K.Frame(4.78, ZN, 0.0, 1.0)
-    K.wall_hung_wc(ctx, fw, c, 'A3 WC')
-    K.flush_plate(ctx, fw, c, 0.0, 3.45, 'A3 flush plate')
-    K.tp_holder(ctx, fn, c, 'A3 paper', 5.95, 2.25)
-
-    # --- floating vanity on the fluted east wall, pill mirror -------------------------------
-    fv = K.Frame(FCE, 0.0, -1.0, 0.0)           # u = FCE - x (from the rib crests), v = z
-    v0, v1 = 40.28, 42.70
-    vc = (v0 + v1) / 2
-    sv = vc + 0.12                             # basin nudged south: hand towels sit at the north end
-    floating_vanity(ctx, fv, c, 'A3 vanity', v0, v1, FCE - 6.22, 1.30, 'quartz_white',
-                    [(v0 + 0.006, v1 - 0.006, 1.30, 2.58)], holes=[(0.80, sv, 0.36, 0.50)])
-    K.undermount_bowl(ctx, fv, c, 'A3 basin', 0.80, sv, 2.675, a=0.38, b=0.52, depth=0.42)
-    K.deck_faucet(ctx, fv, c, 'A3 faucet', 0.21, sv, 2.80, height=0.72, reach=0.44, r=0.035)
-    K.pill_mirror(ctx, fv, c, 'A3 mirror', sv, 5.0, 1.55, 2.6)
-    K.outlet(ctx, fv, c, 'A3 outlet', 40.06, 3.45)
-    K.exhaust_grille(ctx, c, 'A3 exhaust', 4.4, 41.4)
-    x, z = fv.w(0.74, v0 + 0.30)
-    sage = K.towel_band_material('towel_sage', K.SAGE_TOWEL)
-    K.folded_towel(ctx, c, 'A3 hand towel 0', x, 2.80, z, 0.70, 0.42, 0.075, 0.0, sage)
-    K.folded_towel(ctx, c, 'A3 hand towel 1', x, 2.875, z, 0.68, 0.40, 0.075, 0.03, sage)
-    x, z = fv.w(0.32, v1 - 0.17)
-    K.bottle(ctx, c, 'A3 soap', x, 2.80, z, r=0.09, h=0.5, mat=K.matte_material('bottle_white', (0.80, 0.79, 0.76), 0.5))
-    u = K.towel_bar(ctx, fv, c, 'A3 towel bar', 38.35, 39.85, 3.95)
-    yb = 3.95 + 0.026 - 0.98
-    K.draped(ctx, fv, c, 'A3 bath towel', u, u, 38.55, 39.65, 3.95 + 0.026, 1.10, 0.98,
-             K.towel_band_material('towel_A3', K.SAGE_TOWEL, (yb + 0.16, yb + 0.30)), th=0.05, rc=0.026)
+    """Called by build() with the other baths, before the warp. Since the eighth round (v7 bedrooms) the Bedroom 3
+    bath is laid out on the architect's sheet and fitted out AFTER the warp, in plan feet, by
+    baths_suite3.build_room (called by bl/revisions.bedroom3_fit_out), like the primary bath; here only its
+    collection is made, which is also the mark that tells the revision that the baths zone was asked for."""
+    ctx.coll(f'{ZONE}_suite3', ZONE)
     return None
 
 
@@ -174,8 +100,7 @@ def build_suite3(ctx):
 # white of the reference baths (wall r/g ~1.1, b/g ~0.8); the LED accents stay warmer (3500K).
 CAN_K = 6000
 CANS = [                                                            # (primary: baths_primary._ceiling, after the warp)
-        (13.4, 23.6), (13.4, 27.9),                                 # shared
-        (1.75, 39.2), (5.45, 40.35)]                                # suite 3 (shower can over the rain head)
+        (13.4, 23.6), (13.4, 27.9)]                                 # shared (suite 3: baths_suite3.build_room, after the warp)
 
 
 def build_lights(ctx):

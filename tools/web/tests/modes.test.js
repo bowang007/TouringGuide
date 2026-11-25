@@ -686,3 +686,63 @@ test('inside <-> exterior: the two pictures dissolve into each other, like every
   }
 });
 
+
+// A floor below the house floor (the garage, 11 in down since the owner's eighth round) is a floor like any
+// other in the dollhouse and on the floor plan: the model shows it at the level the data gives its sweeps,
+// their dots lie on it, the cursor marks a sweep of the room over it and a click enters there. (A bake that
+// takes that slab for a foundation top under a floor leaves a hole: the dots float and no click arrives.)
+test('a room whose floor lies below the house floor: its floor is in the model, its sweeps are marked on it, a click enters it', { timeout: 240000 }, async (s) => {
+  await s.open();
+  const tour = await s.tour();
+  const holds = (r, x, z, tol = 0) => x >= r.bounds[0] - tol && x <= r.bounds[2] + tol && z >= r.bounds[1] - tol && z <= r.bounds[3] + tol;
+  // the room with the lowest floor: every indoor sweep that stands in it
+  const rooms = tour.rooms.map((r) => ({ r, sweeps: tour.sweeps.filter((x) => !x.outdoor && x.room === r.id && holds(r, x.p[0], x.p[2])) })).filter((x) => x.sweeps.length);
+  const low = rooms.sort((a, b) => Math.min(...a.sweeps.map((x) => x.floor)) - Math.min(...b.sweeps.map((x) => x.floor)))[0];
+  const room = low.r, own = low.sweeps.map((x) => x.id), floor = Math.min(...low.sweeps.map((x) => x.floor));
+  if (floor > -0.25) s.note('no room of this data lies below the house floor; the lowest is the ' + room.label + ' at ' + floor + ' ft');
+  await s.inside(tour.start);
+  const done = [];
+  for (const m of ['floorplan', 'dollhouse']) {
+    await s.press(s.testid('btn-' + m));
+    await mode(s, m);
+    await s.waitFor((m) => { const x = window.TOUR.getState()[m]; return !!x && !x.flight; }, { what: 'the ' + m + ' view to stand still' }, m);
+    await s.settle(8000);
+    // level surfaces of the room that the page's own ray cast reports; the dollhouse may hide the room behind
+    // its own walls from some sides: turn it a quarter at a time
+    // (a floor is more than a stray point at that height: a tenth of the room's grid on the plan, where nothing
+    // hides it, and a handful of points in the dollhouse, where the near wall and what stands in the room do)
+    let found = await levelSpots(s, room);
+    const onFloor = (f) => f.spots.filter((p) => Math.abs(p.point[1] - floor) < 0.08);
+    const enough = m === 'floorplan' ? 22 : 6;
+    for (let turn = 0; m === 'dollhouse' && onFloor(found).length < enough && turn < 3; turn++) {
+      const { width: W, height: H } = s.viewport;
+      await s.drag([W * 0.3, H * 0.3], [W * 0.3 + 286, H * 0.3], { steps: 12, hold: 200 });
+      await s.settle(8000);
+      found = await levelSpots(s, room);
+    }
+    const spots = onFloor(found);
+    assert.ok(spots.length >= enough, m + ': the model shows the floor of the ' + room.label + ' at ' + floor + ' ft, where the data has it (' + spots.length + ' of ' + found.spots.length + ' level points of the room are at that height, ' + enough + ' wanted; the others: ' + ([...new Set(found.spots.filter((p) => !spots.includes(p)).map((p) => 'y ' + p.point[1].toFixed(1)))].slice(0, 8).join(', ') || 'none') + ')');
+    // the dots of its sweeps lie on that floor: seen from above, each one is on the plan
+    if (m === 'floorplan') {
+      const dots = await s.page.evaluate((ids) => ids.filter((id) => !window.TOUR.project(id)), own);
+      assert.deepEqual(dots, [], 'floor plan: sweeps of the ' + room.label + ' whose dot does not show');
+    }
+    // a floor point away from every dot: the cursor marks a sweep of the room, the click enters it
+    const far = spots.filter((p) => !tour.sweeps.some((x) => Math.hypot(x.p[0] - p.point[0], x.p[2] - p.point[2]) < 1.6))[0] || spots[0];
+    await s.moveTo(far.x, far.y);
+    const hover = await s.waitFor((m) => window.TOUR.getState()[m].hover, { what: 'the cursor to show the sweep a click would enter', timeout: 4000 }, m);
+    assert.ok(own.includes(hover), m + ': over the floor of the ' + room.label + ' the cursor marks one of its sweeps (' + own.join(', ') + '), not ' + hover);
+    await s.shot(m + '-cursor-on-' + room.id);
+    await s.clickAt(far.x, far.y);
+    const st = await s.waitRest(null, 12000);
+    assert.ok(own.includes(st.sweep), m + ': a click on the floor of the ' + room.label + ' (surface point ' + far.point + ') enters it, got ' + st.sweep);
+    // (the first frame of the inside view may still be on its way when the flight has landed)
+    const here = tour.sweeps.find((x) => x.id === st.sweep);
+    const eye = await s.waitFor((p) => { const v = window.TOUR.viewer.view; return !!v && !!v.eye && Math.hypot(v.eye[0] - p[0], v.eye[2] - p[2]) < 0.01 ? v.eye[1] : false; }, { what: 'the picture drawn from ' + st.sweep, timeout: 8000 }, here.p);
+    assert.ok(Math.abs(eye - here.p[1]) < 0.01, m + ': the visitor lands at the eye height of ' + st.sweep + ' (' + here.p[1] + ' ft), got ' + eye.toFixed(3));
+    await s.settle(8000);
+    await s.shot(m + '-landed-' + st.sweep);
+    done.push(m + ': ' + spots.length + ' of ' + found.spots.length + ' level points on the floor, floor point ' + far.point + ' -> ' + st.sweep + ' (eye ' + eye.toFixed(3) + ')');
+  }
+  s.note(room.label + ', floor ' + floor + ' ft; ' + done.join('; '));
+});

@@ -258,7 +258,9 @@ def build(ctx):
             (r'east wall — so', lambda b: b[1] < ex0 + 0.02, 4, e1 + ln2, 'vestibule east run S, north end'),
             (r'east wall — so', lambda b: b[0] > ex1 - 0.02, 4, e1 + ln2, 'hall run S, north end'),
             # (a hall-side run north of the old opening that had no wall behind it until now: it ends at the liner)
-            (r'east wall — no', lambda b: b[0] > ex1 - 0.02 and b[5] > e0, 5, e0 - ln2, 'hall run N, south end')):
+            # (v7 hall: only a run that starts north of the opening; with the entry at the sheet's place the shell's
+            # short run stands inside the opening, and bl/zones/hall_block.py re-fits the hall face's baseboards)
+            (r'east wall — no', lambda b: b[0] > ex1 - 0.02 and b[5] > e0 > b[4], 5, e0 - ln2, 'hall run N, south end')):
         # (names are cut at 60 characters)
         ob = _one(r'^\d+ Painted skirting — Aligned primary-suite ' + pat, pick)
         if ob is None:
