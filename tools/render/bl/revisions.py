@@ -13,9 +13,8 @@ the built objects by name, so it survives re-runs of the build:
 6. Primary bathroom: a tall west window (clear glass, a transom at 6 ft, a 2'-0" sill since the third round),
    between the vanity and the shower; the linen cabinet that stood in front of it is gone.
 7. Kitchen skylight: moved off the garage-gable ridge (where the old 4 x 3 ft unit straddled two roof
-   planes) to the continuous east-facing roof plane over the sink / dishwasher run. (3'-6" x 4'-0" until the
-   seventh round; 1'-10" x 3'-10", the size the architect's plan draws, since the eighth: see "v7 roof" below.
-   v7 final: its east edge where the 3'-6" opening's stood, so it lies over the sink: revision_spec.KITCHEN_SKY.)
+   planes) to the continuous east-facing roof plane over the sink / dishwasher run, 3'-6" x 4'-0"
+   as on the architect's plan.
 (8, the dining table in line with the island, is built by the kitchen zone.)
 
 Second round (2026-11-19):
@@ -48,8 +47,8 @@ the fifth round the room was mirrored north-south):
     (4'-7" x 8'-0") is open to the bedroom and carries the attic access hatch; the suite entry (D09) is a 2'-8"
     opening with a sliding panel on the hall side, parked south. Geometry: bl/zones/primary_suite_rooms.py; the
     bedroom's furniture as drawn, the vestibule and the closet's fit-out: bl/zones/primary_suite.fit_out, in plan
-    feet. (Until the seventh round the suite entry stood 1.66 ft south of the sheet's place, beside Bedroom 2's
-    entry alcove; since the eighth it is at revision_spec.SUITE_ENTRY_SHEET_Z, see 19, hall_block.)
+    feet. The suite entry stands 1.66 ft south of the sheet's place (revision_spec.SUITE_ENTRY_SHEET_Z): this
+    model's Bedroom 2 keeps its entry alcove where the sheet has hall.
 14. bedroom3_bath_window (revision_spec.BED3_BATH_WIN_*): the Bedroom 3 bathroom's shower window W11 is taller,
     sill 3'-0", head 7'-6" (was 5'-0" / 7'-0"); width, place, frosted glazing and frame as before; the tile around
     it, the tiled jamb returns and the quartz sill are the baths zone's (bl/zones/baths.py, build_suite3).
@@ -57,9 +56,7 @@ the fifth round the room was mirrored north-south):
 Seventh round (2026-11-21), the owner: "Set all windows to white color, and it should have grid line for these
 windows":
 15. white_windows (revision_spec.WINDOW_*), the last step of all: every window and glazed door of the built model
-    (since the eighth round: the windows W01, W02, W05, W07..W09, W11..W15, W17, the two sliding glass doors and the
-    front door's two sidelights; the garden door D14 and W03 / W04 / W06 / W10 are gone; the five skylights keep
-    their frames) gets satin white frames, sashes,
+    (W01..W15, W17 and the garden door D14; the four skylights keep their frames) gets satin white frames, sashes,
     mullions and transom bars and a grid of white bars on both faces of the glass, lites as close to 14 x 16 1/2 in
     as each sash allows; the kitchen's W08 keeps 2 x 4 lites per sash; two centre mullions go back to the middle
     of their windows; roller shades are seated on the room side of the bars; the primary bedroom slider's pull
@@ -70,32 +67,8 @@ Repairs to the conversion run first: ceiling_seam and floor_seam close seams the
 and ceiling_overlap end two slabs on one line where they overlapped in one plane (coplanar faces of two objects
 shade each other: a dark stripe on the floor across Bedroom 4 and the foyer, a dark rectangle on the foyer's
 ceiling, both in front of the laundry closet); foyer_corner fills the notch in the wall corner between the foyer
-and the kitchen's pantry wall and the bare strip of floor at its foot.
-
-Eighth round (2026-11-23/24), the model on the architect's sheet SKA002 (each step's own docstring has the detail;
-the numbers are those docstrings' numbers, the order is apply()'s):
-*   v7 glazing: primary_slider (4) and bedroom2_tall_window (5) at the sheet's widths, living_slider (one four-panel
-    sliding door in place of the garden door and the two fixed lights), primary_west_window (W15),
-    living_east_windows (W05, W07). v7 final: primary_west_window_south gives W14, the owner's second west window,
-    the same unit as W15.
-*   v7 roof: roof_v7 (bl/roof.py), the sheets' roof, every plane 5 in 12, with Bedroom 3's vault and the entry vault
-    under it; it runs before the skylights, which cut their wells through it. living_skylight: the sheet's skylight
-    over the living room (W21, the fifth).
-16. bedrooms_west_windows: Bedroom 4's west window W12 at 5'-0", Bedroom 3's west window W10 closed.
-17. bedroom3_rooms: the wall between Bedroom 3 and its bath / closet, Bedroom 3's and Bedroom 4's entries.
-18. bedroom3_fit_out (bl/zones/bedrooms_rooms.py, baths_suite3.py): Bedroom 3's bath and closet fitted out.
-19. hall_block (bl/zones/hall_block.py): Bedroom 2's closet block and the hall beside it, the furnace and storage
-    closets, the shared bath's door.
-20. hall_block_fit_out: Bedroom 2's closet and the hall fitted out.
-*   v7 garage: garage_v7 (bl/garage.py), the garage's lowered floor, step and doors, the front door unit, the water
-    heater. v7 site: site_shell, the shell pieces that meet the ground work.
-
-Five general repairs run last, after every change has cut or moved walls and slabs, in this order: floor_level (two
-floor pieces that stood 0.008 ft proud of the oak floor), floor_gaps (thin floor seams and the bare strips under door
-openings), living_east_baseboard (the house baseboard behind the living room's own on its east wall), skirting_trim
-(baseboards cut back to the walls behind them) and skirting_joints (the gaps between baseboard runs on one wall).
-white_windows (15) alone runs after them.
-(v7 final: comment; it named two repairs and had no entry for the eighth round.)
+and the kitchen's pantry wall and the bare strip of floor at its foot. Two general repairs run last, after every change has cut or moved walls and slabs: floor_gaps (thin
+floor seams and the bare strips under door openings) and skirting_trim (baseboards cut back to the walls behind them).
 """
 import math
 import re
@@ -109,12 +82,11 @@ from .common import FT, ft2bl
 
 COLL_SHELL, COLL_OPEN = 'shell', 'openings'
 
-from .revision_spec import (BATH_OLD_HOLE_Y, BATH_WIN_Z, BED2_WIN_X, FOYER_CORNER_INFILL, FOYER_SKY,  # noqa: F401
-                            KITCHEN_CEILING, KITCHEN_SKY, LAUNDRY_CEILING,
+from .revision_spec import (BATH_OLD_HOLE_Y, BATH_WIN_Z, FOYER_CORNER_INFILL, FOYER_SKY, KITCHEN_SKY, LAUNDRY_CEILING,  # noqa: F401
                             LAUNDRY_CLEAR, LAUNDRY_DOOR_HEAD, LAUNDRY_DOOR_LINER, LAUNDRY_DOOR_LINER_PROUD,
                             LAUNDRY_DOOR_Z, LAUNDRY_HOOKUP_RECESS, LAUNDRY_HOST_WALL, LAUNDRY_HOST_WALL_X,
-                            LAUNDRY_THRESHOLD_Y, LAUNDRY_WALL_T, OFFICE_CEILING, PRIMARY_BATH_SKY, REAR_WALL_C, SLIDER_HEAD,
-                            SLIDER_X, TALL_SILL, WEST_WALL_C, R, laundry_leaves, laundry_walls)
+                            LAUNDRY_THRESHOLD_Y, LAUNDRY_WALL_T, OFFICE_CEILING, PRIMARY_BATH_SKY, SLIDER_HEAD,
+                            SLIDER_X, TALL_SILL, laundry_leaves, laundry_walls)
 
 
 # ------------------------------------------------------------------------------------- helpers
@@ -296,18 +268,10 @@ def skylight(ctx, name, x0, x1, z0, z1, cut_ceiling_pat):
         print(f'[revisions] {name}: no roof above, skipped', flush=True)
         return 0
     ceil = [ceiling_y(x, z) for x, z in corners]
-    # v7 repair: the ceiling's surface at the lining's OUTER corners too (before anything is cut), so the lining's
-    # foot follows a sloping ceiling over its whole thickness (the entry vault; 8.0 on the flat ceilings)
-    ceil_o = [ceiling_y(x, z) for x, z in ((x0 - pad, z0 - pad), (x1 + pad, z0 - pad), (x1 + pad, z1 + pad), (x0 - pad, z1 + pad))]
-    ceil_o = [co if abs(co - ci) < 0.2 else ci for co, ci in zip(ceil_o, ceil)]
-    y_lo = min(ceil + ceil_o) - 0.05
+    y_lo = min(ceil) - 0.05
     # cut: everything between the ceiling and the sky over the opening
-    # v7 repair: the ceiling and whatever stands above it are cut to the lining's OUTER outline, like the roof (below).
-    # Cut to the clear well, the ceiling slab ran on under the four linings: the linings' feet lay in the plane of
-    # the ceiling's underside (a ring 0.12 ft wide round every well) and the slab's cut faces in the plane of the
-    # linings' inner faces: two surfaces in one plane, which rendered as dark wedges and streaks round the wells.
-    cutter = ctx.box(f'{name} cutter', x0 - pad, x1 + pad, y_lo, max(roof) + 3.0, z0 - pad, z1 + pad, None, COLL_OPEN)
-    targets, roofs = [], []
+    cutter = ctx.box(f'{name} cutter', x0, x1, y_lo, max(roof) + 3.0, z0, z1, None, COLL_OPEN)
+    targets = []
     rx = re.compile(cut_ceiling_pat, re.I)
     for ob in bpy.data.objects:
         if ob.type != 'MESH' or ob is cutter or not len(ob.data.vertices):
@@ -316,24 +280,14 @@ def skylight(ctx, name, x0, x1, z0, z1, cut_ceiling_pat):
         if not (cols & {COLL_SHELL, 'exterior_shell', COLL_OPEN}) and not any(c.startswith('zone_') for c in cols):
             continue
         b = bbox(ob)
-        if not _overlap(b, x0 - pad, x1 + pad, z0 - pad, z1 + pad, y_lo, max(roof) + 3.0):     # v7 repair: outer outline
+        if not _overlap(b, x0, x1, z0, z1, y_lo, max(roof) + 3.0):
             continue
         is_roof = 'exterior_shell' in cols and not re.search(r'stucco', ob.name, re.I)
-        if is_roof and re.match(r'v7 roof (cap|flashing)', ob.name):         # v7 roof: open strips lying on the planes
-            continue
         is_ceiling = bool(rx.search(ob.name))
         attic = b[2] >= y_lo - 0.01 and (COLL_SHELL in cols or is_roof)      # infill / knee walls above
-        if is_roof:
-            roofs.append(ob)
-        elif is_ceiling or attic:
+        if is_roof or is_ceiling or attic:
             targets.append(ob)
     n = _cut(targets, cutter)
-    # v7 roof: the roof is a slab 6 1/2 in thick now (bl/roof.py), not a sheet. Its hole is the lining's OUTER outline,
-    # so the lining stands in the hole and the slab's cut faces lie behind it (cut to the inner outline they would lie
-    # in the plane of the lining's faces: two surfaces in one plane all round the well).
-    # (v7 repair: one cutter for the ceilings and the roof now, both on the outer outline)
-    if roofs:
-        n += _cut(roofs, cutter)
     bpy.data.objects.remove(cutter, do_unlink=True)
     # lining: four walls from the ceiling surface up to 0.25 ft above the roof
     top = [r + 0.25 for r in roof]
@@ -341,8 +295,7 @@ def skylight(ctx, name, x0, x1, z0, z1, cut_ceiling_pat):
     outer = [(x0 - pad, z0 - pad), (x1 + pad, z0 - pad), (x1 + pad, z1 + pad), (x0 - pad, z1 + pad)]
     for i in range(4):
         j = (i + 1) % 4
-        # v7 repair: the foot is the only surface in the ceiling's plane over the ring (ceil_o at the outer corners)
-        lo = [(*_xz(inner[i], ceil[i]),), (*_xz(inner[j], ceil[j]),), (*_xz(outer[j], ceil_o[j]),), (*_xz(outer[i], ceil_o[i]),)]
+        lo = [(*_xz(inner[i], ceil[i]),), (*_xz(inner[j], ceil[j]),), (*_xz(outer[j], ceil[j]),), (*_xz(outer[i], ceil[i]),)]
         hi = [(*_xz(inner[i], top[i]),), (*_xz(inner[j], top[j]),), (*_xz(outer[j], top[j]),), (*_xz(outer[i], top[i]),)]
         _slab(f'{name} lining {i}', lo, hi, 'paint_ceiling', COLL_OPEN, ctx)
     # curb + frame (black) and glass, parallel to the roof
@@ -358,16 +311,6 @@ def skylight(ctx, name, x0, x1, z0, z1, cut_ceiling_pat):
     g_hi = [(p[0], p[1] + 0.03, p[2]) for p in g_lo]
     gl = _slab(f'{name} glass', g_lo, g_hi, 'glass_clear', COLL_OPEN, ctx)
     gl.visible_shadow = True
-    # v7 roof: curb flashing. The lining stands 0.25 ft out of the roof as the curb; a skirt of the roof's metal
-    # wraps it from inside the roof slab up to the frame, so no white lining shows on the roof and the joint
-    # between curb and roofing is covered.
-    fl = 0.03
-    skirt = [(x0 - pad - fl, z0 - pad - fl), (x1 + pad + fl, z0 - pad - fl), (x1 + pad + fl, z1 + pad + fl), (x0 - pad - fl, z1 + pad + fl)]
-    for i in range(4):
-        j = (i + 1) % 4
-        lo = [_xz(outer[i], roof[i] - 0.2), _xz(outer[j], roof[j] - 0.2), _xz(skirt[j], roof[j] - 0.2), _xz(skirt[i], roof[i] - 0.2)]
-        hi = [_xz(outer[i], top[i]), _xz(outer[j], top[j]), _xz(skirt[j], top[j]), _xz(skirt[i], top[i])]
-        _slab(f'{name} curb flashing {i}', lo, hi, 'roof_metal', COLL_OPEN, ctx)
     # recessed cans that would now hang in the opening
     gone = remove([ob for ob in bpy.data.objects
                    if re.search(r'\bcan\b|can lens|can trim', ob.name) and _inside_xz(ob, x0 - 0.4, x1 + 0.4, z0 - 0.4, z1 + 0.4)])
@@ -454,17 +397,16 @@ def floor_seam(ctx):
     for fam, front in (('Oak floor substrate', 'Hall in enclosed porch substrate'),
                        ('Foundation', 'Front hall infill foundation')):
         pieces = [(o, bbox(o)) for o in find(rf'^\d* ?{fam}$')]
-        fw, fe, b3n = R.X_FOYER_W, R.X_FOYER_E, R.Z_B3_N       # the foyer's two wall faces, Bedroom 3's north face
-        row = [o for o, b in pieces if b[1] > fe - 0.2 and b[4] < R.Z_GAR_N and b3n + 0.8 < b[5] < b3n + 2.3]
-        west = [b for o, b in pieces if b[1] < fw + 0.05 and b3n + 0.1 < b[4] < b3n + 0.9]
+        row = [o for o, b in pieces if b[1] > 21.0 and b[4] < 31.5 and 43.5 < b[5] < 45.0]
+        west = [b for o, b in pieces if b[1] < 15.6 and 42.8 < b[4] < 43.6]
         hall = find(rf'^\d* ?{front}$')
         if len(row) != 1 or len(west) != 1 or len(hall) != 1:
             out[fam] = f'not found ({len(row)}, {len(west)}, {len(hall)})'
             continue
         z = west[0][4]
         out[fam] = {'seam z': round(z, 3),
-                    'row front verts': _set_z(row[0], lambda v: v > b3n + 0.1, z),
-                    'foyer slab rear verts': _set_z(hall[0], lambda v: v < b3n + 2.3, z)}
+                    'row front verts': _set_z(row[0], lambda v: v > 42.8, z),
+                    'foyer slab rear verts': _set_z(hall[0], lambda v: v < 45.0, z)}
     return out
 
 
@@ -478,12 +420,8 @@ def floor_overlap(ctx):
     stretch of floor is one surface at one height (the oak material is mapped in world space, so the planks run
     through). floor_gaps, which runs last, would patch the joint from below if it ever opened."""
     pieces = [(o, bbox(o)) for o in find(r'^\d* ?Oak floor substrate$', COLL_SHELL)]
-    # (the row slab ends in the garage's west wall and starts about 2 ft south of Bedroom 4's north face; the north
-    # slab runs to the east wall, from the old front wall to the kitchen / garage wall)
-    row = [o for o, b in pieces if R.X_FOYER_E - 0.2 < b[1] < R.X_GAR_W + 0.05 and R.Z_B4_N + 1.6 < b[4] < R.Z_B4_N + 2.3
-           and b[5] > R.Z_B3_N - 0.2]
-    north = [o for o, b in pieces if b[1] > R.X_LIV_E - 0.2 and R.Z_PBATH_S - 0.1 < b[4] < R.Z_B4_N
-             and R.Z_KIT_S - 0.05 < b[5] < R.Z_GAR_N + 0.03]
+    row = [o for o, b in pieces if 21.0 < b[1] < 21.6 and 30.5 < b[4] < 31.0 and b[5] > 42.5]
+    north = [o for o, b in pieces if b[1] > 39.0 and 28.3 < b[4] < 28.8 and 31.0 < b[5] < 31.5]
     if len(row) != 1 or len(north) != 1:
         return f'slabs not found ({len(row)}, {len(north)})'
     top = bbox(row[0])[3]
@@ -580,8 +518,7 @@ def bedroom4_flat(ctx):
     cx0, cx1, cz0, cz1 = OFFICE_CEILING
     box(ctx, 'Bedroom 4 flat ceiling', cx0, cx1, 8.0, 8.12, cz0, cz1, 'paint_ceiling', COLL_SHELL)
     # The vault's cans sat on the slope above the new ceiling: drop them (the pendant lights the room).
-    n += remove([ob for ob in find(r'^slope can')
-                 if (lambda b: b[1] < OFFICE_CEILING[1] + 0.3 and OFFICE_CEILING[2] < b[4] and b[5] < OFFICE_CEILING[3])(bbox(ob))])
+    n += remove([ob for ob in find(r'^slope can') if (lambda b: b[1] < OFFICE_CEILING[1] + 0.3 and 28.5 < b[4] and b[5] < 37.0)(bbox(ob))])
     # The pendant hung from the vault on a long stem. Rehang it as one piece under the flat ceiling:
     # canopy at the ceiling, globe (with its collar) 0.35 ft below, the stem shortened to span the gap.
     parts = {k: find(rf'^B4 pendant {k}$') for k in ('canopy', 'collar', 'globe', 'stem')}
@@ -631,344 +568,60 @@ def bay_to_floor(ctx):
             ob.location.z -= 1.0 * FT
         else:
             map_y(ob, [(1.0, 0.0), (1.13, 0.13), (7.37, 7.37), (7.5, 7.5)], only_below=7.0)
-            if 'tall sash glass' in ob.name:
-                # v7 repair: the panes stopped 0.44 in above the bottom rail (rail top 0.092, glass from 0.13) and
-                # short of the head (glass to 7.37, top rail 7.408..7.493, top band from 7.5): unglazed slits along
-                # all three sashes. The glass runs into the bottom rail and up through the top rail into the band.
-                move_face(ob, 'y', 0.13, 0.05)
-                move_face(ob, 'y', 7.37, 7.52)
         k += 1
     return {'removed': n, 'extended': k}
 
 
 def primary_slider(ctx):
-    """4. The primary bedroom's sliding glass door in the rear wall. v7 glazing (eighth round): the wall opening is
-    the sheet's, 6'-4" at x 2.439..8.772 (revision_spec.SLIDER_X; 6'-0" clear between the frames), and the door is
-    built like the living room's (_glz_slider): a fixed west panel on the room-side track, the sliding east panel on
-    the outer one, closed. It was 6'-7 13/16" wide at x 2.450..9.100 with 0.14 ft frames."""
-    from . import revision_spec as RS
     x0, x1 = SLIDER_X
-    out = _glz_opening(r'^\d+ Primary — rear wall$', r'Painted skirting — Primary — rear wall', r'^\d+ Primary — rear wall$',
-                       'x', R.ZN, x0, x1, 0.0, SLIDER_HEAD, 'primary sliding door')
-    out['sills removed'] = remove(_sills(out['was'][0] - 0.1, out['was'][1] + 0.1))
-    out['overlay baseboards split'] = _glz_split_runs(r'^\d+ Primary rear — (painted baseboard|baseboard top reveal)$', 'x', x0, x1)
-    out['door'] = _glz_slider(ctx, 'Primary slider', (x0, x1), SLIDER_HEAD, RS.slider_panels((x0, x1), 2))
-    return out
+    gone = remove([ob for ob in find(r'^\d+ Primary — rear wall$')
+                   if (lambda b: b[3] <= 2.6 and b[0] > x0 - 0.1 and b[1] < x1 + 0.1 and b[4] < 0.3)(bbox(ob))
+                   and any(c.name == COLL_SHELL for c in ob.users_collection)])
+    gone += remove([ob for ob in find(r'Painted skirting — Primary — rear wall')
+                    if (lambda b: b[0] > x0 - 0.1 and b[1] < x1 + 0.1)(bbox(ob))])
+    gone += remove([ob for ob in find(r'^\d+ Primary — rear wall$') if any(c.name == COLL_OPEN for c in ob.users_collection)])
+    gone += remove(_sills(x0, x1))
+    zc, fd, fw = 0.0, 0.22, 0.14
+    c = COLL_OPEN
+    # outer frame
+    box(ctx, 'Primary slider head', x0, x1, SLIDER_HEAD - fw, SLIDER_HEAD, zc - fd / 2, zc + fd / 2, 'black_aluminum', c)
+    box(ctx, 'Primary slider sill', x0, x1, 0.0, 0.06, zc - fd / 2, zc + fd / 2, 'black_aluminum', c)
+    box(ctx, 'Primary slider jamb W', x0, x0 + fw, 0.0, SLIDER_HEAD, zc - fd / 2, zc + fd / 2, 'black_aluminum', c)
+    box(ctx, 'Primary slider jamb E', x1 - fw, x1, 0.0, SLIDER_HEAD, zc - fd / 2, zc + fd / 2, 'black_aluminum', c)
+    # two panels: west fixed (outer track), east sliding (inner track); they overlap at the middle
+    xm = (x0 + x1) / 2
+    panels = [('fixed', x0 + fw, xm + 0.08, zc - 0.05), ('sliding', xm - 0.08, x1 - fw, zc + 0.05)]
+    st = 0.13
+    for tag, a, b, z in panels:
+        for nm, ax0, ax1, ay0, ay1 in (('stile a', a, a + st, 0.06, SLIDER_HEAD - fw), ('stile b', b - st, b, 0.06, SLIDER_HEAD - fw),
+                                       ('rail bottom', a, b, 0.06, 0.06 + st + 0.05), ('rail top', a, b, SLIDER_HEAD - fw - st, SLIDER_HEAD - fw)):
+            box(ctx, f'Primary slider {tag} {nm}', ax0, ax1, ay0, ay1, z - 0.04, z + 0.04, 'black_aluminum', c)
+        g = box(ctx, f'Primary slider {tag} glass', a + st, b - st, 0.06 + st + 0.05, SLIDER_HEAD - fw - st, z - 0.012, z + 0.012,
+                'glass_clear', c)
+        g.visible_shadow = True
+    box(ctx, 'Primary slider pull', xm + 0.02, xm + 0.08, 3.0, 4.6, zc + 0.10, zc + 0.14, 'black_metal', c)
+    return {'removed': gone}
 
 
 def bedroom2_tall_window(ctx):
-    """5. Bedroom 2's rear window W02 runs from a 2'-0" sill (TALL_SILL, third round) up to the 8 ft ceiling (owner).
-    v7 glazing (eighth round): it is 6'-0" wide at the sheet's place, x 13.923..19.923
-    (revision_spec.BED2_REAR_WIN_X; the concept's window, carried over by the warp, was 5'-3 13/16" at
-    x 14.456..19.772). The wall is re-cut, the window rebuilt in plan feet (_glz_window), and the room's ceiling-track
-    drapes are set to the new jambs (revision_spec.BED2_DRAPE)."""
-    from . import revision_spec as RS
-    a0, a1 = RS.BED2_REAR_WIN_X
-    pat = r'^\d+ Bedroom 2 — rear wall$'
-    out = _glz_opening(pat, r'Painted skirting — Bedroom 2 — rear wall', pat, 'x', R.ZN, a0, a1, TALL_SILL, 8.0,
-                       'rear window W02')
-    out['sills removed'] = remove(_sills(out['was'][0] - 0.1, out['was'][1] + 0.1))
-    out['window'] = _glz_window(ctx, 'Bedroom 2 rear window W02', 'x', REAR_WALL_C, a0, a1, TALL_SILL, 8.0)
-    # the drapes (bl/zones/bedrooms.py builds them on the concept plan; the warp carries them rigidly with the room's
-    # furniture): one stack each side, covering the glass by BED2_DRAPE['over'] from the jamb
-    d = RS.BED2_DRAPE
-    parts = {k: [o for o in find(rf'^B2 drape {k}$') if o.type == 'MESH'] for k in ('track', 'left drape', 'right drape')}
-    if all(len(v) == 1 for v in parts.values()):
-        spans = {'left drape': (a0 + d['over'] - d['stack'], a0 + d['over']),
-                 'right drape': (a1 - d['over'], a1 - d['over'] + d['stack'])}
-        spans['track'] = (spans['left drape'][0] - d['track_past'], spans['right drape'][1] + d['track_past'])
-        for k, (u0, u1) in spans.items():
-            _glz_fit_x(parts[k][0], u0, u1)
-        out['drapes'] = {k: [round(v, 3) for v in s] for k, s in spans.items()}
-    else:
-        out['drapes'] = 'zone bedrooms not built: skipped'
-    return out
-
-
-# ============================================================================================ v7 glazing
-# Eighth round (2026-11-24), stage B, track "glazing": the rear and east openings and the primary bedroom's west
-# window W15 at the sheet's widths and places (revision_spec, "v7 glazing"; audit F13, F14, F16, F17, F20, F21).
-# primary_slider and bedroom2_tall_window above use these helpers too. Everything is rebuilt in plan feet after the
-# warp: the wall is re-cut between the two solid pieces that flank the old opening, the old unit goes, and the new
-# one is built on the sheet's numbers. Frame members are built in the frames' black aluminium and the panes in
-# `glass_clear`, all in `openings`: white_windows, the last revision, makes them white and gives them their grid.
-def _glz_wall(pat, axis, a0, a1, y0, y1, label):
-    """Re-cut an exterior wall for the opening a0..a1 along `axis` ('x': the rear wall, 'z': the west / east wall)
-    from the height y0 to y1. `pat` names the wall's shell pieces (plain boxes: full-height solids, and the pieces
-    below and above the old windows). The full-height piece that starts before a0 and the one that ends after a1
-    take the new jambs; every piece between them goes; the wall below y0 and above y1 is a copy of the first (same
-    paint inside, stucco outside, same `scene_index`: it bakes as a wall). Returns the old opening (`was`), the
-    wall's `span` along the axis and its two faces (`across`)."""
-    k0, k1, c0, c1 = (0, 1, 4, 5) if axis == 'x' else (4, 5, 0, 1)
-    pcs = [(o, bbox(o)) for o in find(pat, COLL_SHELL)
-           if o.type == 'MESH' and len(o.data.vertices) == 8 and not SKIRT.search(o.name)]
-    full = [(o, b) for o, b in pcs if b[2] < 0.01 and b[3] > 7.9]
-    left = [p for p in full if p[1][k0] < a0 - 0.02]
-    right = [p for p in full if p[1][k1] > a1 + 0.02]
-    if not left or not right:
-        raise RuntimeError(f'{label}: no solid wall piece {"before" if not left else "after"} {a0:.3f}..{a1:.3f} ({pat!r})')
-    lo, lb = max(left, key=lambda p: p[1][k0])
-    ro, rb = min(right, key=lambda p: p[1][k1])
-    if lo is ro or lb[k1] > rb[k0] + 0.01 or max(abs(lb[c0] - rb[c0]), abs(lb[c1] - rb[c1])) > 0.01:
-        raise RuntimeError(f'{label}: the wall is not where the spec expects it: {[round(float(v), 3) for v in lb + rb]}')
-    n = remove([o for o, b in pcs if o is not lo and o is not ro and b[k0] > lb[k1] - 0.02 and b[k1] < rb[k0] + 0.02])
-    move_face(lo, axis, lb[k1], a0)
-    move_face(ro, axis, rb[k0], a1)
-    base = re.sub(r'^\d+ ', '', lo.name)
-    for nm, ya, yb in (('below', lb[2], y0), ('above', y1, lb[3])):
-        if yb - ya > 0.01:
-            b = (a0, a1, ya, yb, lb[4], lb[5]) if axis == 'x' else (lb[0], lb[1], ya, yb, a0, a1)
-            _like(lo, f'{base} ({nm} the {label})', *b)
-    return {'was': (round(float(lb[k1]), 3), round(float(rb[k0]), 3)), 'opening': (round(a0, 3), round(a1, 3)),
-            'y': (y0, y1), 'wall pieces removed': n, 'span': (float(lb[k0]), float(rb[k1])),
-            'across': (float(lb[c0]), float(lb[c1]))}
-
-
-def _glz_skirting(pat, axis, face, span, a0, a1, to_floor):
-    """The baseboard runs named by `pat` on the wall's room face (`face`) between span[0] and span[1]: the first
-    and the last keep their far ends; a run between them (under the old window, on an old pier) goes. Under a
-    window the first runs on to the far jamb, where the last begins; at an opening down to the floor they end on
-    its two edges. (skirting_trim, which runs later, checks every run against the wall behind it.)"""
-    k0, k1, c0, c1 = (0, 1, 4, 5) if axis == 'x' else (4, 5, 0, 1)
-    runs = []
-    for o in find(pat, COLL_SHELL):
-        if o.type != 'MESH' or len(o.data.vertices) != 8 or not SKIRT.search(o.name):
-            continue
-        b = bbox(o)
-        if abs((b[c0] + b[c1]) / 2 - face) < 0.09 and b[k1] > span[0] + 0.05 and b[k0] < span[1] - 0.05:
-            runs.append((b[k0], o))
-    runs.sort(key=lambda t: t[0])
-    if len(runs) < 2:
-        return {'runs': len(runs)}
-    first, last = runs[0][1], runs[-1][1]
-    n = remove([o for _, o in runs[1:-1]])
-    move_face(first, axis, bbox(first)[k1], a0 if to_floor else a1)
-    move_face(last, axis, bbox(last)[k0], a1)
-    return {'runs': 2, 'removed': n, 'ends': [round(float(bbox(first)[k1]), 3), round(float(bbox(last)[k0]), 3)]}
-
-
-def _glz_opening(walls, skirts, opens, axis, face, a0, a1, y0, y1, label):
-    """_glz_wall for the new opening, then the old unit's pieces in `openings` (named by `opens`, standing in the old
-    opening) and the baseboards (_glz_skirting)."""
-    out = _glz_wall(walls, axis, a0, a1, y0, y1, label)
-    k = 0 if axis == 'x' else 4
-    lo, hi = out['was']
-    out['old pieces removed'] = remove([o for o in find(opens, COLL_OPEN) if o.type == 'MESH'
-                                        and (lambda b: lo - 0.25 < (b[k] + b[k + 1]) / 2 < hi + 0.25)(bbox(o))])
-    out['baseboards'] = _glz_skirting(skirts, axis, face, out['span'], a0, a1, y0 < 0.01)
-    return out
-
-
-def _glz_fit_x(ob, u0, u1):
-    """Set a mesh object's extent along x to u0..u1 (its vertices are spread in proportion)."""
-    w, mw = _world(ob)
-    x = w[:, 0] / FT
-    lo, hi = float(x.min()), float(x.max())
-    w[:, 0] = (u0 + (x - lo) / max(hi - lo, 1e-9) * (u1 - u0)) * FT
-    _set_world(ob, w, mw)
-
-
-def _glz_split_runs(pat, axis, a0, a1):
-    """A baseboard run (named by `pat`) that crosses an opening down to the floor becomes two runs that end on the
-    opening's edges. (skirting_trim would keep only the first stretch of such a run: it cuts the copy of a piece it
-    has already cut, which is why the primary bedroom's second baseboard ended at the sliding door until now.)"""
-    k0, k1, k = (0, 1, 0) if axis == 'x' else (4, 5, 1)
-    sgn = 1.0 if axis == 'x' else -1.0
-    n = 0
-    for o in find(pat, COLL_SHELL):
-        if o.type != 'MESH' or not SKIRT.search(o.name):
-            continue
-        b = bbox(o)
-        if b[k0] < a0 - 0.05 and b[k1] > a1 + 0.05:
-            for ob, lo, hi in ((_copy(o, f'{o.name} (beyond the opening)'), a1, b[k1]), (o, b[k0], a0)):
-                w, mw = _world(ob)
-                w[:, k] = sgn * np.clip(sgn * w[:, k] / FT, lo, hi) * FT
-                _set_world(ob, w, mw)
-            n += 1
-    return n
-
-
-def _glz_box(ctx, name, axis, u0, u1, y0, y1, n0, n1, mat='black_aluminum', bevel=0.0):
-    """Box given along the wall (u), up (y) and through it (n), for a wall that runs along `axis`."""
-    b = (u0, u1, y0, y1, n0, n1) if axis == 'x' else (n0, n1, y0, y1, u0, u1)
-    return ctx.box(name, *b, mat, COLL_OPEN, bevel=bevel, segments=2)
-
-
-def _glz_window(ctx, name, axis, wc, a0, a1, y0, y1, stool=None, mullion=None):
-    """A two-sash window in the wall opening a0..a1 (along `axis`), y0..y1, on the wall's centre line `wc`
-    (revision_spec.GLAZING_WIN_*): a frame as deep as the wall, standing 0.015 ft proud of both faces like the
-    shell's window heads and sills (so no wall end shows in the reveals), and inside it the two sashes' stiles and
-    rails with one mullion (their meeting stiles: in the middle, or on the line `mullion`) and a pane each, let
-    0.008 ft into the sash. `stool`: a painted stool under the sill (revision_spec.GLAZING_STOOL), given with the
-    room's side (+1 / -1 along n)."""
-    from . import revision_spec as RS
-    f, s, sd, m = RS.GLAZING_WIN_FRAME, RS.GLAZING_WIN_SASH, RS.GLAZING_WIN_SASH_D, RS.GLAZING_WIN_MULLION
-    d0, d1 = wc - R.WALL / 2 - 0.015, wc + R.WALL / 2 + 0.015
-    bx = lambda nm, *b, **kw: _glz_box(ctx, f'{name} {nm}', axis, *b, **kw)   # noqa: E731
-    bx('frame head', a0, a1, y1 - f, y1, d0, d1)
-    bx('frame sill', a0, a1, y0, y0 + f, d0, d1)
-    bx('frame jamb a', a0, a0 + f, y0 + f, y1 - f, d0, d1)
-    bx('frame jamb b', a1 - f, a1, y0 + f, y1 - f, d0, d1)
-    i0, i1, j0, j1 = a0 + f, a1 - f, y0 + f, y1 - f                    # inside the frame
-    s0, s1 = wc - sd / 2, wc + sd / 2
-    e = 0.004                                                          # the sashes are let this far into the frame
-    bx('sash rail bottom', i0 - e, i1 + e, j0 - e, j0 + s, s0, s1, bevel=0.004)
-    bx('sash rail top', i0 - e, i1 + e, j1 - s, j1 + e, s0, s1, bevel=0.004)
-    bx('sash stile a', i0 - e, i0 + s, j0 + s, j1 - s, s0, s1, bevel=0.004)
-    bx('sash stile b', i1 - s, i1 + e, j0 + s, j1 - s, s0, s1, bevel=0.004)
-    um = (a0 + a1) / 2 if mullion is None else mullion
-    bx('mullion', um - m / 2, um + m / 2, j0 + s, j1 - s, s0, s1, bevel=0.004)
-    lites = []
-    for tag, u0, u1 in (('a', i0 + s, um - m / 2), ('b', um + m / 2, i1 - s)):
-        g = bx(f'sash {tag} glass', u0 - 0.008, u1 + 0.008, j0 + s - 0.008, j1 - s + 0.008, wc - 0.016, wc + 0.016,
-               mat='glass_clear')
-        g.visible_shadow = True
-        lites.append((round(u0, 3), round(u1, 3)))
-    out = {'frame': (round(a0, 3), round(a1, 3), y0, y1), 'daylight': lites, 'daylight y': (round(j0 + s, 3), round(j1 - s, 3))}
-    if stool:
-        g = RS.GLAZING_STOOL
-        n0, n1 = (d0 + 0.015 - g['out'], d1 - 0.015 + g['room']) if stool > 0 else (d0 + 0.015 - g['room'], d1 - 0.015 + g['out'])
-        bx('stool', a0 - g['past'], a1 + g['past'], g['y'][0], g['y'][1], n0, n1, mat='paint_trim', bevel=0.008)
-        out['stool'] = (round(a0 - g['past'], 3), round(a1 + g['past'], 3))
-    return out
-
-
-def _glz_slider(ctx, name, x, head, panels):
-    """A sliding glass door in the rear wall's opening x = (x0, x1), floor to `head` (revision_spec.GLAZING_*): a
-    frame as deep as the wall and 0.015 ft proud of both faces (2 in jambs and head), a low threshold with the two
-    track ribs, and the panels of revision_spec.slider_panels on their tracks (stiles, rails, a pane let 0.008 ft into
-    them). Each sliding panel has a pull on both faces of its lock stile: the stile that closes on the jamb (two
-    panels) or on the other centre panel (four)."""
-    from . import revision_spec as RS
-    c = COLL_OPEN
-    x0, x1 = x
-    fr, st, rb, pt = RS.GLAZING_FRAME, RS.GLAZING_STILE, RS.GLAZING_RAIL_BOTTOM, RS.GLAZING_PANEL_T
-    tr, th = RS.GLAZING_TRACK, RS.GLAZING_THRESHOLD
-    zc = REAR_WALL_C
-    d0, d1 = zc - R.WALL / 2 - 0.015, zc + R.WALL / 2 + 0.015
-    box(ctx, f'{name} head', x0, x1, head - fr, head, d0, d1, 'black_aluminum', c)
-    box(ctx, f'{name} jamb W', x0, x0 + fr, -0.01, head - fr, d0, d1, 'black_aluminum', c)
-    box(ctx, f'{name} jamb E', x1 - fr, x1, -0.01, head - fr, d0, d1, 'black_aluminum', c)
-    sill = box(ctx, f'{name} sill', x0 + fr, x1 - fr, -0.01, th, d0, d1, 'black_aluminum', c)
-    ctx.add_bevel(sill, 0.012, 2)
-    for tag, sg in (('inner', 1.0), ('outer', -1.0)):
-        box(ctx, f'{name} sill track {tag}', x0 + fr, x1 - fr, th - 0.004, th + 0.014, zc + sg * tr - 0.014, zc + sg * tr + 0.014,
-            'black_aluminum', c)
-    ya, yb = th + 0.010, head - fr + 0.004                # a panel rides on its track rib and runs up into the head
-    sliding = [p for p in panels if p[3] == 'outer']
-    cm = (x0 + x1) / 2
-    out = {'clear': [round(v, 3) for v in RS.slider_clear(x)], 'head': head, 'panels': {}}
-    for tag, a, b, track in panels:
-        z = zc + (tr if track == 'inner' else -tr)
-        za, zb = z - pt / 2, z + pt / 2
-        for nm, u0, u1, v0, v1 in (('stile a', a, a + st, ya, yb), ('stile b', b - st, b, ya, yb),
-                                   ('rail bottom', a + st, b - st, ya, ya + rb), ('rail top', a + st, b - st, yb - st, yb)):
-            ctx.box(f'{name} {tag} {nm}', u0, u1, v0, v1, za, zb, 'black_aluminum', c, bevel=0.005, segments=2)
-        g = box(ctx, f'{name} {tag} glass', a + st - 0.008, b - st + 0.008, ya + rb - 0.008, yb - st + 0.008,
-                z - 0.012, z + 0.012, 'glass_clear', c)
-        g.visible_shadow = True
-        out['panels'][tag] = (round(a, 3), round(b, 3), track)
-        if track != 'outer':
-            continue
-        # the interlock: a fin on the stile that covers a fixed panel's stile, across the slot between the two tracks
-        mid = (a + b) / 2
-        ui = (a + st / 2) if (mid < cm) == (len(sliding) == 2) else (b - st / 2)
-        box(ctx, f'{name} {tag} interlock', ui - 0.03, ui + 0.03, ya, yb, zb, zc + tr - pt / 2, 'black_aluminum', c)
-        # the lock stile: toward the middle of a four-panel door, toward the jamb of a two-panel one
-        mid = (a + b) / 2
-        west = (mid > cm) if len(sliding) == 2 else (mid < cm)
-        uc = a + st / 2 if west else b - st / 2
-        for side, zf, sg in (('inside', zb, 1.0), ('outside', za, -1.0)):
-            for k, yp in enumerate((3.02, 4.18)):
-                ctx.box(f'{name} {tag} pull {side} post {k}', uc - 0.016, uc + 0.016, yp - 0.016, yp + 0.016,
-                        min(zf, zf + sg * 0.034), max(zf, zf + sg * 0.034), 'black_metal', c)
-            ctx.box(f'{name} {tag} pull {side} bar', uc - 0.02, uc + 0.02, 2.9, 4.3, min(zf + sg * 0.03, zf + sg * 0.052),
-                    max(zf + sg * 0.03, zf + sg * 0.052), 'black_metal', c, bevel=0.006, segments=2)
-    return out
-
-
-def living_slider(ctx):
-    """The living room's rear wall (audit F17): ONE four-panel sliding glass door, 12'-4" wide, x 25.528..37.861
-    (revision_spec.LIVING_SLIDER_*), in place of the garden door D14 and the two fixed lights W03 / W04. Head 7'-6" as
-    the lights it replaces, a threshold 5/8 in above the floor. The two centre panels slide over the fixed end
-    panels; the east one is shown 2'-3" open (the tour's way to the landing)."""
-    from . import revision_spec as RS
-    x0, x1 = RS.LIVING_SLIDER_X
-    out = _glz_opening(r'^\d+ Living — rear wall$', r'Painted skirting — Living — rear wall',
-                       r'^\d+ Living — rear wall$|^\d+ (Open glass garden door|Garden door white)', 'x', R.ZN, x0, x1,
-                       0.0, RS.LIVING_SLIDER_HEAD, 'living room sliding door')
-    out['sills removed'] = remove(_sills(out['was'][0] - 0.1, out['was'][1] + 0.1))
-    out['door'] = _glz_slider(ctx, 'Living slider', (x0, x1), RS.LIVING_SLIDER_HEAD,
-                              RS.slider_panels((x0, x1), 4, *RS.LIVING_SLIDER_OPEN))
-    out['way'] = [round(v, 3) for v in RS.living_slider_way()]
-    return out
-
-
-def primary_west_window(ctx):
-    """The primary bedroom's north west window W15 (audit F13): 3'-0" wide at the sheet's place, z 1.225..4.225
-    (revision_spec.PRIMARY_WEST_WIN_Z; the concept's window, carried over by the warp, was 2'-9 15/16" at
-    z 1.107..3.937). Sill, head and the painted stool as before. W14, the second west window, is rebuilt by
-    primary_west_window_south (v7 final)."""
-    from . import revision_spec as RS
-    z0, z1 = RS.PRIMARY_WEST_WIN_Z
-    y0, y1 = RS.GLAZING_WIN_Y
-    out = _glz_opening(r'^\d+ Primary — west wall$|^\d+ Primary west wall — north of added window$',
-                       r'Painted skirting — Primary (— west wall|west wall — north of added)',
-                       r'^\d+ Primary — west wall$|^\d+ Primary existing west window', 'z', R.XW, z0, z1, y0, y1,
-                       'west window W15')
-    out['window'] = _glz_window(ctx, 'Primary west window W15', 'z', WEST_WALL_C, z0, z1, y0, y1, stool=1)
-    return out
-
-
-def primary_west_window_south(ctx):                                                          # v7 final
-    """The primary bedroom's south west window W14 (the owner's second west window; the sheet has none there): the
-    same unit as W15, in the opening it has (revision_spec.PRIMARY_WEST_WIN_S_Z, z 9.197..12.071, 2'-10 1/2"; sill
-    2'-6", head 7'-0"). The wall is not touched: the opening is the shell's, carried by the warp, and is checked
-    against the spec. The shell's unit goes (two lights one above the other with a meeting rail, painted jambs flush
-    with both wall faces, a head and a sill reveal, a stone sill 0.19 ft into the room) and _glz_window builds
-    W15's kit in its place: the frame 0.015 ft proud of both wall faces, two sashes side by side with one mullion
-    in the middle, the painted stool. white_windows then gives each sash the 1 x 3 lights W15's have (the sashes
-    are 0.76 in narrower than W15's: the opening is 1 1/2 in narrower). Its roller shade is the zone's
-    (bl/zones/primary_suite.build_shades), hung like W15's."""
-    from . import revision_spec as RS
-    z0, z1 = RS.PRIMARY_WEST_WIN_S_Z
-    y0, y1 = RS.GLAZING_WIN_Y
-
-    def one(pat):
-        obs = [o for o in find(pat, COLL_SHELL) if o.type == 'MESH']
-        if len(obs) != 1:
-            raise RuntimeError(f'west window W14: {len(obs)} wall pieces {pat!r}, expected 1')
-        return bbox(obs[0])
-    was = (one(r'^\d+ Primary west wall — north of added window$')[5], one(r'^\d+ Primary west wall — south of added window$')[4],
-           one(r'^\d+ Primary west wall — added window sill wall$')[3], one(r'^\d+ Primary west wall — added window header$')[2])
-    if max(abs(a - b) for a, b in zip(was, (z0, z1, y0, y1))) > 0.005:
-        raise RuntimeError(f'west window W14: the opening is {[round(float(v), 3) for v in was]}, the spec has '
-                           f'{[round(v, 3) for v in (z0, z1, y0, y1)]}')
-    out = {'opening': (round(z0, 3), round(z1, 3)), 'y': (y0, y1),
-           'old pieces removed': remove([o for o in find(r'^\d+ Primary added west window — ', COLL_OPEN) if o.type == 'MESH'])}
-    out['window'] = _glz_window(ctx, 'Primary west window W14', 'z', WEST_WALL_C, z0, z1, y0, y1, stool=1)
-    return out
-
-
-def living_east_windows(ctx):
-    """The east wall's two windows north of the kitchen (audit F20, F21). W05: ONE 6'-0" unit at z 0.368..6.368
-    (revision_spec.LIVING_EAST_WIN_Z) in place of the two 2'-10 7/16" windows W05 / W06 and the 9 in pier between
-    them. W07, the living / dining window: 5'-0" at z 16.066..21.066 (DINING_EAST_WIN_Z; it was 3'-11 7/16" at
-    z 17.615..21.570), its mullion where the sheet draws it (DINING_EAST_WIN_MULLION, z 19.44: two unequal lights).
-    Sill 2'-6" and head 7'-0" as before."""
-    from . import revision_spec as RS
-    pat = r'^\d+ Living / kitchen — east wall$'
-    walls = pat + r'|^\d+ Kitchen east wall beside arch$'
-    y0, y1 = RS.GLAZING_WIN_Y
-    out = {}
-    for tag, name, (z0, z1), zm in (('W05', 'Living east window W05', RS.LIVING_EAST_WIN_Z, None),
-                                    ('W07', 'Living / dining east window W07', RS.DINING_EAST_WIN_Z,
-                                     RS.DINING_EAST_WIN_MULLION)):
-        o = _glz_opening(walls, r'Painted skirting — Living / kitchen — east wall', pat, 'z', R.X_LIV_E, z0, z1, y0, y1,
-                         f'east window {tag}')
-        o['window'] = _glz_window(ctx, name, 'z', RS.EAST_WALL_C, z0, z1, y0, y1, mullion=zm)
-        out[tag] = o
-    return out
+    """Bedroom 2's rear window (concept sill 2'-6", head 7'-0") runs from a 2'-0" sill (TALL_SILL) up to the 8 ft
+    ceiling: the wall below keeps its skirting and is cut down to the sill, the stool and outside sill drop with it, the
+    header above goes."""
+    s = TALL_SILL
+    shell = [ob for ob in find(r'^\d+ Bedroom 2 — rear wall$') if any(cc.name == COLL_SHELL for cc in ob.users_collection)
+             and (lambda b: b[0] > 14.3 and b[1] < 19.8)(bbox(ob))]
+    low = [ob for ob in shell if bbox(ob)[3] <= 2.6]
+    gone = remove([ob for ob in shell if bbox(ob)[2] >= 6.9])
+    for ob in low:
+        map_y(ob, [(0.0, 0.0), (2.5, s)])
+    sills = _sills(14.3, 19.8)
+    for ob in sills:
+        ob.location.z -= (2.5 - s) * FT
+    k = 0
+    for ob in find(r'^\d+ Bedroom 2 — rear wall$', COLL_OPEN):
+        map_y(ob, [(2.5, s), (2.6, s + 0.1), (6.9, 7.9), (7.0, 8.0)])
+        k += 1
+    return {'removed header': gone, 'wall below cut to the sill': len(low), 'sills lowered': len(sills), 'stretched': k}
 
 
 def bedroom3_bath_window(ctx):
@@ -1186,7 +839,7 @@ def bath_window(ctx):
     nb = bbox(north[0])
     # the wall below the sill: a copy of the north solid stretched across the opening, up to the sill
     _like(north[0], 'Primary bathroom west wall — below tall window', nb[0], nb[1], nb[2], s, z0, z1)
-    xc, fd, fw, mw = WEST_WALL_C, 0.22, 0.12, 0.10       # on the west wall's centre line
+    xc, fd, fw, mw = 0.0, 0.22, 0.12, 0.10
     c = COLL_OPEN
     box(ctx, 'Primary bath tall window head', xc - fd / 2, xc + fd / 2, 8.0 - fw, 8.0, z0, z1, 'black_aluminum', c)
     box(ctx, 'Primary bath tall window sill', xc - fd / 2, xc + fd / 2, s, s + 0.08, z0, z1, 'black_aluminum', c)
@@ -1208,8 +861,7 @@ def bath_window(ctx):
 def kitchen_skylight(ctx):
     gone = remove(find(r'^\d+ Kitchen skylight —'))
     gone += remove(find(r'^\d+ House ceiling — skylight (east|north|south) panel$'))
-    kx0, kx1, kz0, kz1 = KITCHEN_CEILING
-    box(ctx, 'Kitchen ceiling (east of the central panel)', kx0, kx1, 8.0, 8.12, kz0, kz1, 'paint_ceiling', COLL_SHELL)
+    box(ctx, 'Kitchen ceiling (east of the central panel)', 28.41, 39.42, 8.0, 8.12, 0.0, 31.24, 'paint_ceiling', COLL_SHELL)
     n = skylight(ctx, 'Kitchen skylight', *KITCHEN_SKY, r'ceiling')
     return {'removed': gone, 'cut': n}
 
@@ -1226,24 +878,6 @@ def primary_bath_skylight(ctx):
     shower into the room's north-west corner; the opening is cut into the shell as built, so nothing is left where it
     was."""
     return skylight(ctx, 'Primary bath skylight', *PRIMARY_BATH_SKY, r'ceiling')
-
-
-# v7 roof -----------------------------------------------------------------------------------------------------------
-def roof_v7(ctx):
-    """Eighth round (2026-11-24), track "roof": the concept's roof (planes of 4.0 to 6.5 in 12, eaves of 5 1/4 in, an
-    entry ridge that fell toward the street, a flat porch canopy) is removed and the sheets' roof built in plan feet
-    by bl/roof.py: every plane 5 in 12, main ridge 14'-7", garage ridge 12'-4 1/2", level wing and entry ridges,
-    1'-0" eaves with a 6 1/2 in fascia, the entry gable running on over the porch; Bedroom 3's vault and the entry
-    vault re-fitted under it. It runs before the skylights, which cut their wells through the roof that is there."""
-    from . import roof
-    return roof.rebuild(ctx)
-
-
-def living_skylight(ctx):
-    """The sheet's "(N) SKYLIGHT" over the living room (SK1, 1'-10" x 3'-10"; revision_spec.LIVING_SKY), on the east
-    roof plane, with its well through the ceiling slab kitchen_skylight builds (so it runs after it)."""
-    from .revision_spec import LIVING_SKY
-    return skylight(ctx, 'Living skylight', *LIVING_SKY, r'ceiling')
 
 
 def primary_bath_fit_out(ctx):
@@ -1263,9 +897,8 @@ def primary_bath_fit_out(ctx):
 
 
 def entry_vault_closure(ctx):
-    """Close the strip between the entry vault's rear edge and the rear gable below it (eaves 8 ft): looking up
-    from the foyer it opened into the attic. (The vault is level since the eighth round, bl/roof.entry_ceiling:
-    9.719 ft at the walls, 10.917 ft at the ridge; the concept's fell from 11.2 to 9.05 ft.)   v7 final: comment"""
+    """Close the strip between the entry vault's rear edge (eaves 9.05 ft, ridge 11.2 ft) and the
+    rear gable below it (eaves 8 ft): looking up from the foyer it opened into the attic."""
     vault = find(r'Coordinated entry vaulted ceiling')
     gable = find(r'Coordinated entry rear gable')
     if not vault or not gable:
@@ -1437,7 +1070,6 @@ def laundry_closet(ctx):
     th = box(ctx, 'Laundry closet door threshold', hx0 - ow, hx1 + ow, -0.005, LAUNDRY_THRESHOLD_Y, d0 + ln, d1 - ln,
              'white_oak_veneer', c)
     ctx.add_bevel(th, 0.006, 2)
-    th['tg_grain'] = 1                                  # v7 repair: the grain runs along the strip (it lies along z)
 
     # ---- door: jamb liners and head trim like the other interior doors, a pair of flush slab leaves standing open
     box(ctx, 'Laundry closet door jamb N', hx0 - ow, hx1 + ow, 0.0, head - 0.08, d0 - ln, d0 + ln, 'paint_trim', c)
@@ -1488,190 +1120,6 @@ def suite_fit_out(ctx):
         return 'zone primary_suite not built: skipped'
     from .zones import primary_suite
     return primary_suite.fit_out(ctx)
-
-
-# v7 bedrooms -------------------------------------------------------------------------------------------------------
-# Eighth round (2026-11-24), stage B, track "bedrooms" (revision_spec, section "v7 bedrooms"; geometry in
-# bl/zones/bedrooms_rooms.py and bl/zones/baths_suite3.py). They run after laundry_closet (Bedroom 4's door wall) and
-# bedroom3_bath_window (W11), before floor_gaps, skirting_trim and white_windows.
-def bedrooms_west_windows(ctx):
-    """16. Bedroom 4's west window W12 is 5'-0" wide and centred on the room's west wall, as on the sheet; Bedroom 3's
-    west window W10, which the sheet does not have, is closed while revision_spec.BED3_WEST_WINDOW is False (solid
-    wall, paint and baseboard inside, stucco outside)."""
-    from .zones import bedrooms_rooms
-    return bedrooms_rooms.west_windows(ctx)
-
-
-def bedroom3_rooms(ctx):
-    """17. The wall between Bedroom 3 and its bath / closet as the sheet draws it: the bath's hinged 2'-4" door at the
-    east end of the bath's south wall, the closet's 4'-8" opening with two sliding panels (the two pocket doors go);
-    Bedroom 3's entry 2'-8" at the sheet's place, hinged on the north jamb; a leaf sized to its opening for Bedroom 4's
-    entry; hinges, levers, liners, saddle, baseboards."""
-    from .zones import bedrooms_rooms
-    return bedrooms_rooms.rooms(ctx)
-
-
-def bedroom3_fit_out(ctx):
-    """18. Bedroom 3's bath fitted out on the sheet's layout (shower 3'-0", toilet bay 2'-6", vanity bay 2'-9", toilet
-    and vanity on the north wall) and its closet as a reach-in fitted to its 2'-3 1/2" depth, after the warp and in
-    plan feet; the picture over Bedroom 3's bed on the closed west wall; Bedroom 4's shade in the wider window."""
-    from .zones import bedrooms_rooms
-    return bedrooms_rooms.fit_out(ctx)
-
-
-# v7 hall -----------------------------------------------------------------------------------------------------------
-# Eighth round (2026-11-24), stage B, track "hall" (revision_spec, section "v7 hall" and SUITE_ENTRY_* /
-# SUITE_CLOSET_DOOR_*; geometry in bl/zones/hall_block.py). They run after bath_door and suite_rooms (which build the
-# suite entry and the pocket door at their new numbers), before floor_gaps, skirting_trim and white_windows.
-def hall_block(ctx):
-    """19. Bedroom 2's closet block and the hall as the sheet draws them (audit F08, F09, F10, F11, F42, P3): the hall
-    3'-3" wide beside a block 7'-8" x 4'-8" whose south face is 17'-4" from the rear wall, 3'-4" of hall south of it;
-    Bedroom 2's south wall with its hinged 2'-8" entry and the closet's 6'-0" sliding doors; the furnace closet with
-    a louvred 1'-8" door and the storage closet with a 2'-4" door; the shared bath's hinged 2'-4" door with a leaf;
-    the open corner at the bath's north-east closed. (The concept's entry alcove, its doorless opening and the wall
-    south of it are gone; the suite entry stands at the sheet's place, revision_spec.SUITE_ENTRY_SHEET_Z.)"""
-    from .zones import hall_block as hb
-    return hb.build(ctx)
-
-
-def hall_block_fit_out(ctx):
-    """20. Bedroom 2's closet fitted to its 6'-10" x 1'-11" and the hall's ledge, picture, switch and lights placed
-    in the 3'-3" / 3'-4" hall (nothing deeper than 6 in on a hall wall), after the warp and in plan feet."""
-    from .zones import hall_block as hb
-    return hb.fit_out(ctx)
-
-
-# v7 garage ---------------------------------------------------------------------------------------------------------
-def garage_v7(ctx):
-    """Eighth round, stage B, the garage track (bl/garage.py; numbers bl/garage_spec.py): the vehicle door's opening
-    15'-0" wide with its head 7'-0" above the garage floor, the garage floor 11 in below the house floor with the
-    step at the house door, the door between house and garage at the sheet's place and hinged on its north jamb,
-    the garage's side door in the east wall, the front door with a sidelight each side, and the tank water heater in
-    the garage's north-east corner. Runs before floor_gaps, skirting_trim and white_windows (which gives the
-    sidelights their grid bars). Each step reports under its own name; one that fails reads FAILED."""
-    from . import garage
-    return garage.apply(ctx)
-
-
-# v7 site ------------------------------------------------------------------------------------------------------------
-def site_shell(ctx):
-    """Eighth round (2026-11-24), stage B, track "site": the shell pieces that meet the ground work (audit F61, P2,
-    F50; the ground, the landings, the porch slab and the walls below the floor line are bl/zones/exterior_site.py).
-
-    * Outside corners. The exterior walls stop on each other's centre lines, which left a square of wall open,
-      floor to 8 ft, at four outside corners (rear west, rear east, the garage's front east, Bedroom 3's front
-      west) and at the two front corners beside the porch (Bedroom 3's and the garage's, behind the porch's
-      piers). The concept's three "stucco front corner return"
-      boxes stood on the side walls beside the front corners, wider than the walls (0.035 ft proud outside, 0.02
-      to 0.09 ft into the rooms). Each of them now IS the missing corner: it fills the open square exactly, its
-      two outer faces on the sheet's wall lines, the other two against the wall ends. Three copies close the rear
-      corners and the garage's corner at the porch. All faces are stucco.
-    * Porch. The paving at house-floor level is taken out: the porch floor is the exterior's slab at
-      exterior_layout.PORCH_TOP (-0.4583 since the repair: two risers of 5 1/2 in; A1.3's -0.336 before). The two
-      baseboards on the porch's side walls ran on from the foyer in one piece; each is cut in the front door wall
-      and its porch part is removed (no baseboard outdoors: the porch walls are clad from the slab to the soffit,
-      bl/roof.py).   v7 final: comment (it gave -0.336 and porch parts standing on the lower slab)"""
-    from .zones import exterior_layout as L
-    out = {}
-
-    def edge(pat, k, pick, default):
-        """bbox coordinate k (0 x0, 1 x1, 4 z0, 5 z1) of the shell walls named `pat`; `default` if they are gone
-        or renamed (the walls' centre lines, where they have always ended)."""
-        v = [bbox(o)[k] for o in find(pat) if o.type == 'MESH' and re.match(r'^\d+ ' + pat, o.name)
-             and any(c.name == COLL_SHELL for c in o.users_collection)]
-        if not v:
-            return default
-        got = pick(v)
-        return got if abs(got - default) < 0.05 else default
-
-    half = R.WALL / 2
-    front = (R.WALL - R.STUCCO) / 2                    # the three front walls' shell box, behind the stucco skin
-    xw = edge('(Primary — rear wall|Bedroom 3 front wall beside bay)', 0, min, R.XW_OUT + half)
-    xe_rear = edge('Living — rear wall', 1, max, R.XE_OUT - half)
-    xe_gar = edge('Garage — front / vehicle door', 1, max, R.XE_OUT - half)
-    zn_w = edge('Primary — west wall', 4, min, R.ZN_OUT + half)
-    zn_e = edge('Living / kitchen — east wall', 4, min, R.ZN_OUT + half)
-    z_gar = edge('Garage — east side', 5, max, R.Z_GAR_S + front)
-    z_b3w = edge('Bedroom 3 front extension west pier', 5, max, R.Z_B3_S + front)
-    z_b3e = edge('Bedroom 3 / recessed porch exterior', 5, max, R.Z_B3_S + front)
-    x_b3e = edge('Bedroom 3 front wall beside bay', 1, max, (R.FOYER_WALL[0] + R.FOYER_WALL[1]) / 2)
-    x_garw = edge('Garage — front / vehicle door', 0, min, (R.X_FOYER_E + R.X_GAR_W) / 2)
-    z_garw = edge('Garage interior access — south wall', 5, max, R.Z_GAR_S + front)
-    returns = sorted((o for o in find(r'stucco front corner return') if o.type == 'MESH'),
-                     key=lambda o: bbox(o)[0])
-    # v7 repair: the two corner pieces beside the porch had their porch-side face IN the plane of the porch's side
-    # wall, where the pier's face lies too (two stucco faces in one plane behind each pier, and a bare stucco strip
-    # 0.04 ft wide between the wall's finish and the pier). That face stands 0.004 ft back now: the porch's wood
-    # cladding (bl/roof.porch) covers it up to the pier and the pier from there on.
-    PORCH_CORNER_BACK = 0.004
-    corners = {
-        'Bedroom 3 front west': (R.XW_OUT, xw, z_b3w, R.Z_B3_OUT),
-        'Bedroom 3 front, porch side': (x_b3e, R.FOYER_WALL[1] - PORCH_CORNER_BACK, z_b3e, R.Z_B3_OUT),
-        'garage front east': (xe_gar, R.XE_OUT, z_gar, R.Z_GAR_OUT),
-        'rear west': (R.XW_OUT, xw, R.ZN_OUT, zn_w),
-        'rear east': (xe_rear, R.XE_OUT, R.ZN_OUT, zn_e),
-        'garage front, porch side': (R.X_FOYER_E + PORCH_CORNER_BACK, x_garw, z_garw, R.Z_GAR_OUT),
-    }
-    if len(returns) == 3:
-        pieces = list(zip(list(corners)[:3], returns))
-        pieces += [(k, _copy(returns[0], f'{returns[0].name} · {k}')) for k in list(corners)[3:]]
-        for k, ob in pieces:
-            x0, x1, z0, z1 = corners[k]
-            _reshape(ob, x0, x1, 0.0, 8.0, z0, z1)
-            for poly in ob.data.polygons:
-                poly.material_index = 1                # stucco on every face
-            out[k] = [round(v, 4) for v in (x0, x1, z0, z1)]
-    else:
-        out['corners'] = f'FAILED: {len(returns)} corner returns found, 3 expected'
-    # ---- porch
-    out['porch paving removed'] = remove(find(r'Open front porch paving', COLL_SHELL))
-    px0, px1, pz0, _ = R.ROOMS['porch']
-    cut = R.Z_FOYER_S + 0.05                            # inside the front door wall
-    for ob in [o for o in find(r'Painted skirting', COLL_SHELL) if o.type == 'MESH']:
-        x0, x1, y0, y1, z0, z1 = bbox(ob)
-        on_side = (abs((x0 + x1) / 2 - px0) < 0.1 or abs((x0 + x1) / 2 - px1) < 0.1) and (z1 - z0) > (x1 - x0)
-        if not on_side or z1 < pz0 + 0.5 or y0 < -0.1:
-            continue
-        if z0 < cut - 0.1:                              # the foyer's part stays where it is
-            _reshape(_copy(ob, f'{ob.name} · foyer'), x0, x1, y0, y1, z0, cut)
-        # v7 repair: no baseboard outdoors. The porch part of each run (it had gone down with the slab) is removed:
-        # the porch's two side walls are clad in wood from the slab to the roof (bl/roof.porch).
-        out[re.sub(r'^\d+ ', '', ob.name)[-40:]] = 'porch part removed (z %.3f..%.3f)' % (max(z0, pz0 - 0.02), z1)
-        bpy.data.objects.remove(ob, do_unlink=True)
-    # v7 integrate: (1) the short baseboards on the PORCH face of the front door wall (what the front door unit with
-    # its sidelights left of them, 3 in each side) go down with the slab like the two side walls' runs: they stood
-    # 4 in above them at the two inside corners. (2) The wall between Bedroom 3 and the porch is one box from inside
-    # the foyer out along the porch, and its east face was one face in the porch's wood cladding: the last 0.83 ft
-    # of the foyer's west wall, beside the front door's sidelight, was wood. The box is cut in the middle of the
-    # front door wall; the foyer part's east face is painted like the rest of the foyer.
-    zc = R.Z_FOYER_S + R.WALL / 2
-    low = []
-    for ob in [o for o in find(r'Painted skirting — Centered front entrance', COLL_SHELL) if o.type == 'MESH']:
-        x0, x1, y0, y1, z0, z1 = bbox(ob)
-        if (z0 + z1) / 2 > zc and y0 > -0.1 and (x1 - x0) > (z1 - z0):
-            # v7 repair: removed, not lowered (no baseboard outdoors; they stood inside the stucco skin)
-            low.append([round(v, 3) for v in (x0, x1, z0, z1)])
-            bpy.data.objects.remove(ob, do_unlink=True)
-    out['front door wall, porch face baseboards removed'] = low
-    for ob in [o for o in find(r'^\d+ Bedroom 3 / recessed porch exterior$', COLL_SHELL) if o.type == 'MESH']:
-        x0, x1, y0, y1, z0, z1 = bbox(ob)
-        if not (z0 < zc - 0.3 < zc + 0.3 < z1):
-            continue
-        paint = next((i for i, sl in enumerate(ob.material_slots) if sl.material and 'paint' in sl.material.name.lower()), None)
-        inner = _copy(ob, f'{ob.name} · foyer')
-        _reshape(inner, x0, x1, y0, y1, z0, zc)
-        _reshape(ob, x0, x1, y0, y1, zc, z1)
-        n = 0
-        if paint is not None:
-            w, _ = _world(inner)
-            for poly in inner.data.polygons:
-                cx = np.mean([w[i, 0] for i in poly.vertices]) / FT
-                if abs(cx - x1) < 1e-3 and poly.material_index != paint:           # the face toward the foyer
-                    poly.material_index = paint
-                    n += 1
-        out['foyer west wall beside the front door'] = {'cut at z': round(zc, 3), 'foyer part z': [round(z0, 3), round(zc, 3)],
-                                                        'faces painted': n}
-    return out
 
 
 # ---- repairs that run last (after every change above has cut or moved walls and slabs)
@@ -1742,10 +1190,8 @@ def skirting_trim(ctx):
             remove([ob])
             out[key] = 'removed (no wall behind it)'
             continue
-        # v7 integrate: the copies for the further stretches are made BEFORE the first one is clipped (a copy of the
-        # clipped piece collapsed to zero length, so a run cut in two lost its second stretch)
-        pieces = [ob] + [_copy(ob, f'{ob.name} {i}') for i in range(1, len(runs))]
-        for piece, (a, b) in zip(pieces, runs):
+        for i, (a, b) in enumerate(runs):
+            piece = ob if i == 0 else _copy(ob, f'{ob.name} {i}')
             w, mw = _world(piece)
             if along_x:
                 w[:, 0] = np.clip(w[:, 0], a * FT, b * FT)
@@ -1754,80 +1200,6 @@ def skirting_trim(ctx):
             _set_world(piece, w, mw)
         out[key] = [(round(a, 2), round(b, 2)) for a, b in runs] + [f'was {a0:.2f}..{a1:.2f}']
     return out
-
-
-# ------------------------------------------------------------------------------- v7 repair (inside half)
-def floor_level(ctx):
-    """v7 repair (reviews P7 / E5): two floor pieces stood 0.008 ft (0.1 in) above the oak floor round them, the
-    foyer's south end ('Hall in enclosed porch substrate') and Bedroom 3's front strip ('Bedroom 3 front extension
-    substrate'): a lip across the foyer 4 ft inside the front door, along the middle of Bedroom 3's doorway and
-    across Bedroom 3. Their tops come down to the oak's. Runs before floor_gaps."""
-    oak = [bbox(o)[3] for o in find(r'^\d* ?Oak floor substrate$', COLL_SHELL)]
-    if not oak:
-        return 'no oak floor'
-    top = max(oak)
-    out = {}
-    for ob in find(r'^\d* ?(Hall in enclosed porch substrate|Bedroom 3 front extension substrate)$', COLL_SHELL):
-        b = bbox(ob)
-        if 1e-4 < abs(b[3] - top) < 0.03:
-            out[re.sub(r'^\d+ ', '', ob.name)] = {'top was': round(b[3], 4), 'now': round(top, 4),
-                                                  'verts': move_face(ob, 'y', b[3], top, tol=0.002)}
-    return out
-
-
-def living_east_baseboard(ctx):
-    """v7 repair (review E3): the living room's east wall carried only the room's own baseboard (0.39 ft with its
-    reveal), which met the rear wall's 0.455 ft house baseboard in the north-east corner beside the sliding door
-    with a step of 0.065 ft. The west wall has the house baseboard behind the room's own (0.003 ft back, so it reads
-    as one 0.455 ft board with a line at 0.39); the east wall gets the same. Runs before skirting_trim."""
-    own = find(r'^\d+ Living east — painted baseboard$', COLL_SHELL)
-    src = find(r'^\d+ Painted skirting — Living — rear wall$', COLL_SHELL)
-    if len(own) != 1 or not src:
-        return f'not found ({len(own)}, {len(src)})'
-    b, sb = bbox(own[0]), bbox(src[0])
-    _like(src[0], 'Painted skirting — Living east wall', b[0] + 0.003, R.X_LIV_E + 0.002, sb[2], sb[3], b[4], b[5])
-    return {'x': (round(b[0] + 0.003, 3), round(R.X_LIV_E + 0.002, 3)), 'y': (round(sb[2], 3), round(sb[3], 3)),
-            'z': (round(b[4], 3), round(b[5], 3))}
-
-
-def skirting_joints(ctx):
-    """v7 repair (review E4 and the integration's list): the shell cuts every baseboard 0.02 ft short at both ends
-    of its wall piece, so two runs on adjacent pieces of one wall leave about 0.046 ft of bare wall between them
-    (the foyer's west wall opposite the garage door and beside the front door, under Bedroom 4's window jambs, ...).
-    Where two runs of the same section lie on one line with up to 0.07 ft between their ends and nothing of an
-    opening (a liner, a casing, a frame) stands in the gap, the first runs on to the second. Runs after
-    skirting_trim."""
-    runs = []
-    for o in bpy.data.objects:
-        if o.type == 'MESH' and len(o.data.vertices) == 8 and SKIRT.search(o.name) \
-                and any(c.name == COLL_SHELL for c in o.users_collection):
-            b = bbox(o)
-            runs.append((o, b, (b[1] - b[0]) >= (b[5] - b[4])))
-    stops = [bbox(o) for o in bpy.data.objects if o.type == 'MESH' and len(o.data.vertices)
-             and any(c.name == COLL_OPEN for c in o.users_collection)]
-    todo = []
-    for oa, a, ax in runs:
-        for ob, b, bx in runs:
-            if ob is oa or ax != bx or abs(a[2] - b[2]) > 0.005 or abs(a[3] - b[3]) > 0.005:
-                continue
-            k = 4 if ax else 0                               # the section across the run
-            if abs(a[k] - b[k]) > 0.006 or abs(a[k + 1] - b[k + 1]) > 0.006:
-                continue
-            g0, g1 = (a[1], b[0]) if ax else (a[5], b[4])
-            if not 0.002 < g1 - g0 <= 0.07:
-                continue
-            gb = (g0, g1, a[2], a[3], a[4], a[5]) if ax else (a[0], a[1], a[2], a[3], g0, g1)
-            if any(s[0] < gb[1] and s[1] > gb[0] and s[2] < gb[3] and s[3] > gb[2] and s[4] < gb[5] and s[5] > gb[4]
-                   for s in stops):
-                continue
-            todo.append((oa, 'x' if ax else 'z', g0, g1))
-    out = []
-    for oa, axis, g0, g1 in todo:
-        if move_face(oa, axis, g0, g1, tol=0.001) == 4:
-            b = bbox(oa)
-            out.append((re.sub(r'^\d+ Painted skirting — ', '', oa.name)[:34], axis, round(g0, 3), round(g1, 3),
-                        round((b[0] + b[1]) / 2 if axis == 'z' else (b[4] + b[5]) / 2, 2)))
-    return {'joints closed': len(out), 'runs': out}
 
 
 def floor_gaps(ctx):
@@ -1908,17 +1280,7 @@ def floor_gaps(ctx):
             continue
         (name, y), _ = nb.most_common(1)[0]
         src = bpy.data.objects[name]
-        # v7 repair: a patch runs 0.16 ft past both ends of its seam (0.06 / 0.04 before). The probes cannot see a
-        # seam under a baseboard, so the hall / living patch started 0.03 ft in front of the shared bath's corner
-        # baseboard and left a pinhole to the foundation there (review P4). Under intact floor the patch is hidden.
-        ex, ez = (0.16, 0.04) if along_x else (0.06, 0.16)
-        px1 = x1 + ex
-        # v7 verify: a seam along x that the probes lose within 0.75 ft of the east wall is patched on to the wall.
-        # The hall / living seam tapers to a hairline there (0.012..0.028 in wide over x 38.86..39.25, in front of
-        # the living / dining east window's south jamb) and stayed open to the foundation past the patch's end.
-        if along_x and 0.0 < R.X_LIV_E - px1 < 0.75:
-            px1 = R.X_LIV_E + 0.05
-        patch = ctx.box(f'Floor seam patch {k}', x0 - ex, px1, y - 0.1, y - 0.0026, z0 - ez, z1 + ez,
+        patch = ctx.box(f'Floor seam patch {k}', x0 - 0.06, x1 + 0.06, y - 0.1, y - 0.0026, z0 - 0.04, z1 + 0.04,
                         None, COLL_SHELL)
         if src.data.materials:
             patch.data.materials.append(src.data.materials[0])
@@ -2045,8 +1407,7 @@ def white_windows(ctx):
     * Two centre mullions that the conversion to the architect's plan left off centre (WINDOW_MULLION_CENTRE) go
       back to the middle of their windows first: with a grid the two sashes would show lites of two widths.
     * Shades stay in front of the grid: a roller shade that stands in or beyond its window's bars (the bay's three
-      stood outside the glass) is turned square to its pane and set 0.01 ft on the room side of the bars. One that
-      had to be turned (the bay's two side shades) is also set back in the middle of its pane.
+      stood outside the glass) is turned square to its pane and set 0.01 ft on the room side of the bars.
 
     The glass is not touched: every pane stays the light portal lighting.add_window_portals makes of it (the bars
     are not glass and are skipped there)."""
@@ -2226,7 +1587,7 @@ def white_windows(ctx):
             bars_total += len(boxes)
 
     # shades hang square to their window, on the room side of its bars
-    shades, seated, slid = {}, {}, {}
+    shades, seated = {}, {}
     for ob in bpy.data.objects:
         m = re.match(RS.WINDOW_SHADES, ob.name)
         if m and ob.type == 'MESH' and ob.parent is None and len(ob.data.vertices):
@@ -2254,17 +1615,6 @@ def white_windows(ctx):
             for ob in obs:
                 ob.matrix_basis = rot @ ob.matrix_basis
             bpy.context.view_layer.update()
-            # A shade that had to be turned hangs in a canted facet (the bay's sides), which the conversion
-            # stretched while the shade was carried rigidly with whatever it touched: it stood off the middle of
-            # its sash, toward the corner pier, by 0.19 ft until the seventh round and by 0.26 ft with the 5 in
-            # walls. Back to the middle of its pane (a facet has one), where the zone hangs it.
-            r = _ww_rect(lead, u)
-            a = (pr[0] + pr[1]) / 2 - (r[0] + r[1]) / 2
-            if abs(a) > 1e-4:
-                for ob in obs:
-                    ob.location += Vector((u[0] * a * FT, -u[1] * a * FT, 0.0))
-                bpy.context.view_layer.update()
-                slid[tag] = round(a, 3)
         rs = [_ww_rect(ob, u) for ob in obs]
         lo, hi = min(r[4] for r in rs), max(r[5] for r in rs)
         ua, nm = (pr[0] + pr[1]) / 2, (pr[4] + pr[5]) / 2
@@ -2293,29 +1643,20 @@ def white_windows(ctx):
         raise RuntimeError(f'frame pieces left black: {left[:5]}')
     bpy.context.view_layer.update()
     return {'panes': len(panes), 'windows': len(grids), 'white pieces': n, 'bars': bars_total, 'old bars removed': gone,
-            'mullions centred': centred, 'shades re-seated (deg, ft)': seated,
-            'turned shades centred on their pane (ft along it)': slid, 'grids': grids}
+            'mullions centred': centred, 'shades re-seated (deg, ft)': seated, 'grids': grids}
 
 
 def apply(ctx):
     bpy.context.view_layer.update()
     res = {}
     for f in (ceiling_seam, ceiling_overlap, floor_seam, floor_overlap, foyer_corner, bedroom4_flat, bay_to_floor, primary_slider,
-              bedroom2_tall_window, living_slider, primary_west_window, living_east_windows,   # v7 glazing
-              primary_west_window_south,                                         # v7 final: W14 like W15
-              bedroom3_bath_window,
-              bath_door, bath_window,
-              roof_v7,                                                           # v7 roof (before the skylights)
-              kitchen_skylight, living_skylight, foyer_skylights, primary_bath_skylight, entry_vault_closure,
+              bedroom2_tall_window, bedroom3_bath_window,
+              bath_door, bath_window, kitchen_skylight, foyer_skylights, primary_bath_skylight, entry_vault_closure,
               laundry_closet,
               suite_rooms, suite_fit_out,
               primary_bath_fit_out,
-              hall_block, hall_block_fit_out,                                    # v7 hall
-              bedrooms_west_windows, bedroom3_rooms, bedroom3_fit_out,           # v7 bedrooms
-              garage_v7,                                                         # v7 garage
-              site_shell,                                                        # v7 site
-              floor_level, floor_gaps, living_east_baseboard, skirting_trim, skirting_joints,   # v7 repair: floor_level,
-              white_windows):                                                    # living_east_baseboard, skirting_joints
+              floor_gaps, skirting_trim,
+              white_windows):
         try:
             res[f.__name__] = f(ctx)
         except Exception as e:                       # report, keep building

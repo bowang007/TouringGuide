@@ -25,7 +25,7 @@ _LIB = {}
 
 # =============================================================================== library
 
-BATH_SCREEN_Z = L.R.Z_PBATH_N + 2.655      # opposite the primary bath's tall window (bl/revision_spec.BATH_WIN_Z)
+BATH_SCREEN_Z = 23.85      # opposite the primary bath's tall window (bl/revision_spec.BATH_WIN_Z)
 
 def _lib_root(ctx):
     return coll(ctx, 'library')
@@ -301,67 +301,6 @@ def proc_plant(ctx, kind):
     return ob
 
 
-# The house kept clear of the planting. A clump's blades arch up to 2 ft out from its root, and the beds along the
-# house put roots 1 ft off a wall: blades passed through the 5 in wall and stood in the room (Bedroom 3's front
-# wall, east of the bay, eighth round; a few did before). No blade passes a face of the house: a clump that would
-# is moved straight out from that face, by as much as its deepest blade is in.
-_HOUSE = []          # convex plan outlines [(x, z), ...] of the house's outer faces, counter-clockwise on the plan
-_MOVED = []          # (kind, x, z, ft) of the clumps moved off the house
-
-
-def _house_outlines():
-    """The body with the garage, the Bedroom 3 wing, and the wing's canted bay (from the shell, as built)."""
-    from .exterior_site import bay_outline
-    out = [[(L.HX0, L.HZ0), (L.HX1, L.HZ0), (L.HX1, L.GARAGE_FRONT), (L.HX0, L.GARAGE_FRONT)],
-           [(L.HX0, L.HZ0), (L.PORCH[0], L.HZ0), (L.PORCH[0], L.BED3_FRONT), (L.HX0, L.BED3_FRONT)]]
-    bay = bay_outline()
-    if len(bay) >= 3:
-        out.append(bay)
-    for poly in out:                               # one winding for all: the outside is to the right of each edge
-        if sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(poly, poly[1:] + poly[:1])) < 0:
-            poly.reverse()
-    return out
-
-
-def _keep_clear(ob, kind):
-    """Move the clump `ob` straight out from the house until none of its blades is inside a house outline."""
-    import numpy as np
-    from mathutils import Matrix
-    me = ob.data
-    co = np.empty(len(me.vertices) * 3)
-    me.vertices.foreach_get('co', co)
-    co = co.reshape(-1, 3)
-    x0, z0 = ob.location.x / FT, -ob.location.y / FT
-    for _ in range(8):
-        m = np.array(Matrix.LocRotScale(ob.location, ob.rotation_euler, ob.scale))
-        w = co @ m[:3, :3].T + m[:3, 3]
-        x, z = w[:, 0] / FT, -w[:, 1] / FT
-        bx, bz = ob.location.x / FT, -ob.location.y / FT
-        push = None
-        for poly in _HOUSE:
-            edges = []                             # (outward normal, signed distance outside of every blade vertex)
-            for a, b in zip(poly, poly[1:] + poly[:1]):
-                ln = math.hypot(b[0] - a[0], b[1] - a[1])
-                n = ((b[1] - a[1]) / ln, -(b[0] - a[0]) / ln)
-                edges.append((n, a, (x - a[0]) * n[0] + (z - a[1]) * n[1]))
-            inside = np.all([e[2] < 0.0 for e in edges], axis=0)
-            if not inside.any():
-                continue
-            # the face the clump stands in front of: the one its root is farthest outside of
-            n, a, s = max(edges, key=lambda e: (bx - e[1][0]) * e[0][0] + (bz - e[1][1]) * e[0][1])
-            depth = float(-s[inside].min())
-            if push is None or depth > push[0]:
-                push = (depth, n)
-        if push is None:
-            break
-        d = push[0] + 0.02
-        ob.location.x += push[1][0] * d * FT
-        ob.location.y -= push[1][1] * d * FT
-    moved = math.hypot(ob.location.x / FT - x0, -ob.location.y / FT - z0)
-    if moved > 0.0:
-        _MOVED.append((kind, round(x0, 2), round(z0, 2), round(moved, 2)))
-
-
 def place_proc(ctx, kind, x, z, scale=1.0, rot=None, y=None, seed=0):
     src = proc_plant(ctx, kind)
     r = rng(zlib.crc32(f'{kind}{x:.2f}{z:.2f}{seed}'.encode()))
@@ -370,7 +309,6 @@ def place_proc(ctx, kind, x, z, scale=1.0, rot=None, y=None, seed=0):
     ob.rotation_euler = (r.gauss(0, 0.04), r.gauss(0, 0.04), r.uniform(0, 2 * math.pi) if rot is None else rot)
     s = scale * r.uniform(0.85, 1.15)
     ob.scale = (s, s, s * r.uniform(0.9, 1.1))
-    _keep_clear(ob, kind)
     coll(ctx, SUB).objects.link(ob)
     return ob
 
@@ -531,9 +469,9 @@ def pebble_source(ctx, kind='river'):
 
 # ============================================================================ placement
 HOUSE_RECTS = [(L.HX0 - 0.08, L.HX1 + 0.08, L.HZ0 - 0.08, L.GARAGE_FRONT + 0.05),        # main house + garage
-               (L.HX0 - 0.08, 14.4, L.PORCH[2] - 0.582, L.BED3_FRONT + 0.05),           # bedroom 3
-               (L.R.X_FRONT_ROOMS(2.7), L.R.X_FRONT_ROOMS(11.4), L.BED3_FRONT, L.BED3_FRONT + 2.14),   # its canted bay
-               (L.PORCH_POSTS[0][0], L.PORCH_POSTS[1][1], L.PORCH[2] - 0.182, L.PORCH[3] + 0.05)]      # covered porch
+               (L.HX0 - 0.08, 14.4, 47.0, L.BED3_FRONT + 0.05),                         # bedroom 3
+               (2.7, 11.4, L.BED3_FRONT, 56.1),                                         # its canted bay
+               (L.PORCH_POSTS[0][0], L.PORCH_POSTS[1][1], 47.4, L.PORCH[3] + 0.05)]      # covered porch
 
 
 def _check_clear(inst, x, z, eave=0.7):
@@ -559,8 +497,6 @@ def _row(a, b, step, jitter, r):
 def build(ctx, surfaces):
     r = rng(2024)
     res = {}
-    _HOUSE[:] = _house_outlines()
-    del _MOVED[:]
     leaf_tree = dict(amount=0.3)
     leaf_olive = dict(amount=0.28, hue=0.49, sat=0.62, val=0.95)     # grey-green olive foliage
     # ---- lawns: GN instanced blade clumps
@@ -588,10 +524,8 @@ def build(ctx, surfaces):
         _check_clear(plant(ctx, aid, var, x, z, height_ft=h, res=rs, leaf=lf), x, z)
     # narrow evergreen screens in the side yards (outside the primary's added west window, the primary
     # bath's floor-to-ceiling window and kitchen W08)
-    # (v7 site: the ground beside the house lies 5 to 6 in lower than the level site these heights were chosen
-    # on; the screens grow by that much, so they still reach as high on the windows they stand in front of)
     for x, z, h in ((L.FW + 0.95, 10.6, 7.5), (L.FW + 0.95, BATH_SCREEN_Z, 8.5), (L.FE - 1.2, 26.1, 8.0)):
-        _check_clear(plant(ctx, 'searsia_lucida', 'b', x, z, height_ft=h - L.settle_dy(z), res='2k',
+        _check_clear(plant(ctx, 'searsia_lucida', 'b', x, z, height_ft=h, res='2k',
                            leaf=dict(amount=0.25, hue=0.5, sat=0.8)), x, z)
     # street trees in our park strip
     for x in (4.0, 48.5):
@@ -635,20 +569,18 @@ def build(ctx, surfaces):
                            scale=r.uniform(0.85, 1.0))
     # front: bed along bedroom 3 / bay, west corner bed, bank between walk and drive, east beds
     fb = L.FRONT_BED
-    bay = [p[0] for p in _HOUSE[2]] if len(_HOUSE) > 2 else [0.0, 0.0]    # the bay's plinth, west .. east
     for i, x in enumerate(_row(fb[0] + 0.8, L.PORCH_POSTS[0][0] - 0.6, 2.3, 0.2, r)):
         b3 = L.BED3_FRONT
         if abs(x + 2.6) < 1.6:
             place_proc(ctx, 'fescue', x, b3 + 1.65, scale=0.9)
             continue
-        # clear of the bay (2.05 ft in front of the face) from 0.3 ft west of its plinth to 0.3 ft east of it
-        zz = b3 + 1.05 if not (min(bay) - 0.3 < x < max(bay) + 0.3) else b3 + 3.19
+        zz = b3 + 1.05 if not (2.6 < x < 11.5) else 57.15          # clear of the bay (to z ~56.0)
         if i % 3 == 0:
             plant(ctx, 'searsia_lucida', 'e' if i % 2 else 'f', x, zz, height_ft=r.uniform(2.4, 3.0), res='2k',
                   leaf=sl)
         else:
             place_proc(ctx, 'lomandra' if i % 3 == 1 else 'feather', x, zz, scale=r.uniform(0.8, 0.95))
-        place_proc(ctx, 'fescue', x + 0.9, b3 + 4.39 + r.uniform(-0.1, 0.1), scale=r.uniform(0.85, 1.0))
+        place_proc(ctx, 'fescue', x + 0.9, 58.35 + r.uniform(-0.1, 0.1), scale=r.uniform(0.85, 1.0))
     for z in _row(L.W_FRONT_BED[2] + 0.6, L.W_FRONT_BED[3] - 0.4, 2.0, 0.15, r):
         place_proc(ctx, 'lomandra', -3.2 + r.uniform(-0.4, 0.4), z, scale=0.9)
     for z in _row(L.STRIP[2] + 1.0, L.STRIP[3] - 0.8, 1.7, 0.1, r):
@@ -670,7 +602,6 @@ def build(ctx, surfaces):
             continue
         place_proc(ctx, 'fescue', x, (L.PARK[0] + L.PARK[1]) / 2 + r.uniform(-0.6, 0.6), y=GRADE + 0.03,
                    scale=0.9)
-    res['moved off the house (kind, x, z, ft)'] = list(_MOVED)
     res['proc_plants'] = len([o for o in coll(ctx, SUB).objects if o.type == 'MESH'])
     res['instances'] = len([o for o in coll(ctx, SUB).objects if o.type == 'EMPTY'])
     return res

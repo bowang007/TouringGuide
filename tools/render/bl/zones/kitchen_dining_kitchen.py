@@ -16,17 +16,8 @@ faucet; a white-oak drawer island with brass knobs under a thick honed quartzite
 
 All numbers are SCENE feet on the concept plan (bl/warp.py carries them onto the architect's plan).
 Plan anchors: south (garage) wall face z=31.41, east wall face x=40.61, flat ceiling y=8.0;
-W08 window z 23.387-29.387, sill 3.15, head 7.75 (sink centred at z 26.387); W07 ended at z 21.814.
-
-Eighth round (2026-11-24, the architect's sheet SKA002): the counters are 2'-0" deep and the island is
-7'-0" x 4'-0" at the sheet's place, 3'-6" from the east counter's front and 4'-0" from the south counter's.
-Those sizes are stated in feet on the ARCHITECT'S plan (PLAN_* below, from relayout's wall faces) and carried
-back to the concept plan with the inverse of the maps bl/warp.py applies to this zone (_px, _pz): built,
-the south counter's front is z 29.058, the east counter's x 37.308, the island's worktop x 26.808-33.808,
-z 21.058-25.058 (concept: z 29.388, x 38.532, x 27.611-34.892, z 21.296-25.342). The east run starts at the
-south jamb of the 5'-0" living / dining window (worktop from z 21.072; the sheet: 21.058). The tall wall's fronts
-stand one door thickness in front of the 2'-0" line (a 24in carcass). Everything keeps its place ALONG the
-walls: only the depths changed. The island itself is built in plan feet (C.PlanFace), like the refrigerator.
+south counter front z=29.13, east counter front x=38.405; island top x 28.4-34.4, z 22-25;
+W08 window z 23.387-29.387, sill 3.15, head 7.75 (sink centred at z 26.387); W07 ends at z 21.814.
 
 Warp naming: run fronts / carcasses / crowns / splashes are '... panel / carcass / cove / splash /
 tile ...' (fitted, reshaped with the room); knobs and cup pulls are '... hardware panel' (fitted, so
@@ -62,59 +53,11 @@ GAP = 0.011               # reveal between fronts (~1/8in)
 RECESS = 0.022            # shaker centre-panel recess (kitchen_dining_cabs.Acc.shaker default)
 TOE_H = 0.333             # toe kick height (4in)
 TOE_D = 0.25              # toe kick recess (3in)
-
-
-def _inv(f, v):
-    """Concept coordinate that the piecewise-linear relayout map `f` carries to the new-plan value v."""
-    ps = f.pairs
-    if v <= ps[0][1]:
-        return ps[0][0] + (v - ps[0][1])
-    if v >= ps[-1][1]:
-        return ps[-1][0] + (v - ps[-1][1])
-    for (a0, b0), (a1, b1) in zip(ps, ps[1:]):
-        if b0 <= v <= b1:
-            return a0 + (v - b0) / (b1 - b0) * (a1 - a0)
-
-
-def _px(x):
-    """Concept x of an x on the architect's plan (region 'kitchen + dining': relayout.X_HALL)."""
-    return _inv(R.X_HALL, x)
-
-
-def _pz(z):
-    """Concept z of a z on the architect's plan (region 'kitchen + dining': relayout.Z_RIGHT)."""
-    return _inv(R.Z_RIGHT, z)
-
-
-# v7 kitchen (eighth round): the sheet's kitchen, feet on the ARCHITECT'S plan, from relayout's wall faces
-PLAN_COUNTER_D = 2.0                       # worktop front to the wall face, east and south runs: 2'-0"
-PLAN_AISLE_E = 3.5                         # island's east end to the east counter's front: 3'-6"
-PLAN_AISLE_S = 4.0                         # island's south edge to the south counter's front: 4'-0"
-PLAN_ISLAND_L, PLAN_ISLAND_D = 7.0, 4.0    # island worktop: 7'-0" x 4'-0"
-PLAN_CT_E = R.X_LIV_E - PLAN_COUNTER_D     # east counter's front, x 37.308
-PLAN_CT_S = R.Z_KIT_S - PLAN_COUNTER_D     # south counter's front, z 29.058
-PLAN_ISLAND = (PLAN_CT_E - PLAN_AISLE_E - PLAN_ISLAND_L, PLAN_CT_E - PLAN_AISLE_E,      # x 26.808 .. 33.808
-               PLAN_CT_S - PLAN_AISLE_S - PLAN_ISLAND_D, PLAN_CT_S - PLAN_AISLE_S)      # z 21.058 .. 25.058
-ISLAND_END = 0.25         # worktop past the end panels (3in)
-ISLAND_LIP_S = 0.09       # worktop past the drawer faces on the kitchen side (1in)
-ISLAND_LIP_N = 1.0        # worktop past the panelled back on the living-room side: a 12in seating overhang
-ISLAND_STACKS = 4         # drawer stacks (19in each) / back panels
-
-# North end of the east run: the worktop ends on the south jamb of the living / dining east window W07, as it
-# always has (RUN_E0 was 21.84, the old window's jamb). Eighth round: that window is the sheet's 5'-0" at
-# z 16.066..21.066 on the built plan (revision_spec.DINING_EAST_WIN_Z, the glazing track), so the run is the
-# sheet's 10'-0" long (ska002 KT02 starts at z 21.058) and its first cabinet is 6in wider.
-try:
-    from ..revision_spec import DINING_EAST_WIN_Z as _W07_Z
-except Exception:                          # a spec without it: the sheet's own numbers
-    _W07_Z = (R.ZN + 15.841, R.ZN + 20.841)
-PLAN_RUN_E0 = _W07_Z[1] + 0.026            # the end panel's face; the worktop ends 0.02 north of it, clear of the jamb
-RUN_E0 = _pz(PLAN_RUN_E0)                  # 21.330
-CT_FRONT_S = _pz(PLAN_CT_S)       # 29.388 (29.13 until the seventh round: 2'-3" deep on the built plan)
-FRONT_S = CT_FRONT_S + 0.08       # face of the south-run base fronts
-TALL_FRONT_S = CT_FRONT_S - FT_T  # face of the tall wall's fronts: a 2'-0" carcass with its doors in front
-CT_FRONT_E = _px(PLAN_CT_E)       # 38.532 (38.405 until the seventh round: 2'-1 1/2" deep on the built plan)
-FRONT_E = CT_FRONT_E + 0.083      # face of the east-run fronts
+CT_FRONT_S = 29.13
+FRONT_S = 29.21           # face of the south-run fronts
+CT_FRONT_E = 38.405
+FRONT_E = 38.488          # face of the east-run fronts
+RUN_E0 = 21.84            # north end of the east run (W07 jamb)
 TALL_X0 = 22.60           # outer face of the tall-wall end panel
 FRIDGE = (22.6625, 25.6625)
 OVEN = (25.6625, 28.10)
@@ -127,18 +70,13 @@ CROWN_H = 0.44
 UPPER_FRONT = 30.2675     # face of the upper doors
 SHELF_FRONT = 30.55       # face of the walnut open-shelf bay
 SINK_Z = 26.387
-# fireclay apron sink outer footprint (x0, x1, z0, z1): 30in wide, 18-1/2in front to back (20in until the
-# counter became 2'-0" deep: the bridge faucet keeps its place in front of the window stool, so the bowl gave
-# up 3/4in); the apron stands 0.035 behind the worktop's front edge, as before
-SINK = (CT_FRONT_E + 0.035, CT_FRONT_E + 0.035 + 1.60, 25.137, 27.637)
+SINK = (38.44, 40.10, 25.137, 27.637)   # fireclay apron sink outer footprint (x0, x1, z0, z1): 30 x 20in
 SINK_BOT = 2.16           # bottom of the apron (10in apron)
 Y_B0 = TOE_H + 0.012      # bottom of base fronts
 Y_B1 = CT_UNDER - 0.012   # top of base fronts
 Y_DR = Y_B1 - 0.5         # top drawer bottom (6in drawers)
-# 36in gas cooktop (x0, x1, z0, z1): the same deck (20-1/2in), 1-1/2in behind the worktop's front edge
-COOK = (33.30, 36.30, CT_FRONT_S + 0.125, CT_FRONT_S + 0.125 + 1.73)
-# island worktop (x0, x1, z0, z1) on the concept plan; the dining table continues its west end
-ISLAND = (_px(PLAN_ISLAND[0]), _px(PLAN_ISLAND[1]), _pz(PLAN_ISLAND[2]), _pz(PLAN_ISLAND[3]))
+COOK = (33.30, 36.30, 29.32, 31.05)     # 36in gas cooktop (x0, x1, z0, z1)
+ISLAND = (28.4, 34.4, 22.0, 25.0)       # island worktop (x0, x1, z0, z1); the dining table continues its west end
 POT_FILLER = (34.80, 4.55)               # (x, y) on the wall inside the slab's scallop
 
 
@@ -219,10 +157,9 @@ def build(ctx, g: Geo):
     isl = g.sub('kd island')
     _island(g, M, isl, hw)
     notes.append('kitchen: greige pantry wall (stainless French-door refrigerator in its bay, built-in microwave '
-                 'over a wall oven), cream shaker L runs 2ft deep, glass uppers, walnut open shelves, plaster hood, '
-                 'fireclay sink, oak island 7ft x 4ft with quartzite top')
+                 'over a wall oven), cream shaker L runs, glass uppers, walnut open shelves, plaster hood, '
+                 'fireclay sink, oak island with quartzite top')
     notes.append(appliance_plan())
-    notes.append(island_plan())
     return notes
 
 
@@ -299,15 +236,27 @@ def _base_unit(acc, g, M, F, u0, u1, kind, hw, hinge='l'):
 
 
 # ============================================================================= tall wall
+def _inv(f, v):
+    """Concept coordinate that the piecewise-linear relayout map `f` carries to the new-plan value v."""
+    ps = f.pairs
+    if v <= ps[0][1]:
+        return ps[0][0] + (v - ps[0][1])
+    if v >= ps[-1][1]:
+        return ps[-1][0] + (v - ps[-1][1])
+    for (a0, b0), (a1, b1) in zip(ps, ps[1:]):
+        if b0 <= v <= b1:
+            return a0 + (v - b0) / (b1 - b0) * (a1 - a0)
+
+
 def _plan_face(w=0.0):
     """Face frame of the tall wall's fronts in feet on the ARCHITECT'S plan (region 'kitchen + dining':
     relayout.X_HALL / Z_RIGHT), `w` in front of the fronts."""
-    return C.PlanFace('mz', R.Z_RIGHT(TALL_FRONT_S) - w, lambda x: _inv(R.X_HALL, x), lambda z: _inv(R.Z_RIGHT, z))
+    return C.PlanFace('mz', R.Z_RIGHT(FRONT_S) - w, lambda x: _inv(R.X_HALL, x), lambda z: _inv(R.Z_RIGHT, z))
 
 
 def _fridge_bay():
     """(x0, x1, z of the cabinet fronts, depth to the wall) of the refrigerator bay on the architect's plan."""
-    zf = R.Z_RIGHT(TALL_FRONT_S)
+    zf = R.Z_RIGHT(FRONT_S)
     return R.X_HALL(FRIDGE[0]), R.X_HALL(FRIDGE[1]), zf, R.Z_RIGHT(WALL_S) - zf
 
 
@@ -334,7 +283,7 @@ def _tall_wall(g, M, col, hw):
     """The greige 'pantry wall' of the closet references: the refrigerator's bay (hall-side end panel, a
     two-door cabinet over the appliance) and the oven tower (drawer, wall oven, microwave, top door) under
     one frieze and crown. The appliances themselves: _refrigerator, _wall_oven, _microwave."""
-    F = C.Face('mz', TALL_FRONT_S)
+    F = C.Face('mz', FRONT_S)
     acc = C.Acc()
     # oven tower: drawer, niche backing (the appliances are loose, in front of it; it shows as the flat face
     # frame between and above them), top door
@@ -357,26 +306,20 @@ def _tall_wall(g, M, col, hw):
     # end panels (two stacked shaker panels on the hall side), side panel to the counter, kick, carcass
     side = C.Acc()
     Fw = C.Face('mx', TALL_X0)
-    side.shaker(Fw, TALL_FRONT_S, WALL_S, 0.0, 3.4, sw=0.24)
-    side.shaker(Fw, TALL_FRONT_S, WALL_S, 3.4, UPPER_TOP, sw=0.24)
-    side.wbox(OVEN[1], BASE_X0, 0.0, UPPER_TOP, TALL_FRONT_S, WALL_S)
+    side.shaker(Fw, FRONT_S, WALL_S, 0.0, 3.4, sw=0.24)
+    side.shaker(Fw, FRONT_S, WALL_S, 3.4, UPPER_TOP, sw=0.24)
+    side.wbox(OVEN[1], BASE_X0, 0.0, UPPER_TOP, FRONT_S, WALL_S)
     side.done(g, 'kd tall end panel', M.greige, col)
     # The refrigerator stands on the floor in an open bay (no toe kick, no carcass behind it: its side and top
     # reveals are real gaps); the carcass is the oven tower and the cabinet over the bay.
-    g.box('kd tall plinth', OVEN[0], OVEN[1], 0.0, TOE_H, TALL_FRONT_S + 0.10, WALL_S - 0.02, M.greige, coll=col)
-    g.box('kd tall carcass', OVEN[0], OVEN[1], TOE_H, CEIL - 0.006, TALL_FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
+    g.box('kd tall plinth', OVEN[0], OVEN[1], 0.0, TOE_H, FRONT_S + 0.10, WALL_S - 0.02, M.greige, coll=col)
+    g.box('kd tall carcass', OVEN[0], OVEN[1], TOE_H, CEIL - 0.006, FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
     g.box('kd tall carcass over refrigerator', FRIDGE[0], FRIDGE[1], TOPCAB_Y0 - 0.008, CEIL - 0.006,
-          TALL_FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
+          FRONT_S + FT_T + 0.01, WALL_S, M.greige, coll=col)
     # frieze behind the crown + crown with mitred returns on both ends
-    g.box('kd tall carcass frieze', TALL_X0, BASE_X0, UPPER_TOP, CEIL - 0.006, TALL_FRONT_S + 0.004, TALL_FRONT_S + FT_T + 0.012,
+    g.box('kd tall carcass frieze', TALL_X0, BASE_X0, UPPER_TOP, CEIL - 0.006, FRONT_S + 0.004, FRONT_S + FT_T + 0.012,
           M.greige, coll=col)
-    # v7 repair: the frieze returns along both ends behind the crown's returns. The end panels stop at UPPER_TOP and
-    # the crown starts at CROWN_Y, 0.02 ft higher: a dark slot ran under the crown on both end faces (review E9).
-    g.box('kd tall carcass frieze return W', TALL_X0 + 0.004, TALL_X0 + FT_T + 0.012, UPPER_TOP - 0.01, CEIL - 0.006,
-          TALL_FRONT_S + FT_T + 0.012, WALL_S, M.greige, coll=col)
-    g.box('kd tall carcass frieze return E', BASE_X0 - FT_T - 0.012, BASE_X0 - 0.004, UPPER_TOP - 0.01, CEIL - 0.006,
-          TALL_FRONT_S + FT_T + 0.012, WALL_S, M.greige, coll=col)
-    C.sweep(g, 'kd tall crown cove', [(TALL_X0, WALL_S - 0.004), (TALL_X0, TALL_FRONT_S), (BASE_X0, TALL_FRONT_S), (BASE_X0, WALL_S - 0.004)],
+    C.sweep(g, 'kd tall crown cove', [(TALL_X0, WALL_S - 0.004), (TALL_X0, FRONT_S), (BASE_X0, FRONT_S), (BASE_X0, WALL_S - 0.004)],
             C.crown_profile(0.24, CROWN_H), CROWN_Y, M.greige, col)
     # hardware: cups on the tower's drawer, a knob on each top door (the pair over the refrigerator on its
     # meeting stiles, the tower's on its east stile), all at one height
@@ -450,20 +393,20 @@ def _wall_oven(g, M, col):
     k = 0
     oy0, oy1 = OVEN_Y
     ox0, ox1 = oc - 1.125, oc + 1.125
-    g.box(f'kd oven {k} fascia', ox0, ox1, oy0, oy1, TALL_FRONT_S - 0.035, TALL_FRONT_S + 0.012, 'stainless', 0.01, coll=col)
-    g.box(f'kd oven {k} door', ox0 + 0.05, ox1 - 0.05, oy0 + 0.05, oy1 - 0.3, TALL_FRONT_S - 0.05, TALL_FRONT_S - 0.03,
+    g.box(f'kd oven {k} fascia', ox0, ox1, oy0, oy1, FRONT_S - 0.035, FRONT_S + 0.012, 'stainless', 0.01, coll=col)
+    g.box(f'kd oven {k} door', ox0 + 0.05, ox1 - 0.05, oy0 + 0.05, oy1 - 0.3, FRONT_S - 0.05, FRONT_S - 0.03,
           'stainless', 0.008, coll=col)
-    g.box(f'kd oven {k} window', ox0 + 0.32, ox1 - 0.32, oy0 + 0.3, oy1 - 0.62, TALL_FRONT_S - 0.053, TALL_FRONT_S - 0.047,
+    g.box(f'kd oven {k} window', ox0 + 0.32, ox1 - 0.32, oy0 + 0.3, oy1 - 0.62, FRONT_S - 0.053, FRONT_S - 0.047,
           M.black_glass, 0.002, coll=col)
-    g.box(f'kd oven {k} controls', ox0 + 0.05, ox1 - 0.05, oy1 - 0.22, oy1 - 0.05, TALL_FRONT_S - 0.045, TALL_FRONT_S - 0.03,
+    g.box(f'kd oven {k} controls', ox0 + 0.05, ox1 - 0.05, oy1 - 0.22, oy1 - 0.05, FRONT_S - 0.045, FRONT_S - 0.03,
           M.black_glass, 0.006, coll=col)
     for kx in (-0.55, 0.55):
-        g.cyl_axis(f'kd oven {k} knob', (oc + kx, oy1 - 0.135, TALL_FRONT_S - 0.045), (oc + kx, oy1 - 0.135, TALL_FRONT_S - 0.09),
+        g.cyl_axis(f'kd oven {k} knob', (oc + kx, oy1 - 0.135, FRONT_S - 0.045), (oc + kx, oy1 - 0.135, FRONT_S - 0.09),
                    0.045, M.handle, 24, col)
     hy = oy1 - 0.38
-    g.cyl_axis(f'kd oven {k} handle', (ox0 + 0.2, hy, TALL_FRONT_S - 0.17), (ox1 - 0.2, hy, TALL_FRONT_S - 0.17), 0.028, M.handle, 20, col)
+    g.cyl_axis(f'kd oven {k} handle', (ox0 + 0.2, hy, FRONT_S - 0.17), (ox1 - 0.2, hy, FRONT_S - 0.17), 0.028, M.handle, 20, col)
     for xx in (ox0 + 0.32, ox1 - 0.32):
-        g.cyl_axis(f'kd oven {k} handle post', (xx, hy, TALL_FRONT_S - 0.05), (xx, hy, TALL_FRONT_S - 0.17), 0.017, M.handle, 16, col)
+        g.cyl_axis(f'kd oven {k} handle post', (xx, hy, FRONT_S - 0.05), (xx, hy, FRONT_S - 0.17), 0.017, M.handle, 16, col)
 
 
 # seven-segment digits of the microwave's clock: segments a (top), b, c (right), d (bottom), e, f (left), g
@@ -481,10 +424,10 @@ def _microwave(g, M, col):
     y0, y1 = MW_Y
     ox0, ox1 = oc - 1.125, oc + 1.125
     N = 'kd microwave oven'
-    zt = TALL_FRONT_S - 0.035                  # face of the trim kit (the wall oven's fascia plane)
+    zt = FRONT_S - 0.035                  # face of the trim kit (the wall oven's fascia plane)
     zd = zt - 0.05                        # face of the door and the control strip
     LAYER = 0.003                         # printed / applied layers stand 1mm proud (as the oven's window does)
-    g.box(f'{N} trim', ox0, ox1, y0, y1, zt, TALL_FRONT_S + 0.012, 'stainless', 0.01, coll=col)
+    g.box(f'{N} trim', ox0, ox1, y0, y1, zt, FRONT_S + 0.012, 'stainless', 0.01, coll=col)
     ix0, ix1, iy0, iy1 = ox0 + 0.10, ox1 - 0.10, y0 + 0.16, y1 - 0.16
     slots = C.Acc()
     for yy in (y0 + 0.058, y0 + 0.100, y1 - 0.100, y1 - 0.058):
@@ -527,11 +470,11 @@ def _microwave(g, M, col):
     keys.done(g, f'{N} control keys', M.keys, col, bevel=0.0)
     # handle on the door's right edge: the wall oven's bar (same radius, same distance from the fronts), upright
     hx = dx0 + 0.105
-    bar = g.cyl_axis(f'{N} handle', (hx, iy0 + 0.10, TALL_FRONT_S - 0.17), (hx, iy1 - 0.10, TALL_FRONT_S - 0.17), 0.028,
+    bar = g.cyl_axis(f'{N} handle', (hx, iy0 + 0.10, FRONT_S - 0.17), (hx, iy1 - 0.10, FRONT_S - 0.17), 0.028,
                      M.handle, 20, col)
     g.bevel_mod(bar, 0.008, 3)
     for yy in (iy0 + 0.24, iy1 - 0.24):
-        g.cyl_axis(f'{N} handle post', (hx, yy, zd), (hx, yy, TALL_FRONT_S - 0.17), 0.017, M.handle, 16, col)
+        g.cyl_axis(f'{N} handle post', (hx, yy, zd), (hx, yy, FRONT_S - 0.17), 0.017, M.handle, 16, col)
 
 
 # ============================================================================= base runs
@@ -539,15 +482,12 @@ def _base_runs(g, M, col, hw, lights):
     Fs = C.Face('mz', FRONT_S)
     Fe = C.Face('mx', FRONT_E)
     acc = C.Acc()
-    # the two runs meet in the corner: each ends just short of the other's worktop front (the units along the
-    # walls keep their places; the last one of each run took up what the 2'-0" depth changed)
-    S_END, E_END = CT_FRONT_E - 0.005, CT_FRONT_S - 0.01
     for (x0, x1), kind in (((BASE_X0, 30.70), 'doors2'), ((30.70, 33.30), 'drawers3'),
-                           ((33.30, 36.30), 'drawers3'), ((36.30, S_END), 'doors2')):
+                           ((33.30, 36.30), 'drawers3'), ((36.30, 38.40), 'doors2')):
         _base_unit(acc, g, M, Fs, x0, x1, kind, hw)
     # blind corner fillers
-    acc.box(Fs, S_END, FRONT_E + FT_T, Y_B0, Y_B1, -FT_T, 0.0)
-    acc.box(Fe, E_END, FRONT_S + FT_T, Y_B0, Y_B1, -FT_T, 0.0)
+    acc.box(Fs, 38.40, FRONT_E + FT_T, Y_B0, Y_B1, -FT_T, 0.0)
+    acc.box(Fe, 29.12, FRONT_S + FT_T, Y_B0, Y_B1, -FT_T, 0.0)
     # east run (u = z): narrow door | dishwasher panel | sink base | drawers
     _base_unit(acc, g, M, Fe, RUN_E0 + FT_T, 22.887, 'door1', hw, hinge='l')
     acc.shaker(Fe, 22.887 + GAP / 2, 24.887 - GAP / 2, Y_B0, Y_B1)                    # dishwasher
@@ -560,7 +500,7 @@ def _base_runs(g, M, col, hw, lights):
     acc.shaker(Fe, SINK_Z + GAP / 2, s1 - GAP / 2, Y_B0, SINK_BOT - GAP)
     _hw_door(g, M, Fe, s0, SINK_Z - GAP / 2, Y_B0, SINK_BOT - GAP, 'l', hw)
     _hw_door(g, M, Fe, SINK_Z + GAP / 2, s1, Y_B0, SINK_BOT - GAP, 'r', hw)
-    _base_unit(acc, g, M, Fe, 27.887, E_END, 'drawers3', hw)
+    _base_unit(acc, g, M, Fe, 27.887, 29.12, 'drawers3', hw)
     acc.done(g, 'kd base door panel run', M.cream, col)
     # exposed end panel of the east run (faces north, toward W07)
     ep = C.Acc()
@@ -838,55 +778,30 @@ def _bridge_faucet(g, M, col):
 
 
 # ================================================================================ island
-def island_plan():
-    """The island on the built (architect's) plan, feet: what the build log and the notes report."""
-    x0, x1, z0, z1 = PLAN_ISLAND
-    r = lambda v: round(v, 3)                                            # noqa: E731
-    return {'east_run_north_end_z': {'worktop': r(R.Z_RIGHT(RUN_E0 - 0.02)), 'end_panel': r(PLAN_RUN_E0)},
-            'island': {'top_x': [r(x0), r(x1)], 'top_z': [r(z0), r(z1)],
-                       'body_x': [r(x0 + ISLAND_END), r(x1 - ISLAND_END)],
-                       'body_z': [r(z0 + ISLAND_LIP_N), r(z1 - ISLAND_LIP_S)],
-                       'aisle_east': r(PLAN_CT_E - x1), 'aisle_south': r(PLAN_CT_S - z1),
-                       'stacks': ISLAND_STACKS, 'stools': 0},
-            'counter_front': {'east_x': r(PLAN_CT_E), 'south_z': r(PLAN_CT_S),
-                              'tall_fronts_z': r(R.Z_RIGHT(TALL_FRONT_S))}}
-
-
 def _island(g, M, col, hw):
-    """White-oak drawer island under a 2in honed quartzite top with an eased edge: 7'-0" x 4'-0" at the
-    sheet's place (eighth round; 5'-9" x 3'-0" before). Four 19in drawer stacks to the kitchen, a panelled
-    back toward the living room under a 12in overhang, furniture end panels with a centre stile; the dining
-    table stands against the west one. No stools: the table continues the island (architect's plan).
-
-    Built in feet on the ARCHITECT'S plan (C.PlanFace; _px / _pz for the boxes) and named as fitted pieces, so
-    after the warp every number here is the built one: stiles, rails and reveals are true to size."""
-    x0, x1, z0, z1 = PLAN_ISLAND
+    """White-oak drawer island (three drawer stacks to the kitchen, panelled back toward the living room,
+    furniture end panels; the dining table stands against the west one) under a 2in honed quartzite top
+    with an eased edge."""
+    x0, x1, z0, z1 = ISLAND
     t = 0.167
-    top = g.box('kd island top', _px(x0), _px(x1), TOP - t, TOP, _pz(z0), _pz(z1), M.quartzite, coll=col)
+    top = g.box('kd island top', x0, x1, TOP - t, TOP, z0, z1, M.quartzite, coll=col)
     _soft_edge(g, top, 0.022, 3)
-    bx0, bx1 = x0 + ISLAND_END, x1 - ISLAND_END       # outer faces of the end panels
-    zf = z1 - ISLAND_LIP_S                            # drawer faces
-    zb = z0 + ISLAND_LIP_N                            # back panel faces
-    bz0, bz1 = zb + FT_T, zf - FT_T                   # carcass back / front
+    bx0, bx1 = 28.65, 34.15
+    bz0, bz1 = 23.0, 24.85                      # carcass back / front (fronts overlay outside these)
     yt = TOP - t - 0.002
-
-    def face(facing, plane):
-        return C.PlanFace(facing, plane, _px, _pz)
-    # end panels: one frame over the whole depth with a centre stile (two upright panels: the body is 35in deep)
+    zf = bz1 + FT_T                             # drawer faces
+    zb = bz0 - FT_T                             # back panel faces
     ends = C.Acc()
-    zm = (zb + zf) / 2
-    for F in (face('mx', bx0), face('px', bx1)):
-        ends.shaker(F, zb, zf, 0.0, yt, sw=0.22, rw=0.24)
-        ends.box(F, zm - 0.11, zm + 0.11, 0.24, yt - 0.24, -RECESS, 0.0)
+    ends.shaker(C.Face('mx', bx0), zb, zf, 0.0, yt, sw=0.22, rw=0.24)
+    ends.shaker(C.Face('px', bx1), zb, zf, 0.0, yt, sw=0.22, rw=0.24)
     ends.done(g, 'kd island end panel', M.oak, col)
-    g.box('kd island carcass', _px(bx0 + FT_T), _px(bx1 - FT_T), TOE_H, yt, _pz(bz0), _pz(bz1), M.oak, coll=col)
-    g.box('kd island plinth', _px(bx0 + FT_T), _px(bx1 - FT_T), 0.0, TOE_H, _pz(bz0 + 0.15), _pz(bz1 - 0.15), M.oak,
-          coll=col)
-    Ff = face('pz', zf)
-    Fb = face('mz', zb)
+    g.box('kd island carcass', bx0 + FT_T, bx1 - FT_T, TOE_H, yt, bz0, bz1, M.oak, coll=col)
+    g.box('kd island plinth', bx0 + FT_T, bx1 - FT_T, 0.0, TOE_H, bz0 + 0.15, bz1 - 0.15, M.oak, coll=col)
+    Ff = C.Face('pz', zf)
+    Fb = C.Face('mz', zb)
     fronts = C.Acc()
     a0, a1 = bx0 + FT_T, bx1 - FT_T
-    n = ISLAND_STACKS
+    n = 3
     w = (a1 - a0) / n
     cuts = [Y_B0, Y_B0 + 0.98, yt - 0.012 - 0.52, yt - 0.012]
     for i in range(n):

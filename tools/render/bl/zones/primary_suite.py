@@ -11,8 +11,7 @@ Design language (unchanged): serene, light, warm-white / white oak / walnut with
 
 Bedroom (x 0.225..11.308, z 0.225..12.475), furniture as the sheet draws it: a king bed with its headboard on the
 west wall, centred on the room (z 6.35), a nightstand each side (2'-0" wide, under the two west windows), a rug.
-Both west windows stay (W15 z 1.225..4.225 since the eighth round, 3'-0" as on the sheet; W14 z 9.197..12.071; sills
-2'-6"), and the bed as drawn is wider than
+Both west windows stay (W15 z 1.107..3.937, W14 z 9.197..12.071, sills 2'-6"), and the bed as drawn is wider than
 the pier between them, so NOTHING on that wall rises above the sills where there is glass behind it: the
 channel-tufted headboard is low (2'-4 1/2") and runs the bed's full width under both sills, the nightstands are low
 (1'-4 3/4") and carry small dome lamps (tops 2'-4"), and the tall pillows stand within the pier. A colour-field
@@ -20,11 +19,11 @@ canvas hangs on the pier above the bed. The east side stays clear from the vesti
 between the bed's foot and the wall): the arch mirror and a framed print hang there; the concept's bench, dresser,
 lounge chair and corner tree are gone (a dresser on the east wall would leave 2.4 ft at the bed's foot).
 
-Vestibule (x 6.725..11.308, z 12.892..20.892): a calm passage. One full-height black-framed mirror on the closet
+Vestibule (x 6.725..11.308, z 12.835..20.835): a calm passage. One full-height black-framed mirror on the closet
 wall north of the closet door, two recessed cans, the switch by the suite entry. (The attic hatch is built with the
 rooms.)
 
-Walk-in closet (x 0.225..6.308, z 12.892..20.892), hanging on three sides as on the sheet, open (no fronts), in the
+Walk-in closet (x 0.225..6.308, z 12.835..20.835), hanging on three sides as on the sheet, open (no fronts), in the
 former wardrobes' finishes (warm-white lacquer uprights, oak shelves, black rods, 4000 K strips):
   west wall   a drawer / shelf tower facing the door (four drawers, lit shelves with folded knits and linen boxes)
               between a double-hang bay (north) and a single long-hang bay (south);
@@ -55,18 +54,19 @@ C_SOFT = 'ps_softgoods'
 C_LIT = 'ps_lights'
 C_MOD = 'ps_models'
 
-# room datums (SCENE feet on the architect's plan = the sheet's frame, tools/render/relayout.py)
-WEST, EAST, NORTH, SOUTH_B = RS.R.ROOMS['primary']    # the bedroom's wall faces: x 0.225, 11.308; z 0.225, 12.475
-#                                                       (EAST is the vestibule's east face too; SOUTH_B is the wall
-#                                                       between bedroom and closet)
+# room datums (SCENE feet on the architect's plan)
+WEST = 0.225          # west wall interior face
+NORTH = 0.225         # rear wall interior face
+EAST = 11.308         # east wall interior face (bedroom and vestibule)
+SOUTH_B = 12.475      # the bedroom's south wall face (the closet's north wall)
 CEIL = 8.0
 CX0, CX1, CZ0, CZ1 = RS.SUITE_CLOSET_CLEAR          # walk-in closet inside
 VX0, VX1, VZ0, VZ1 = RS.SUITE_VESTIBULE_CLEAR       # vestibule inside
 
 # the two west windows (openings in z) and their sills: what stands in front of glass stays below SILL_CLEAR
-W15_Z = RS.PRIMARY_WEST_WIN_Z     # v7 glazing: 3'-0" at the sheet's place, z 1.225..4.225 (it was 1.107..3.937)
-W14_Z = RS.PRIMARY_WEST_WIN_S_Z   # v7 final: from the spec (z 9.197..12.071, the shell's opening as the warp carries it)
-SILL_CLEAR = 2.43     # underside of the window stools (y 2.442; W14's stone sill was at 2.436); the glass starts at 2.6
+W15_Z = (1.107, 3.937)
+W14_Z = (9.197, 12.071)
+SILL_CLEAR = 2.43     # underside of the window stools (y 2.436 / 2.442); the glass starts at 2.6
 
 BED_ZC = 6.35                                   # the sheet: the bed is centred on the room's depth
 BED_HALF = 3.165                                # king mattress, 6'-4" wide
@@ -78,13 +78,11 @@ NS_W = 2.0                                      # nightstands as drawn: 2'-0" wi
 NS_Z = ((BED_ZC - 5.54, BED_ZC - 3.54), (BED_ZC + 3.54, BED_ZC + 5.54))
 NS_X = (0.30, 1.90)
 NS_TOP = 1.40
-ART_ZC = BED_ZC                                  # v7 repair: the canvas hangs on the bed's centre line (6.35) and is
-ART_W = 3.75                                     # 3'-9" wide (4.2 at z 6.60 since W15 became 3'-0": 3 in off the bed's
-#                                                  centre, tight to W15); its frame is 0.18 ft from W15's jamb
+ART_ZC = 6.46                                   # canvas: between the bed's centre line and the pier's (6.567)
 RUG = (2.40, 10.40, 1.75, 10.95)                # x0, x1, z0, z1 (8 x 9'-2", centred on the bed)
 RUG_TOP = 0.042
 
-CAMS = {'P0': (9.5, 10.5), 'S0': (8.23, VZ0 + 3.985)}     # sweeps of the fifth round's layout (clearance report only)
+CAMS = {'P0': (9.5, 10.5), 'S0': (8.23, 16.82)}     # sweeps of the fifth round's layout (clearance report only)
 
 
 # ----------------------------------------------------------------------------- materials
@@ -241,10 +239,8 @@ def build_bed(ctx, m):
     yb = MAT_TOP + 0.05
     lean(MAT_X0 + 0.48, yb, BED_ZC - 1.08, 2.12, 2.08, 0.52, 12, m['euro'], 'ps euro sham N', 21)
     lean(MAT_X0 + 0.48, yb, BED_ZC + 1.08, 2.12, 2.08, 0.52, 13, m['euro'], 'ps euro sham S', 22)
-    # (v7 glazing: 1.08 off the bed's centre line like the shams, 1.14 before: W15 is 3'-0" wide now and its south
-    # jamb, z 4.225, stood 0.06 ft behind the north pillow's end)
-    lean(MAT_X0 + 1.30, yb, BED_ZC - 1.08, 2.17, 1.62, 0.48, 36, m['pillow'], 'ps pillow N', 23)
-    lean(MAT_X0 + 1.30, yb, BED_ZC + 1.08, 2.17, 1.62, 0.48, 38, m['pillow'], 'ps pillow S', 24)
+    lean(MAT_X0 + 1.30, yb, BED_ZC - 1.14, 2.17, 1.62, 0.48, 36, m['pillow'], 'ps pillow N', 23)
+    lean(MAT_X0 + 1.30, yb, BED_ZC + 1.14, 2.17, 1.62, 0.48, 38, m['pillow'], 'ps pillow S', 24)
     lean(MAT_X0 + 2.00, yb + 0.12, BED_ZC + 0.05, 2.70, 1.10, 0.40, 52, m['lumbar'], 'ps lumbar', 25)
     n += 5
     return n
@@ -311,7 +307,7 @@ def build_art(ctx, m):
     c = C_BED
     img = ART.to_blender_image('Z_primary_suite_art_canvas', 1800, 1000, seed=7)
     mat = M.image_canvas('art_canvas', img)
-    W = ART_W
+    W = 4.2
     z0, z1 = ART_ZC - W / 2, ART_ZC + W / 2
     y0 = 4.70
     y1 = y0 + W / 1.8
@@ -407,24 +403,13 @@ def build_shades(ctx, m):
     """Inside-mount slim roller shades in the three openings, partly lowered (as before; fitted to the reveals)."""
     c = C_BED
     n = 0
-    _WF, _SC = RS.GLAZING_WIN_FRAME, RS.slider_clear(RS.SLIDER_X)      # v7 glazing
     specs = [
-        # (depths: from the window in the middle of the 5 in wall to just inside the room face of the wall)
-        # v7 glazing: W15 and the rear slider are rebuilt at the sheet's widths (revision_spec, "v7 glazing"); their
-        # shades hang inside the new frames, under the frames' heads (the last number: the cassette's top)
-        # (v7 repair: W15's hem at W14's height, 6.05; it hung 0.07 ft lower in the same view)
-        ('W15', 'z', W15_Z[0] + _WF + 0.005, W15_Z[1] - _WF - 0.005, RS.WEST_WALL_C + 0.08, WEST - 0.005, 6.05,
-         RS.GLAZING_WIN_Y[1] - _WF - 0.005),                                       # between the frame's jambs
-        # v7 final: W14 has W15's unit now (bl/revisions.primary_west_window_south), so its shade hangs like W15's:
-        # between the frame's jambs, the cassette under the frame's head (top 6.935; it hung between the old unit's
-        # painted jamb reveals with its top at 6.88, 0.055 ft lower than W15's) and as deep as W15's
-        ('W14', 'z', W14_Z[0] + _WF + 0.005, W14_Z[1] - _WF - 0.005, RS.WEST_WALL_C + 0.08, WEST - 0.005, 6.05,
-         RS.GLAZING_WIN_Y[1] - _WF - 0.005),
-        ('W01', 'x', _SC[0] + 0.005, _SC[1] - 0.005, RS.REAR_WALL_C + RS.GLAZING_TRACK + RS.GLAZING_PANEL_T / 2 + 0.012,
-         NORTH + 0.045, 5.98, RS.SLIDER_HEAD - RS.GLAZING_FRAME - 0.005),          # rear slider: between its jambs,
-        #                                                                            clear of the fixed panel's room face
+        ('W15', 'z', 1.15, 3.895, 0.08, 0.22, 6.12),       # between the black jamb sections
+        ('W14', 'z', 9.31, 11.96, 0.09, 0.22, 6.05),       # between the painted jamb reveals
+        ('W01', 'x', 2.61, 8.94, 0.105, 0.225, 5.98),      # rear slider: clear of the sliding panel (z <= 0.09)
     ]
-    for tag, along, a0, a1, d0, d1, ybot, ytop in specs:
+    for tag, along, a0, a1, d0, d1, ybot in specs:
+        ytop = 6.88
         dm = (d0 + d1) / 2
         if along == 'z':
             _box(ctx, f'ps shade {tag} cassette', d0, d1, ytop - 0.16, ytop, a0, a1, m['trim'], c, bevel=0.02)
@@ -469,7 +454,7 @@ def build_vestibule(ctx, m):
     _box(ctx, 'ps vestibule mirror frame N', fx0, fx1, my0, my1, mz0, mz0 + fw, m['black'], c, bevel=0.006)
     _box(ctx, 'ps vestibule mirror frame S', fx0, fx1, my0, my1, mz1 - fw, mz1, m['black'], c, bevel=0.006)
     xc = (VX0 + VX1) / 2
-    for z in (VZ0 + 4.215, VZ0 + 6.615):        # clear of the attic hatch (0.495..2.985 from the north end)
+    for z in (17.05, 19.45):                    # clear of the attic hatch (z 13.33..15.82)
         lighting.can(ctx, xc, z, coll=C_LIT, kelvin=4700, watts=8.0)
     return 8
 

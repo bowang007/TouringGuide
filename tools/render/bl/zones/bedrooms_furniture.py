@@ -574,11 +574,9 @@ def slope_can(kit, x, z, watts=3.0, tag='slope can', lens=16.0):
     kit.n += 2
 
 
-def ridge_canopy(kit, M, x, z, tag, radius=0.22, mat='paint_trim', vault=None):
-    """Round canopy whose top follows both vault slopes at the ridge (no gap, no intersection).
-    `vault` (v7 repair): the ceiling's underside as a function of x when it is not the concept's (vault_y)."""
+def ridge_canopy(kit, M, x, z, tag, radius=0.22, mat='paint_trim'):
+    """Round canopy whose top follows both vault slopes at the ridge (no gap, no intersection)."""
     import bmesh
-    vault_y = vault or globals()['vault_y']
     bm = bmesh.new()
     bmesh.ops.create_cone(bm, cap_ends=True, segments=32, radius1=radius * FT, radius2=radius * FT, depth=0.25 * FT)
     for v in bm.verts:
@@ -617,17 +615,11 @@ def ring_pendant(kit, M, x, z, y_ring, tag, R=1.25, watts_strength=55.0):
     d = kit.lathe(f'{tag} pendant diffuser', fr, (0, 0, 0), prof_d, kit.emitter('bed_ring', 3000, watts_strength),
                   segs, closed=True, smooth=False)
     d.visible_shadow = False
-    pendant_cables(kit, tag, x, z, y_can, y_ring + 0.04, R)
-
-
-def pendant_cables(kit, tag, x, z, y_can, y_top, R=1.25):
-    """The ring pendant's three cables from its canopy (underside y_can) to the ring's top face (y_top). (v7 repair:
-    split off ring_pendant so that bedrooms_rooms can hang Bedroom 3's ring again from the ridge as built.)"""
     for k in range(3):
         a = math.tau * k / 3 + 0.4
         cx, cz = x + math.cos(a) * (R - 0.0), z + math.sin(a) * (R - 0.0)
         top = (x + math.cos(a) * 0.12, y_can + 0.02, z + math.sin(a) * 0.12)
-        bot = (cx, y_top, cz)
+        bot = (cx, y_ring + 0.04, cz)
         L = math.dist(top, bot)
         mid = tuple((top[i] + bot[i]) / 2 for i in range(3))
         cb = kit.ctx.cylinder(f'{tag} pendant cable {k}', mid, 0.006, L, 'black_metal', kit.cname, verts=6)

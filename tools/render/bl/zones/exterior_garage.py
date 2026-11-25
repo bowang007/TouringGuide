@@ -12,21 +12,15 @@ from ..common import FT, ft2bl
 from . import exterior_layout as L
 from .exterior_util import MB, coll, emit_mat, flat_mat
 from .. import lighting
-from .. import garage_spec as GS         # v7 garage: the sheet's vehicle door and the garage floor's level
 
 SUB = 'garage_door'
 
-# v7 garage: the vehicle door as the sheet has it (DR19): the wall opening is 15'-0" (x 22.975..37.975, the shell's,
-# relayout.GARAGE_DOOR_RO), a 1 in jamb board stands on each of its ends and the 14'-10" door fills what is left
-# (x 23.058..37.892). Every height below is written above the GARAGE floor, which is 11 in below the house floor
-# (A1.3: opening 7'-0" high above it); _seat() puts the built pieces down on it.
-OX0, OX1 = GS.VEHICLE_DOOR_X
-OH = GS.VEHICLE_HEIGHT
-Y0 = GS.FLOOR_Y                          # the garage floor (house floor = 0)
-CEIL = GS.CEILING_Y - Y0 - 0.005         # the garage ceiling above its floor (8'-11"): hanger straps end on it
-JAMB = GS.VEHICLE_JAMB
+# vehicle door opening: x 22.957..37.816 (14'-10", centred in the garage), y 0..7.0 in the garage front wall
+# (z 52.335..52.785)
+OX0, OX1 = L.GARAGE_DOOR
+OH = 7.0
 XC = (OX0 + OX1) / 2                     # door centre line (torsion shaft, opener rail)
-WALL_IN = L.GARAGE_WALL_IN               # interior face of the garage front wall
+WALL_IN = 52.335                         # interior face of the garage front wall
 DZ0, DZ1 = WALL_IN - 0.235, WALL_IN - 0.055   # door leaf thickness (sits just inside the jambs); DZ1 = street face
 DX0, DX1 = OX0 - 0.15, OX1 + 0.15        # 1-3/4" overlap on the jambs
 DY0, DY1 = 0.03, OH + 0.10
@@ -250,30 +244,12 @@ def door(ctx):
     hw.obj(ctx, 'ext garage door hinges', 'black_metal', SUB, bevel=0.008, segments=1)
     seal.obj(ctx, 'ext garage door seal', flat_mat('Z_exterior_rubber', '#121212', 0.8), SUB)
     pulls.obj(ctx, 'ext garage door pulls', 'black_metal', SUB, bevel=0.008, segments=2)
-    # v7 garage: the two jamb boards between the wall's ends (15'-0") and the door (14'-10"), through the wall's
-    # whole thickness and finished like its reveal: stucco down to the screed line the site zone gives the walls,
-    # the foundation's concrete below it (exterior_site.plinth; all stucco if that line is not there)
-    try:
-        from .exterior_site import PLINTH_E, SCREED_Y
-        foot = min(max(SCREED_Y - Y0, 0.0), OH)          # the screed line above the garage floor
-    except Exception:
-        PLINTH_E, foot = 0.0, 0.0
-    jb, jf = MB(), MB()
-    for xa, xb in ((OX0 - JAMB, OX0), (OX1, OX1 + JAMB)):
-        jb.box(xa, xb, foot, OH, WALL_IN, L.GARAGE_FRONT)
-        if foot > 0.0:
-            jf.box(xa, xb, 0.0, foot, WALL_IN, L.GARAGE_FRONT - PLINTH_E)
-    jb.obj(ctx, 'ext garage door jamb boards', 'stucco', SUB)
-    if foot > 0.0:
-        jf.obj(ctx, 'ext garage door jamb boards foot', 'foundation', SUB)
 
 
 def _arc_track(mb, xc, z_vert, y_v_top, y_h, z_back, w=0.2, d=0.12, segs=7):
-    """Vertical track (y 0.04..y_v_top) + radius + horizontal track at y_h back to z_back."""
+    """Vertical track (y 0.3..y_v_top) + radius + horizontal track at y_h back to z_back."""
     r = y_h - y_v_top
-    # v7 repair: the vertical track stands on the slab (it started 0.5 ft above it, above the lowest roller, which
-    # hung under the track's end; review E10)
-    mb.box(xc - w / 2, xc + w / 2, 0.04, y_v_top, z_vert - d / 2, z_vert + d / 2)
+    mb.box(xc - w / 2, xc + w / 2, 0.5, y_v_top, z_vert - d / 2, z_vert + d / 2)
     pz, py = z_vert, y_v_top
     for k in range(1, segs + 1):
         a = (math.pi / 2) * k / segs
@@ -309,9 +285,9 @@ def hardware(ctx):
         _arc_track(trk, xc, zt, y_vt, y_h, z_back)
         # jamb angle (flag) bolted to the wall face
         side = -1 if xc < XC else 1
-        trk.box(xc + side * 0.1, xc + side * 0.16, 0.09, y_vt, zt, WALL_IN - 0.002)       # v7 repair: with the track (0.55)
+        trk.box(xc + side * 0.1, xc + side * 0.16, 0.55, y_vt, zt, WALL_IN - 0.002)
         # rear hanger strap to the ceiling + diagonal brace
-        trk.box(xc - 0.03, xc + 0.03, y_h + 0.06, CEIL, z_back + 0.2, z_back + 0.35)
+        trk.box(xc - 0.03, xc + 0.03, y_h + 0.06, 7.995, z_back + 0.2, z_back + 0.35)
         # rollers (stem into track) at each section
         for s in range(NSEC):
             yr = _sec_y(s)[0] + (0.25 if s == 0 else 0.0)
@@ -361,7 +337,7 @@ def hardware(ctx):
             op.face([b + i for i in f])
     op.box(xr - 0.12, xr + 0.12, 6.75, 7.0, DZ0 - 0.06, DZ0)               # door bracket
     for xs in (xr - 0.42, xr + 0.42):                                        # ceiling hanger straps
-        op.box(xs - 0.03, xs + 0.03, 7.6, CEIL, zr1 + 0.25, zr1 + 0.32)
+        op.box(xs - 0.03, xs + 0.03, 7.6, 7.995, zr1 + 0.25, zr1 + 0.32)
     op.obj(ctx, 'ext garage opener rail', 'black_metal', SUB, bevel=0.006, segments=1)
     head = MB()
     head.box(xr - 0.55, xr + 0.55, 7.05, 7.6, zr1 - 0.2, zr1 + 1.2)
@@ -370,16 +346,6 @@ def hardware(ctx):
     lens = MB()
     lens.box(xr - 0.35, xr + 0.35, 7.03, 7.06, zr1 + 0.1, zr1 + 0.6)
     lens.obj(ctx, 'ext garage opener lens', flat_mat('Z_exterior_opener_lens', '#efefe9', 0.3), SUB)
-
-
-def _seat():
-    """v7 garage: door() and hardware() are written above the garage floor; put what they built down on it."""
-    n = 0
-    for ob in bpy.data.objects:
-        if ob.name.startswith('ext garage '):
-            ob.location.z += Y0 * FT
-            n += 1
-    return n
 
 
 def sconce(ctx, name, x, y, z, nx, nz, watts=6.0):
@@ -518,45 +484,9 @@ def house_number(ctx, text, x, y, z, height=0.5, nx=0.0, nz=1.0):
     coll(ctx, 'lights').objects.link(mo)
     bpy.data.objects.remove(ob, do_unlink=True)
     # standoff pins
-    # v7 verify: each pin stands behind a stroke of a digit. At x -+ 0.45 they stood in the gaps between the digits
-    # and showed as a dash between "1" and "0" and a nub on the "5" (the number hangs at eye height since the west
-    # lantern moved over it). Strokes = where the digits cover the pin's whole height; the pin goes to the covered
-    # point nearest its old place. (A number turned off the street face keeps the old places.)
-    pins = [x - 0.45, x + 0.45]
-    if abs(nx) < 1e-6:
-        import numpy as np
-        w = np.array([(mo.matrix_world @ v.co)[:] for v in me.vertices])
-        vx, vy = w[:, 0] / FT, w[:, 2] / FT
-        me.calc_loop_triangles()
-        tris = [tuple(t.vertices) for t in me.loop_triangles]
-
-        def cover(yy):
-            iv = []
-            for t in tris:
-                xs = []
-                for i, j in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
-                    if (vy[i] - yy) * (vy[j] - yy) < 0:
-                        xs.append(vx[i] + (vx[j] - vx[i]) * (yy - vy[i]) / (vy[j] - vy[i]))
-                if len(xs) == 2 and abs(xs[0] - xs[1]) > 1e-6:
-                    iv.append((min(xs), max(xs)))
-            out = []
-            for a, b in sorted(iv):
-                if out and a <= out[-1][1] + 1e-4:
-                    out[-1][1] = max(out[-1][1], b)
-                else:
-                    out.append([a, b])
-            return out
-
-        def both(p, q):
-            return [[max(a, c), min(b, d)] for a, b in p for c, d in q if min(b, d) - max(a, c) > 0]
-
-        solid = both(both(cover(y - 0.02), cover(y)), cover(y + 0.02))
-        solid = [(a + 0.022, b - 0.022) for a, b in solid if b - a > 0.05]
-        if solid:
-            pins = [min((min(max(p, a), b) for a, b in solid), key=lambda v: abs(v - p)) for p in pins]
     mb = MB()
-    for px in pins:
-        mb.box(px - 0.015, px + 0.015, y - 0.015, y + 0.015, z, z + nz * 0.06 + 0.001)
+    for dx in (-0.45, 0.45):
+        mb.box(x + dx - 0.015, x + dx + 0.015, y - 0.015, y + 0.015, z, z + nz * 0.06 + 0.001)
     mb.obj(ctx, 'ext house number pins', 'black_metal', 'lights')
     return mo
 
@@ -576,31 +506,18 @@ def build(ctx):
     mailbox(ctx, L.WALKWAY[0] - 0.35, L.SIDEWALK[0] - 1.1)
     door(ctx)
     hardware(ctx)
-    seated = _seat()                         # v7 garage: onto the garage floor, 11 in below the house floor
     gf = L.GARAGE_FRONT
     # black coach lanterns flanking the door (owner's reference). The porch's east pier stands on the
-    # garage face just west of the door: the west lantern hangs on the pier's STREET face with the house
-    # number under it (v7 final: comment; it said the pier's side facing the driveway, under the edge of a
-    # canopy the eighth round's roof no longer has)
+    # garage face just west of the door: the west lantern goes on the pier's side facing the driveway
+    # (under the canopy edge, clear of the soffit), the house number on the pier's street face
     px0, px1, pz0, pz1 = L.PORCH_POSTS[1]
-    # (v7 garage: the pair keeps its height against the door, which went down with the garage floor)
-    # v7 repair: the west lantern hangs on the pier's STREET face, over the house number. On the pier's driveway
-    # face it stood 0.44 ft into the clear width of the 15'-0" vehicle door (clear from x 23.058; the lantern
-    # reached x 23.50, 5.5 ft above the driveway, 0.85..1.48 ft in front of the garage wall): the door was 14'-10"
-    # centred when it was put there. Same height as the east lantern, both facing the street.
-    lantern(ctx, 'garage W', (px0 + px1) / 2, 5.95 + Y0, pz1, 0.0, 1.0)
-    lantern(ctx, 'garage E', (OX1 + JAMB + L.HX1) / 2, 5.95 + Y0, gf, 0.0, 1.0)
-    # v7 garage: the front door has a sidelight each side (bl/garage_spec.FRONT_DOOR_UNIT), which leaves 3 in of
-    # wall beside the unit, so the entry sconce moved off the front door wall onto the porch's west side wall
-    # (the door's latch side), 1.25 ft in front of the door wall. (PORCH[0] is that wall's face and PORCH[2] the
-    # front door wall's stucco face.)
-    sconce(ctx, 'entry', L.PORCH[0], 5.95, L.PORCH[2] + 1.25, 1.0, 0.0)
-    # rear: a pair flanking the living room's four-panel sliding door (L.GARDEN_DOOR is its opening; v7 final:
-    # comment, it said "garden door"), as on the 1077 patio
-    gd0, gd1 = L.GARDEN_DOOR
-    sconce(ctx, 'rear W', gd0 - 0.604, 6.3, L.HZ0, 0.0, -1.0)
-    sconce(ctx, 'rear E', gd1 + 0.457, 6.3, L.HZ0, 0.0, -1.0)
-    # v7 repair: the number sits under the west lantern now (it was at 5.25, where the lantern hangs): its top is
-    # 3 1/2 in below the lantern's drop, 4'-10" above the driveway
-    house_number(ctx, '1095', (px0 + px1) / 2, 5.95 + Y0 - 1.08, pz1)
-    return {'door_sections': NSEC, 'lites': NCOL * LITES[0] * LITES[1], 'lanterns': 2, 'seated on the garage floor': seated}
+    lantern(ctx, 'garage W', px1, 5.95, (max(pz0, gf) + pz1) / 2, 1.0, 0.0)
+    lantern(ctx, 'garage E', (OX1 + L.HX1) / 2, 5.95, gf, 0.0, 1.0)
+    # on the foyer front wall between the porch-side wall's stucco and the 3'-0" door (centred, relayout)
+    door_w = (L.PORCH[0] + L.PORCH[1]) / 2 - 1.5
+    sconce(ctx, 'entry', (L.PORCH[0] + 0.09 + door_w) / 2, 5.95, L.PORCH[2] + 0.112, 0.0, 1.0)
+    # rear: a pair flanking the living-room garden door (x 24.45..26.93), as on the 1077 patio
+    sconce(ctx, 'rear W', 23.85, 6.3, L.HZ0, 0.0, -1.0)
+    sconce(ctx, 'rear E', 27.39, 6.3, L.HZ0, 0.0, -1.0)
+    house_number(ctx, '1095', (px0 + px1) / 2, 5.25, pz1)
+    return {'door_sections': NSEC, 'lites': NCOL * LITES[0] * LITES[1], 'lanterns': 2}

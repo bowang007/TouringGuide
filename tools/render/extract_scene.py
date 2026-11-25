@@ -7,10 +7,9 @@
 
 Until v3 this script copied the SCENE, PRIMITIVES and MEASUREMENTS constants out of index.html into
 tools/render/data/. The page no longer holds data: apply_relayout.py and apply_revisions_web.py write
-tools/render/data/scene.json, measurements.json and scene_classification.json directly
-(tools/web/sitedata.py) and apply_sweeps.py installs the tour, so in the pipeline this step is a check only.
-It keeps its place in the sequence
-  apply_relayout.py -> apply_revisions_web.py -> apply_sweeps.py -> extract_scene.py -> tools/web/dimension_plan.py
+tools/render/data/scene.json and measurements.json directly (tools/web/sitedata.py), so in the pipeline
+this step is a check only. It keeps its place in the sequence
+  apply_relayout.py -> apply_revisions_web.py -> extract_scene.py -> tools/web/dimension_plan.py
 and fails when the files would break a later step:
   * scene.json: SCENE object indices are stable (object i has the name of concept object i; new objects
     may only be appended; a few renames in place only warn), which bake_web.py (`scene_index`) and the

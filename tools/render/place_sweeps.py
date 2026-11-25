@@ -12,20 +12,14 @@ the scene (`tour.nodes` / `tour.edges`). Nothing in the .blend is changed or sav
 How the layout is found (all distances in SCENE feet; x west->east, z north->south, y up):
 
  1. One BVH over the interior (collections shell, openings, exterior_shell, the interior zone_* trees and
-    the garage door) and a second one over the site objects around the front porch and the rear landings.
- 2. A 0.25 ft grid. A cell is standable when a ray down from eye height lands on the floor (-0.03 .. 0.15 ft
-    against the level of the place: floor, rug, tile; anything higher is furniture) and a ray up hits a
-    ceiling. Its clearance is the nearest surface in 16 directions at 0.6 / 2.0 / 3.5 ft and eye height, and
-    not more than the distance to the nearest cell that has furniture below the eye (low tables, beds, benches
-    that the rays can miss).
-    Levels (LEVELS, read from bl/garage_spec.py and bl/zones/exterior_layout.py): the house floor is y 0, the
-    garage floor is 11 in lower, the porch slab 5 1/2 in, the two rear landings 1 in. Every height above is counted
-    from the level of the place, and a sweep's eye is EYE above the level it stands on (its `p[1]`; `level`
-    says which). The step at the door between the house and the garage is furniture for a sweep (nobody stands
-    on it) and floor for a walking line (STEPS).
+    the garage door) and a second one over the site objects around the front porch and the rear deck.
+ 2. A 0.25 ft grid. A cell is standable when a ray down from eye height lands on the floor (y -0.03 .. 0.15:
+    floor, rug, tile; anything higher is furniture) and a ray up hits a ceiling. Its clearance is the
+    nearest surface in 16 directions at 0.6 / 2.0 / 3.5 ft and eye height, and not more than the distance to
+    the nearest cell that has furniture below the eye (low tables, beds, benches that the rays can miss).
  3. Reachable floor: flood fill over cells with >= 0.9 ft clearance from the old stops (no pockets behind
     furniture).
- 4. Seeds (E0 H1 H2 H3 B3 B4 K0 D0 L0 L1 L2 P0 S0 C0 A0 B2 A1 G0 A3) keep their id and position. A seed
+ 4. Seeds (E0 H1 H2 H3 B3 B4 K0 D0 L0 L1 L2 P0 S0 C0 A0 B2 A1 G0 A3 C3) keep their id and position. A seed
     with less than 1.2 ft clearance is nudged by up to 1.5 ft to the best clear cell it can see; where there
     is none it stays (>= 0.8 ft is accepted in rooms that would otherwise have no sweep). Only a seed that
     the model no longer leaves standing room for (< 0.8 ft) goes to the nearest clear cell of its room, with
@@ -33,11 +27,6 @@ How the layout is found (all distances in SCENE feet; x west->east, z north->sou
     The walk-in closet's stop C0 is the exception: its authored place is under the south rod of the closet
     the owner's sixth round built (bl/revision_spec.py SUITE_CLOSET_*), so it goes to the most open cell
     of the aisle between the three hanging walls, which is on the axis of the pocket door (WALKIN).
-    Before the seeds, the stops set by hand (PLACED: id -> place written from relayout's wall faces, with the
-    reason) are put down where their place is standable with --keep-clear of clearance: one stop in front of
-    two doors, the corner of the L-shaped hall, the middle of a doorway beside an open leaf, a stop the grid's
-    coarse measure had left too near a table. Where the place is not free the rules of this list decide, with
-    a note. A seed set by hand keeps aiming at the look point of its stop in the scene file.
  5. The laundry closet, when the model has one (a mesh named laundry / washer / dryer inside the closet's
     rectangle, bl/revision_spec.py): one sweep in the foyer on the axis of the closet's doors, 4 ft in front
     of the door wall (3.4 ft from the open leaves), facing the stacked units and looking 14 degrees down so
@@ -53,26 +42,21 @@ How the layout is found (all distances in SCENE feet; x west->east, z north->sou
     sweeps it can see, distances beyond 5.5 ft counting the same so that among far cells the most open one
     wins, until no cell is >= 4 ft from every sweep it sees. A cell with less than 1.5 ft clearance is used
     only when it is >= 5 ft away (a pocket that needs its own sweep; this keeps sweeps off the walls). At
-    most 4 sweeps in the garage, and no second sweep in a bathroom (FILL_ONE: the only floor 4 ft from the
-    first one is inside the shower). A room region left without a sweep gets one at its most open cell
-    (>= 0.8 ft); bed3_bay, bed4_closet and the reach-in closets of Bedrooms 2 and 3 (bed2_closet, suite3_wic)
-    count as covered by their rooms.
- 8. Two outdoor sweeps (OP on the front porch facing the entry, OD on the rear landing outside the open way
-    of the living room's sliding door: the schedule's way_start .. way_end of D14), each on the porch slab /
-    the landing's boards and only when a walkable straight line through the open door joins it to an indoor
-    sweep; a closed door or panel blocks that line. By default both or none (--outdoor each / off).
+    most 4 sweeps in the garage. A room region left without a sweep gets one at its most open cell
+    (>= 0.8 ft); bed3_bay and bed4_closet count as covered by their rooms.
+ 8. Two outdoor sweeps (OP on the front porch facing the entry, OD on the rear deck outside the living
+    room's garden door), only when a walkable straight line through the open door joins each to an indoor
+    sweep; a closed door blocks that line. By default both or none (--outdoor each / off).
  9. Graph: `links` = walkable straight segments up to 11 ft (rays at 0.5 / 2.0 / 3.5 ft and eye height, each
     at -0.45 / 0 / +0.45 ft sideways, and bare floor under the same three lines every 0.4 ft, so a link
-    never crosses a coffee table or the corner of a bed; between two levels the lines slope from one end's
-    height to the other's and the floor under them may be either level or the step), minus a link that a third
+    never crosses a coffee table or the corner of a bed), minus a link that a third
     sweep replaces with two shorter legs and < 20 % detour. `visible` = sweeps within 40 ft with a clear
     line at eye height and 1 ft below it (clear glass does not block), always including the links. The
     links must form one connected graph.
 
 New ids are a letter for the room region and the first free character: L living, D dining strip, K kitchen,
 G garage, F foyer, H halls, P primary bedroom, S primary dressing, A baths, C closets, X / Y / Z bedroom
-2 / 3 / 4; no new id repeats one of the old stops' ids, kept or not, or an id an earlier round retired
-(RETIRED: L5, C3; their panoramas were published). A new sweep takes the label and room id of
+2 / 3 / 4; no new id repeats one of the 27 old ids, kept or not. A new sweep takes the label and room id of
 its region's seed (the nearest of H2 / H3 in the halls). Re-running on a scene that already holds the
 sweeps gives the same layout and the same ids.
 
@@ -83,17 +67,12 @@ the model the panoramas of the untouched rooms stay valid only while their sweep
    them and the approach stops that layout had dropped stay dropped;
  * a name follows the scene file: a seed takes the label its stop has there now, and the other sweeps that
    carried a renamed seed's old label and room take the new one with it (the sixth round renamed S0
-   "Primary vestibule" and C0 "Walk-in closet"; S1 had S0's old label). An outdoor sweep takes the label
-   OUTDOOR gives its id (the eighth round renamed OD "Rear landing": the model has a landing there, not a deck;
-   its id and its room key 'deck' stay). The panorama is not affected;
+   "Primary vestibule" and C0 "Walk-in closet"; S1 had S0's old label). The panorama is not affected;
  * a seed that stood on its authored position follows the scene file when the scene has moved it since
    (apply_revisions_web.py NODE_MOVES), by the rule of step 4;
  * a sweep the model no longer leaves room for goes to the best clear cell within --nudge (1.5 ft) that it
-   sees, is >= 3 ft from the sweeps it sees and joins the walk graph (a seed: the rule of step 4, from its
-   stop in the scene file, which is its place in today's model), or is dropped; every such decision is a note;
- * a stop set by hand (PLACED) goes to its place whether the kept layout had it elsewhere or not at all;
- * --keep-clear 1.2 (the clearance a new sweep needs) is the value to use when every panorama is rendered
-   again anyway: it moves the kept sweeps a changed model has left with less than a new one would get;
+   sees, is >= 3 ft from the sweeps it sees and joins the walk graph (a seed: the rule of step 4), or is
+   dropped; every such decision is a note;
  * the laundry sweep is always placed by step 5 (it follows the closet; its old place is released);
  * steps 6 (doorways, bridges), 7 and 8 then add sweeps only where the kept ones leave floor uncovered; a
    new sweep never takes an id of the kept file, used or dropped;
@@ -103,14 +82,13 @@ against the kept layout (apply_sweeps.py prints it; moved and new sweeps need a 
 kept sweep that sees a changed part of the model). The overlay rings the moved and new sweeps in red.
 
 Output: {"eye", "generated_from", "units", "params", "stats", "notes", ["keep",] "sweeps": [{"id", "label", "room",
-"p", "level", "floor", "yaw", "pitch", "links", "visible", "outdoor", "origin", "clearance"}]}. p = [x, level + eye,
-z]; `level` is the level the sweep stands on (0 = the house floor), `floor` the surface under it. Angles are DEGREES
+"p", "floor", "yaw", "pitch", "links", "visible", "outdoor", "origin", "clearance"}]}. Angles are DEGREES
 (yaw 0 = looking toward -z / north, positive clockwise seen from above; the convention of
 assets/data/tour.json); apply_sweeps.py converts them to the radians that scene.json nodes use. A seed that
 did not move keeps its authored yaw / pitch, a moved one keeps aiming at its old look point, the others
 look toward the most open direction (LC and the outdoor sweeps at their door; LC also looks down at the
 stacked pair); a sweep of a kept layout keeps the yaw / pitch of that file. `origin` says why a sweep
-exists: seed, seed-moved, placed, approach, laundry, door, bridge, fill, region, outdoor. `notes` lists every
+exists: seed, seed-moved, approach, laundry, door, bridge, fill, region, outdoor. `notes` lists every
 decision (moved seeds, kept / dropped approach stops, doorway and bridge sweeps, outdoor sweeps, what
 became of a kept layout).
 
@@ -144,26 +122,17 @@ import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 from mathutils.bvhtree import BVHTree  # noqa: E402
 
-from bl import garage_spec as GS  # noqa: E402  (pure Python: the garage's floor level and its step)
 from bl import revision_spec as RS  # noqa: E402  (pure Python: the laundry closet's rectangle and opening)
 from bl.common import FT, ft2bl  # noqa: E402
-from bl.zones import exterior_layout as XL  # noqa: E402  (the porch slab and the rear landings: rectangles, levels)
-from bl.zones import kitchen_dining_kitchen as KK  # noqa: E402  (the island and the counters on the plan)
 
 EYE = 5.0853
-SEEDS = 'E0 H1 H2 H3 B3 B4 K0 D0 L0 L1 L2 P0 S0 C0 A0 B2 A1 G0 A3'.split()
-# ids of earlier rounds that no sweep may take again (panoramas were published under them): L5 stood where the sofa
-# is since the seventh round; C3 was the stop inside Bedroom 3's step-in closet, which the eighth round rebuilt as
-# the sheet's reach-in closet behind two sliding panels (nowhere to stand; B3 looks into it)
-RETIRED = ('L5', 'C3')
+SEEDS = 'E0 H1 H2 H3 B3 B4 K0 D0 L0 L1 L2 P0 S0 C0 A0 B2 A1 G0 A3 C3'.split()
 # old approach stops: id -> position on the architect's plan (used when the scene file no longer lists them,
-# i.e. on a re-run after apply_sweeps.py; the positions in the scene file win). They are the concept's stops
-# carried through relayout's maps, as apply_relayout.py carries tour.nodes: T1 (13.044, 18.048), T2 (13.044, 16.374),
-# T3 (13.500, 19.827), T4 (5.273, 43.767), T6 (12.968, 43.922), P1 (8.086, 11.537), GA (19.123, 38.272)
-APPROACH = {k: RS.R.remap_xz(*v) for k, v in {
-    'T1': (13.7, 18.2), 'T2': (13.7, 16.6), 'T3': (14.2, 19.9), 'T4': (4.85, 44.2), 'T6': (11.9, 44.35),
-    'P1': (8.5, 14.0), 'GA': (18.05, 38.3)}.items()}
-OLD_IDS = set(SEEDS) | set(APPROACH) | set(RETIRED)
+# i.e. on a re-run after apply_sweeps.py; the positions in the scene file win)
+APPROACH = {'T1': (12.9874, 17.9619), 'T2': (12.9874, 16.2706), 'T3': (13.4430, 19.7589),
+            'T4': (5.2537, 43.4841), 'T6': (12.9191, 43.6392), 'P1': (8.0858, 11.5372),
+            'GA': (19.0215, 38.1019)}
+OLD_IDS = set(SEEDS) | set(APPROACH)
 
 # region of tools/render/data/scene_classification.json meta.rooms -> (seeds whose label / room id a new
 # sweep in that region takes: the nearest one, letter of new ids, region that also counts as covered)
@@ -172,13 +141,10 @@ REGIONS = {
     'ensuite': (['A0'], 'A', None), 'shared_bath': (['A1'], 'A', None), 'bed2': (['B2'], 'X', None),
     'common_hall': (['H2', 'H3'], 'H', None), 'living': (['L0'], 'L', None), 'dining': (['D0'], 'D', None),
     'kitchen': (['K0'], 'K', None), 'bed4': (['B4'], 'Z', None), 'bed4_closet': (['B4'], 'Z', 'bed4'),
-    'suite3_bath': (['A3'], 'A', None), 'suite3_wic': (['B3'], 'C', 'bed3'), 'bed3': (['B3'], 'Y', None),
-    'bed2_closet': (['B2'], 'X', 'bed2'),     # eighth round: reach-in closets behind sliding panels, seen from the room
+    'suite3_bath': (['A3'], 'A', None), 'suite3_wic': (['C3'], 'C', None), 'bed3': (['B3'], 'Y', None),
     'bed3_bay': (['B3'], 'Y', 'bed3'), 'front_hall': (['H1'], 'F', None), 'garage': (['G0'], 'G', None),
 }
 OUTDOOR_REGIONS = ('porch',)          # roofed but outdoors: never filled, only the porch sweep of step 8
-FILL_ONE = ('ensuite', 'shared_bath', 'suite3_bath')   # bathrooms: the fill adds no second sweep (the only floor
-#                                                        4 ft from the first one is inside the shower)
 ID_CHARS = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
 # laundry closet of the owner's fifth round (bl/revision_spec.py): carved out of Bedroom 4's north-east corner, a
@@ -207,80 +173,19 @@ LAUNDRY = {'id': 'LC', 'label': 'Laundry closet', 'names': ('laundry', 'washer',
 WALKIN = {'id': 'C0',
           'clear': RS.SUITE_CLOSET_CLEAR,           # x0, x1, z0, z1 inside the closet
           'door_z': RS.SUITE_CLOSET_DOOR_Z}         # the pocket door's opening, strike jamb .. pocket jamb
-# Stops set by hand, id -> (x, z, why). The rules find the rooms; they do not know that one stop in front of two
-# doors reads better than a stop beside each, or that the corner of an L-shaped hall wants a stop of its own. The
-# positions are written from relayout's wall faces. An entry is used while the model leaves its place standable with
-# --keep-clear of clearance; a kept sweep of that id moves there, another id is a new sweep. Where the place is not
-# free the usual rules decide and a note says so. Links, visibility and the opening view are found as for any sweep.
-_HALL_X = (RS.R.X_BED2_W + RS.R.X_BLOCK_W) / 2          # centre line of the hall's west leg (3'-3" wide), 13.35
-_HALL_Z = (RS.R.Z_BLOCK_S + RS.R.Z_WIC_S) / 2           # centre line of its east leg (3'-4" wide), 19.225
-_FOYER_WALL_C = sum(RS.R.FOYER_WALL) / 2                # centre line of the wall between the foyer and Bedrooms 3 / 4
-PLACED = {
-    # eighth round: the hall beside Bedroom 2's closet block, as on the architect's sheet
-    'T2': (_HALL_X, RS.SUITE_ENTRY_Z[0] + 1.02,
-           'in front of the primary suite entry and Bedroom 2\'s door (it stood beside the entry\'s parked panel; '
-           'from here the line to S0 in the vestibule passes the opening with 0.45 ft to spare)'),
-    'H5': (_HALL_X + 0.15, _HALL_Z,
-           'where the hall\'s two legs meet, in front of the shared bath\'s door, on the centre line of the east '
-           'leg and 0.15 ft off that of the west leg (the suite entry\'s parked panel stands 0.2 ft into it)'),
-    'H0': (RS.R.X_LIV_W - 1.39, _HALL_Z,
-           'on the centre line of the hall\'s east leg, 1.4 ft inside its open end (the dining table moved west '
-           'with the island: its north-west chair was 0.88 ft from the old place)'),
-    # eighth round: the two bedroom doors have leaves now, standing open at 90 degrees inside the rooms
-    'Y0': (_FOYER_WALL_C, sum(RS.BED3_ENTRY_Z) / 2,
-           'in the middle of Bedroom 3\'s doorway: 1.33 ft from each jamb, 1.24 ft from the open leaf'),
-    'Z0': (_FOYER_WALL_C, sum(RS.BED4_ENTRY_Z) / 2,
-           'in the middle of Bedroom 4\'s doorway: 1.33 ft from each jamb, 1.23 ft from the open leaf'),
-    # eighth round: the garage floor is 11 in lower, with a step at the house door, whose leaf stands open at 90
-    # degrees into the garage. On the door's axis (the scene file's stop) the leaf is 1.3 ft from the camera and its
-    # lever 1.2 ft
-    'G0': (GS.STEP[1] + 1.775, GS.leaf(GS.HOUSE_DOOR)['aabb'][5] + 2.0,
-           'on the garage floor 1.8 ft past the step and 2 ft clear of the open leaf of the door to the house'),
-    # the living room's stop in front of the sofa: since the seventh round's round coffee table its rim was 0.93 ft
-    # from the stop (the grid's low-furniture measure, one cell coarse, read 1.38). 0.6 ft further south it is 1.5 ft
-    'L0': (RS.R.X_LIV_W + 10.213, RS.R.ZN + 10.775,
-           'in front of the sofa\'s south half, 1.5 ft clear of the round coffee table'),
-    # eighth round: the island at the sheet's place
-    'K2': (KK.PLAN_CT_E - KK.PLAN_AISLE_E / 2, KK.PLAN_ISLAND[2] + 0.94,
-           'in the mouth of the aisle between the island and the east counter, on its centre line (the island\'s '
-           'corner was 1.2 ft from the old place)'),
-}
-
 # outdoor sweeps: door id of the dimension schedule (centre used when the schedule lacks it), outward
 # direction (dx, dz), distance from the door plane, id, label, tour room id
 OUTDOOR = [
-    # (centres: the front door in the middle of the foyer on the front wall's centre line, 18.43, 47.60; the open
-    # way of the living room's four-panel sliding door on the rear wall's centre line, 32.82, 0.02. The schedule's
-    # row D14 is the whole 12'-4" unit, whose middle is the edge of a closed panel: door_frames() takes the row's
-    # way_start .. way_end)
-    {'id': 'OP', 'label': 'Front porch', 'room': 'porch', 'door': 'D01',
-     'centre': ((RS.R.X_FOYER_W + RS.R.X_FOYER_E) / 2, (RS.R.Z_FOYER_S + RS.R.Z_PORCH_N) / 2),
+    {'id': 'OP', 'label': 'Front porch', 'room': 'porch', 'door': 'D01', 'centre': (18.33, 47.40),
      'out': (0.0, 1.0), 'dist': 4.5},
-    # (OD was labelled "Rear deck" until the eighth round, whose model has the sheet's landing there. The id and
-    # the room key stay: panoramas, pins and the published data are filed under them.)
-    {'id': 'OD', 'label': 'Rear landing', 'room': 'deck', 'door': 'D14',
-     'centre': (sum(RS.living_slider_way()) / 2, RS.REAR_WALL_C),
+    {'id': 'OD', 'label': 'Rear deck', 'room': 'deck', 'door': 'D14', 'centre': (25.69, 0.0),
      'out': (0.0, -1.0), 'dist': 1.7},
 ]
 
 STEP = 0.25                            # grid
-GRID = (0.25, 39.5, 0.25, 56.0)        # x0, x1, z0, z1 of the indoor grid (inside faces 0.225..39.308; the bay's
-#                                        glass stands at z 55.85)
-FLOOR_BAND = (-0.03, 0.15)             # floor / rug / tile under a standable cell, against the level of its place
-OUT_BAND = (-0.06, 0.15)               # the same for the porch slab and the landings' boards
-# Levels (eighth round: sheet A1.3). The house floor is y 0. The first rectangle (x0, x1, z0, z1) that holds a point
-# gives the level a person stands on there; everywhere else it is the house floor. A sweep's eye is EYE above its
-# level, and every height of a ray (clearance, walking, seeing) is counted from the level of its place.
-LEVELS = [
-    (tuple(RS.R.ROOMS['garage']), GS.FLOOR_Y),       # garage floor, 11 in below the house floor
-    (tuple(XL.PORCH), XL.PORCH_TOP),                 # porch slab
-    (tuple(XL.DECK), XL.DECK_TOP),                   # rear landing outside the living room
-    (tuple(XL.LANDING), XL.DECK_TOP),                # rear landing outside the primary bedroom
-]
-# what a walking line may cross besides those levels: the step at the door between the house and the garage (two
-# risers of 5 1/2 in). Nobody stands on it: for a sweep it is furniture on the garage floor.
-STEPS = [(tuple(GS.STEP), GS.STEP_Y)]
-LEVEL_NEAR = 0.3                       # ft: a walking line accepts the level this near (a nosing, a threshold)
+GRID = (0.25, 39.5, 0.25, 55.75)       # x0, x1, z0, z1 of the indoor grid
+FLOOR_BAND = (-0.03, 0.15)             # floor / rug / tile under a standable cell
+OUT_BAND = (-0.6, 0.2)                 # deck boards, porch paving, steps
 CLEAR_HEIGHTS = (0.6, 2.0, 3.5, EYE)
 WALK_HEIGHTS = (0.5, 2.0, 3.5, EYE)
 WALK_OFFSETS = (-0.45, 0.0, 0.45)
@@ -292,29 +197,6 @@ ARCH, FURN, EXT = 0, 1, 2
 
 def P(*a):
     print('[sweeps]', *a, flush=True)
-
-
-def level(x, z):
-    """The level (y) a person stands on at (x, z): LEVELS, else the house floor."""
-    for (x0, x1, z0, z1), y in LEVELS:
-        if x0 <= x <= x1 and z0 <= z <= z1:
-            return y
-    return 0.0
-
-
-def walk_levels(x, z):
-    """The levels a walking line may find under (x, z): the level there and within LEVEL_NEAR of it, and a step."""
-    r = LEVEL_NEAR
-    out = {level(x + dx, z + dz) for dx, dz in ((0, 0), (r, 0), (-r, 0), (0, r), (0, -r))}
-    for (x0, x1, z0, z1), y in STEPS:
-        if x0 - r <= x <= x1 + r and z0 - r <= z <= z1 + r:
-            out.add(y)
-    return out
-
-
-def on_level(y, x, z, band=FLOOR_BAND, tol=0.0):
-    """True when a floor found at height y under (x, z) is the level of that place (floor, rug, tile, boards)."""
-    return band[0] - tol <= y - level(x, z) <= band[1] + tol
 
 
 def parse():
@@ -347,7 +229,7 @@ def parse():
     ap.add_argument('--laundry', choices=('auto', 'on', 'off'), default='auto',
                     help='auto: add the laundry sweep when the model has laundry / washer / dryer objects')
     ap.add_argument('--outdoor', choices=('both', 'each', 'off'), default='both',
-                    help='both: porch and landing sweeps only when both qualify; each: independently')
+                    help='both: porch and deck sweeps only when both qualify; each: independently')
     ap.add_argument('--keep', metavar='SWEEPS.json',
                     help='keep the layout of this sweeps file: its sweeps stay where they are while the model '
                          'leaves them standable, only uncovered floor gets new ones (see the docstring)')
@@ -360,7 +242,7 @@ def parse():
 
 # ----------------------------------------------------------------------------------------------- geometry
 def _collect(want_ext):
-    """Triangles of the interior and of the site objects near the porch / the landings, in Blender metres."""
+    """Triangles of the interior and of the site objects near the porch / deck, in Blender metres."""
     parents = {ch.name: p.name for p in bpy.data.collections for ch in p.children}
 
     def chain(name):
@@ -403,7 +285,7 @@ def _collect(want_ext):
             z0, z1 = -bb[:, 1].max() / FT, -bb[:, 1].min() / FT
             if not any(x1 >= r[0] and x0 <= r[1] and z1 >= r[2] and z0 <= r[3] for r in want_ext):
                 continue
-            if len(ob.data.polygons) > 150000:      # a whole tree: not an obstacle on the porch or a landing
+            if len(ob.data.polygons) > 150000:      # a whole tree: not an obstacle on the porch or the deck
                 continue
         me = ob.to_mesh()
         nv = len(me.vertices)
@@ -496,9 +378,8 @@ class World:
 
     def ray_clear(self, x, z, cap=4.0, site=False):
         w = cap
-        y0 = level(x, z)
         for h in CLEAR_HEIGHTS:
-            o = ft2bl(x, y0 + h, z)
+            o = ft2bl(x, h, z)
             for dx, dz in DIRS:
                 hit = self.cast(o, Vector((dx, -dz, 0)), w, site)
                 if hit is not None and hit[0] < w:
@@ -506,22 +387,16 @@ class World:
         return w
 
     def los(self, a, b, h, off=0.0, glass_ok=False, site=False):
-        """None when the straight line a -> b at height h above the level of each end (shifted `off` ft
-        sideways) is clear, else the owner index of the first blocker. Between two levels the line slopes; a line
-        below 1 ft runs level, above the higher floor (the lower one's edge is not in the way of a foot)."""
+        """None when the straight line a -> b at height h (shifted `off` ft sideways) is clear, else the
+        owner index of the first blocker."""
         ax, az = a
         bx, bz = b
-        if math.hypot(bx - ax, bz - az) < 1e-6:
+        L = math.hypot(bx - ax, bz - az)
+        if L < 1e-6:
             return None
-        ya, yb = level(ax, az) + h, level(bx, bz) + h
-        if ya != yb and h < 1.0:
-            ya = yb = max(ya, yb)
-        n = math.hypot(bx - ax, bz - az)
-        ux, uz = (bx - ax) / n, (bz - az) / n
-        o = ft2bl(ax - uz * off, ya, az + ux * off)
-        d = ft2bl(bx - uz * off, yb, bz + ux * off) - o
-        L = d.length / FT
-        d.normalize()
+        ux, uz = (bx - ax) / L, (bz - az) / L
+        o = ft2bl(ax - uz * off, h, az + ux * off)
+        d = Vector((ux, -uz, 0))
         t = 0.0
         for _ in range(64):
             hit = self.cast(o + d * (t * FT), d, L - t, site)
@@ -552,7 +427,7 @@ class World:
             return ''
         n = max(1, int(math.ceil(L / 0.4)))
         px, pz = -(b[1] - a[1]) / L, (b[0] - a[0]) / L
-        lo, hi = FLOOR_BAND
+        lo, hi = OUT_BAND if site else FLOOR_BAND
         for k in range(1, n):
             for off in WALK_OFFSETS:
                 x = a[0] + (b[0] - a[0]) * k / n + px * off
@@ -560,7 +435,7 @@ class World:
                 f = self.down(x, z, site)
                 if f is None:
                     return 'no floor at %.1f, %.1f' % (x, z)
-                if not any(lo - 0.07 <= f[0] - y <= hi + 0.07 for y in walk_levels(x, z)):
+                if not (lo - 0.07 <= f[0] <= hi + 0.07):
                     return '%s on the way (top %.2f ft)' % (self.names[f[1]], f[0])
         return ''
 
@@ -586,7 +461,7 @@ class Grid:
                 self.fy[i, j] = f[0]
                 if not w.ceiling(float(x), float(z)) or self.is_outdoor(float(x), float(z)):
                     continue
-                if on_level(f[0], float(x), float(z)):
+                if FLOOR_BAND[0] <= f[0] <= FLOOR_BAND[1]:
                     self.stand[i, j] = True
                 else:
                     low[i, j] = True
@@ -655,7 +530,7 @@ class Grid:
         """Clearance of an arbitrary point (an old stop): 0 when it is not standable, else the rays' result,
         limited by the low-furniture distance of its grid cell (one cell of tolerance)."""
         f = self.w.down(x, z)
-        if f is None or not on_level(f[0], x, z):
+        if f is None or not (FLOOR_BAND[0] <= f[0] <= FLOOR_BAND[1]):
             return 0.0
         c = self.w.ray_clear(x, z)
         i, j = self.cell(x, z)
@@ -753,7 +628,7 @@ class Layout:
 
 
 def place_seed(L, sid, x, z):
-    """One of the 19 kept stops at its authored position (x, z), nudged only where clearance fails."""
+    """One of the 20 kept stops at its authored position (x, z), nudged only where clearance fails."""
     w, g, a = L.w, L.g, L.a
     c = g.clearance_at(x, z)
     if c >= a.min_clear:
@@ -820,38 +695,10 @@ def place_walkin(L, x, z, c):
     return L.add(cx, cz, 'seed-moved', WALKIN['id'], clearance=cc, moved=round(d, 2))
 
 
-def place_hand(L, kept=None):
-    """The stops of PLACED whose place is free. Returns their ids (the other rules leave those ids alone)."""
-    g, a = L.g, L.a
-    was = {k['id']: k for k in kept or ()}
-    done = set()
-    for sid, (x, z, why) in PLACED.items():
-        c = g.clearance_at(x, z)
-        i, j = g.cell(x, z)
-        near = [(di * di + dj * dj) for di in range(-2, 3) for dj in range(-2, 3)
-                if g.inside(i + di, j + dj) and g.reach[i + di, j + dj]]
-        k = was.get(sid)
-        if c < a.keep_clear or not near:
-            L.notes.append('placed %s: (%.2f, %.2f) has %.2f ft of clearance%s: not used, the usual rules decide'
-                           % (sid, x, z, c, '' if near else ' and is not on reachable floor'))
-            P('WARNING:', L.notes[-1])
-            continue
-        done.add(sid)
-        if k is not None and math.hypot(k['x'] - x, k['z'] - z) <= 1e-4:
-            L.add(x, z, k['origin'], sid, clearance=c, keep=k)          # it stands there already
-            continue
-        kw = {'label': k['label'], 'room': k['room']} if k is not None and k['room'] else {}
-        L.add(x, z, 'placed', sid, clearance=c, **kw)
-        L.notes.append('placed %s at (%.2f, %.2f), clearance %.2f ft%s: %s' % (
-            sid, x, z, c, '' if k is None else ', %.2f ft from (%.2f, %.2f)' % (
-                math.hypot(k['x'] - x, k['z'] - z), k['x'], k['z']), why))
-    return done
-
-
-def place_seeds(L, old, kept=None, skip=()):
-    """The 19 kept stops, nudged only where clearance fails. With a kept layout (--keep) only the seeds that
+def place_seeds(L, old, kept=None):
+    """The 20 kept stops, nudged only where clearance fails. With a kept layout (--keep) only the seeds that
     layout does not list (place_kept dealt with the others, also with those it dropped)."""
-    listed = {k['id'] for k in kept or ()} | set(skip)
+    listed = {k['id'] for k in kept or ()}
     for sid in SEEDS:
         if sid in listed:
             continue
@@ -883,7 +730,7 @@ def load_keep(path):
     return out, '%s (%s)' % (os.path.basename(path), doc.get('generated_from', '?'))
 
 
-def place_kept(L, kept, old, skip=()):
+def place_kept(L, kept, old):
     """--keep: the indoor sweeps of an installed layout stay exactly where they are while the model leaves them
     standable; the others follow the scene (a seed the scene moved), are nudged, or are dropped with a note.
     The laundry sweep and the outdoor sweeps are left to place_laundry / place_outdoor."""
@@ -891,7 +738,7 @@ def place_kept(L, kept, old, skip=()):
     later = []
     for k in kept:
         sid, x, z = k['id'], k['x'], k['z']
-        if k['outdoor'] or sid == LAUNDRY['id'] or sid in skip:
+        if k['outdoor'] or sid == LAUNDRY['id']:
             continue
         n = old.get(sid)
         if sid in SEEDS and k['origin'] == 'seed' and n is not None \
@@ -919,11 +766,9 @@ def place_kept(L, kept, old, skip=()):
             place_seed(L, sid, sx, sz)
             continue
         if sid in SEEDS:                           # never lose an id the measurements and design views name
-            n = old.get(sid)                       # its stop in the scene file is its place in today's model
-            sx, sz = (n['p'][0], n['p'][2]) if n is not None else (x, z)
-            L.notes.append('keep %s: clearance %.2f ft < %.1f ft at (%.2f, %.2f): the seed rule decides, from the '
-                           'scene file\'s stop (%.2f, %.2f)' % (sid, c, a.keep_clear, x, z, sx, sz))
-            i = place_seed(L, sid, sx, sz)
+            L.notes.append('keep %s: clearance %.2f ft < %.1f ft at (%.2f, %.2f): the seed rule decides'
+                           % (sid, c, a.keep_clear, x, z))
+            i = place_seed(L, sid, x, z)
             if i is not None:
                 L.sw[i]['keep'] = k
             continue
@@ -1010,8 +855,6 @@ def place_approach(L, old):
     g, a = L.g, L.a
     cand = {}
     for sid, xz in APPROACH.items():
-        if any(s['id'] == sid for s in L.sw):
-            continue                              # set by hand (PLACED)
         x, z = (old[sid]['p'][0], old[sid]['p'][2]) if sid in old else xz
         c = g.clearance_at(x, z)
         if c < a.min_clear:
@@ -1053,10 +896,7 @@ def door_frames(meas):
     for d in (meas or {}).get('doors', []):
         if not all(isinstance(d.get(k), (int, float)) for k in ('c', 'start', 'end')):
             continue
-        s0, s1 = d['start'], d['end']
-        if all(isinstance(d.get(k), (int, float)) for k in ('way_start', 'way_end')):
-            s0, s1 = d['way_start'], d['way_end']     # a sliding unit: the way its open panel leaves
-        mid, half = (s0 + s1) / 2, abs(s1 - s0) / 2
+        mid, half = (d['start'] + d['end']) / 2, abs(d['end'] - d['start']) / 2
         if d.get('axis') == 'x':                  # the wall runs along x at z = c
             out.append((d.get('id', '?'), d.get('name', ''), mid, d['c'], (0.0, 1.0), half))
         elif d.get('axis') == 'z':                # the wall runs along z at x = c
@@ -1183,8 +1023,7 @@ def fill(L):
         if key[i] < 0:
             break
         x, z = float(px[i]), float(pz[i])
-        if (region[i] == 'garage' and L.count('garage') >= a.garage_max) or (
-                region[i] in FILL_ONE and L.count(region[i]) >= 1):
+        if region[i] == 'garage' and L.count('garage') >= a.garage_max:
             alive[i] = False
             continue
         links = L.linked(x, z)
@@ -1229,7 +1068,7 @@ def cover_regions(L):
 
 
 def place_outdoor(L, meas, kept=None):
-    """Porch and landing sweeps, each only when a walkable line through its open door reaches an indoor sweep.
+    """Porch and deck sweeps, each only when a walkable line through its open door reaches an indoor sweep.
     An outdoor sweep of a kept layout (--keep) stays where it is while it still stands free and that line
     exists; otherwise it is looked for again."""
     w, g, a = L.w, L.g, L.a
@@ -1243,8 +1082,7 @@ def place_outdoor(L, meas, kept=None):
         k = stay.get(o['id'])
         if k is not None:
             f = w.down(k['x'], k['z'], site=True)
-            c = w.ray_clear(k['x'], k['z'], site=True) if f is not None and level(k['x'], k['z']) != 0.0 \
-                and on_level(f[0], k['x'], k['z'], OUT_BAND) else 0.0
+            c = w.ray_clear(k['x'], k['z'], site=True) if f is not None and OUT_BAND[0] <= f[0] <= OUT_BAND[1] else 0.0
             links = L.linked(k['x'], k['z'], site=True) if c >= a.keep_clear else []
             if links:
                 L.add(k['x'], k['z'], 'outdoor', o['id'], links, clearance=c, outdoor=True, floor=f[0], keep=k)
@@ -1264,8 +1102,8 @@ def place_outdoor(L, meas, kept=None):
                 if off < 1.0 or math.hypot(x - tx, z - tz) > 3.0:
                     continue
                 f = w.down(x, z, site=True)
-                if f is None or level(x, z) == 0.0 or not on_level(f[0], x, z, OUT_BAND):
-                    continue                      # not on the porch slab or a landing
+                if f is None or not (OUT_BAND[0] <= f[0] <= OUT_BAND[1]):
+                    continue
                 c = w.ray_clear(x, z, site=True)
                 if c >= a.min_clear:
                     cells.append((math.hypot(x - tx, z - tz) - 0.3 * min(c, 2.5), x, z, c, f[0]))
@@ -1387,7 +1225,7 @@ def open_yaw(w, x, z, extent):
         elif dz < -1e-6:
             lim = min(lim, (extent[2] - z) / dz)
         lim = max(lim, 0.1)
-        hit = w.cast(ft2bl(x, level(x, z) + EYE, z), Vector((dx, -dz, 0)), lim)
+        hit = w.cast(ft2bl(x, EYE, z), Vector((dx, -dz, 0)), lim)
         free.append(min(lim if hit is None else hit[0], 20.0))
     half = 5                                      # +-25 degrees
     best = max(range(n), key=lambda k: sum(free[(k + d) % n] for d in range(-half, half + 1)))
@@ -1429,7 +1267,6 @@ def describe(L, old, extent, kept=None):
     """label, room, yaw, pitch, floor for every sweep."""
     w = L.w
     renames = kept_renames(kept, old)
-    outdoor = {o['id']: o['label'] for o in OUTDOOR}
     for s in L.sw:
         x, z = s['x'], s['z']
         if s.get('keep'):                         # a sweep of the kept layout: its view and its room stay,
@@ -1437,17 +1274,14 @@ def describe(L, old, extent, kept=None):
             n = old.get(s['id']) if s['id'] in SEEDS else None          # renamed seed whose label it carried)
             label = (n.get('label') or n.get('name') or k['label']) if n is not None \
                 else renames.get((k['label'], k['room']), k['label'])
-            if s['outdoor'] and s['id'] in outdoor:                     # an outdoor sweep: OUTDOOR names it
-                label = outdoor[s['id']]
             if label != k['label']:
                 s['renamed'] = k['label']
             s['label'], s['room'], s['yaw'], s['pitch'] = label, k['room'] or s['region'], k['yaw'], k['pitch']
             if 'floor' not in s:
                 f = w.down(x, z, s['outdoor'])
-                s['floor'] = f[0] if f else level(x, z)
+                s['floor'] = f[0] if f else 0.0
             continue
-        n = old.get(s['id']) if s['origin'] in ('seed', 'seed-moved') or (
-            s['origin'] == 'placed' and s['id'] in SEEDS) else None
+        n = old.get(s['id']) if s['origin'] in ('seed', 'seed-moved') else None
         princ = [old[k] for k in REGIONS.get(s['region'], ([], None, None))[0] if k in old]
         near = min(princ, key=lambda p: math.hypot(p['p'][0] - x, p['p'][2] - z)) if princ else None
         if n is not None:
@@ -1457,7 +1291,7 @@ def describe(L, old, extent, kept=None):
             s.setdefault('room', near['room'] if near else s['region'])
         if s['origin'] == 'seed' and n is not None and 'yaw' in n:
             s['yaw'], s['pitch'] = math.degrees(n['yaw']), math.degrees(n.get('pitch', 0.0))
-        elif s['origin'] in ('seed-moved', 'placed') and n is not None and n.get('look'):
+        elif s['origin'] == 'seed-moved' and n is not None and n.get('look'):
             s['yaw'], s['pitch'] = yaw_to(x, z, n['look'][0], n['look'][2]), math.degrees(n.get('pitch', 0.0))
         elif s.get('aim'):
             s['yaw'], s['pitch'] = yaw_to(x, z, *s['aim']), s.get('pitch', 0.0)
@@ -1465,7 +1299,7 @@ def describe(L, old, extent, kept=None):
             s['yaw'], s['pitch'] = open_yaw(w, x, z, extent), 0.0
         if 'floor' not in s:
             f = w.down(x, z, s['outdoor'])
-            s['floor'] = f[0] if f else level(x, z)
+            s['floor'] = f[0] if f else 0.0
 
 
 # ----------------------------------------------------------------------------------------------- overlay
@@ -1553,7 +1387,6 @@ class Canvas:
 
 
 ORIGIN_COLOR = {'seed': (235, 130, 20), 'seed-moved': (200, 60, 30), 'approach': (150, 70, 190),
-                'placed': (150, 70, 190),
                 'laundry': (220, 40, 150), 'door': (20, 150, 90), 'bridge': (20, 150, 90),
                 'fill': (30, 110, 230), 'region': (0, 160, 190), 'outdoor': (200, 30, 30)}
 
@@ -1582,8 +1415,8 @@ def draw_overlay(path, L, links, title, a, extent):
             if not indoor:
                 name = w.names[f[1]].lower()
                 paved = any(k in name for k in ('deck', 'landing', 'step', 'porch', 'paving', 'walk', 'drive'))
-                col = (176, 184, 192) if y > 0.5 else (198, 205, 214) if paved else (214, 220, 226)
-            elif on_level(y, x, z):
+                col = (176, 184, 192) if y > OUT_BAND[1] + 0.3 else (198, 205, 214) if paved else (214, 220, 226)
+            elif FLOOR_BAND[0] <= y <= FLOOR_BAND[1]:
                 i, j = g.cell(x, z)
                 col = (244, 244, 244)
                 if g.inside(i, j) and g.reach[i, j]:
@@ -1656,7 +1489,7 @@ def draw_overlay(path, L, links, title, a, extent):
     cv.rect(0, 0, wpx, top, (255, 255, 255))
     cv.text(8, 5, title, (0, 0, 0), 2)
     x = 8
-    for name in ('seed', 'seed-moved', 'approach/placed', 'door/bridge', 'fill', 'region', 'laundry', 'outdoor'):
+    for name in ('seed', 'seed-moved', 'approach', 'door/bridge', 'fill', 'region', 'laundry', 'outdoor'):
         cv.disc(x + 6, 31, 6, ORIGIN_COLOR[name.split('/')[0]])
         cv.text(x + 16, 25, name, (0, 0, 0), 2)
         x += 16 + 12 * len(name) + 14
@@ -1696,10 +1529,9 @@ def main():
         g.reach.sum() * STEP * STEP, a.min_clear, (g.reach & (g.cl >= a.min_clear)).sum() * STEP * STEP))
 
     L = Layout(w, g, a)
-    hand = place_hand(L, kept)
     if kept is not None:
-        place_kept(L, kept, old, hand)
-    place_seeds(L, old, kept, hand)
+        place_kept(L, kept, old)
+    place_seeds(L, old, kept)
     place_laundry(L)
     if kept is None:                   # a kept layout has made its choice among the old approach stops
         place_approach(L, old)
@@ -1737,9 +1569,8 @@ def main():
                       'renamed': {L.sw[i]['id']: L.sw[i]['label'] for i in idx if L.sw[i].get('renamed')}}
         for i in idx:
             if L.sw[i].get('renamed'):
-                L.notes.append('keep %s: named "%s" as %s has it now (was "%s")'
-                               % (L.sw[i]['id'], L.sw[i]['label'],
-                                  'OUTDOOR' if L.sw[i]['outdoor'] else 'the scene file', L.sw[i]['renamed']))
+                L.notes.append('keep %s: named "%s" as the scene file has it now (was "%s")'
+                               % (L.sw[i]['id'], L.sw[i]['label'], L.sw[i]['renamed']))
         for i in idx:
             s = L.sw[i]
             k = was.get(s['id'])
@@ -1804,14 +1635,12 @@ def main():
                    'laundry': a.laundry, 'outdoor': a.outdoor, 'grid_step': STEP,
                    'keep': os.path.basename(a.keep) if a.keep else None, 'keep_clear': a.keep_clear,
                    'seeds': SEEDS, 'approach_candidates': sorted(APPROACH),
-                   'placed': {k: [round(v[0], 4), round(v[1], 4)] for k, v in PLACED.items()},
                    'id_letters': {k: v[1] for k, v in REGIONS.items()}},
         'stats': stats, 'notes': L.notes,
         **({'keep': keep_block} if keep_block else {}),
         'sweeps': [{
             'id': s['id'], 'label': s['label'], 'room': s['room'],
-            'p': [round(s['x'], 4), round(level(s['x'], s['z']) + EYE, 4), round(s['z'], 4)],
-            'level': round(level(s['x'], s['z']), 4) + 0.0, 'floor': round(s['floor'], 3) + 0.0,
+            'p': [round(s['x'], 4), EYE, round(s['z'], 4)], 'floor': round(s['floor'], 3) + 0.0,
             'yaw': round(s['yaw'], 6) + 0.0, 'pitch': round(s['pitch'], 6) + 0.0,
             'links': [L.sw[j]['id'] for j in idx if j in links[i]],
             'visible': [L.sw[j]['id'] for j in idx if j in vis[i]],

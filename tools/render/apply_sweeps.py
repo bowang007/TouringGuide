@@ -11,11 +11,6 @@ today's shape plus three keys:
   yaw, pitch (RADIANS, as the scene's nodes always were; sweeps.json holds degrees), size (the caption of
   an old stop that keeps its id and label, else ''), visible, floor, outdoor
 
-p[1] is the camera's height: the eye height of the file above the level the sweep stands on (the sweep's `level`:
-0 on the house floor, -0.917 in the garage, -0.458 on the porch slab, -0.083 on the rear landing), so the stops of
-the garage, the porch and the landing are lower than the others. `floor` is the surface under the stop (rug, tile,
-slab), where the page draws its ring.
-
 `tour.edges` = every link once, as [a, b] in sweep order. The scene's `rooms` list, a mirror of `tour.nodes`
 since the first version of the page, is updated with it (left alone when it holds something else).
 An old stop that the sweeps leave in place (within 1e-4 ft / 1e-6 rad) keeps its exact numbers, so
@@ -24,7 +19,7 @@ re-installing changes nothing and a seed's authored view survives bit for bit.
 It reports the kept / new / removed / moved ids against the scene it writes into (after apply_relayout.py that
 is the concept's 27 stops) and, when the sweeps were placed with `place_sweeps.py --keep` (the file's "keep"
 block), against that kept layout: the moved and new sweeps there are the ones that need a new panorama (a
-renamed sweep does not: its label follows the scene file or, for an outdoor sweep, place_sweeps.py OUTDOOR).
+renamed sweep does not: its label follows the scene file).
 
 The script is idempotent (a second run writes nothing) and refuses to write, with exit status 1, when
   * two sweeps share an id, or an id is not 2 characters,
@@ -67,45 +62,16 @@ SAME_FT, SAME_RAD = 1e-4, 1e-6
 # new sweeps whose automatic view looked out of the living room, at the dining table and the hall:
 #   L7  between the media console and the coffee table: the sofa on the wall where the fireplace was, its two
 #       lamps, the canvas and the east windows, the rear glazing at the left edge
-#   L8  at the south edge of the living room, looking north: the television on the left, the rear glazing (the
-#       four-panel sliding door since the eighth round) in the middle, the armchair and the coffee table, the sofa
-#       on the right. It is the stop of the reel's "Living room" card
-# (L0 keeps its authored view: it stands in front of the sofa and looks at the television wall. L6 and L9 keep the
-# automatic view, south across the room from the rear glazing.)
+#   L8  at the south edge of the living room, looking north: the television on the left, the garden door and the
+#       rear glazing in the middle, the armchair and the coffee table, the sofa on the right
+# (L0, the stop of the reel's "Living room" card, keeps its authored view: it stands 3 ft in front of the sofa and
+# looks at the television wall. L6 and L9 keep the automatic view, south across the room from the rear glazing.)
 # (LC, the laundry sweep, has no entry any more: its view is place_sweeps.py LAUNDRY['pitch'].)
-# Eighth round (the model brought to the architect's sheet: the hall beside Bedroom 2's closet block, Bedroom 3's
-# bath, door leaves, the island at the sheet's place). Chosen on 1024 px panoramas of house_v7b.blend:
-#   A3  Bedroom 3's bath as the sheet lays it out, from its new place by the door: the shower at the room's west
-#       end with its window, rain head and niche behind the glass, the toilet's flush plate at the right (was
-#       -75 / -3, at the old shower's window). The room is 5 ft wide and the stop 1.5 ft from the vanity: a view
-#       that takes in the toilet and the vanity as well has to look 18 degrees down and reads tilted
-#   H3  the hall's east leg: its authored view (92) had the closet block's wall and the storage closet's door across
-#       the left third; 13 degrees further right it shows the dining table, the island and the kitchen
-#   H5  new, where the hall's two legs meet: along the east leg, the ledge and its canvas at the left, the dining
-#       table and the kitchen beyond
-#   H0  at the open end of that leg: the living room, the island at the right (the automatic view had the wall's
-#       end across its left quarter)
-#   H4  kept in place, its view (55) now had the storage closet's door across the left quarter
-#   T2  in front of Bedroom 2's door: the bedroom through the doorway (the automatic view, written down so that a
-#       small repair of the model cannot turn it)
-#   K2  in the mouth of the aisle between the island and the east counter: down the aisle, the sink window at the
-#       left, the cooktop and the hood ahead (when it was chosen the olive tree stood in front of the east window
-#       and filled a quarter of the view to the north; the tree stands on the pier north of that window now)
-#   Y0  in Bedroom 3's doorway: the room, its bay at the left, the bed and the pendant; the open leaf at the edge
-#   Z0  in Bedroom 4's doorway: the room, its closet doors at the left, the west window, the daybed (the automatic
-#       view looked back into the foyer; the room's north half is behind the open leaf)
-# The round's final build (house_v7d.blend; all 53 opening views looked at again on 1024 px panoramas of it):
-#   D2  new, in front of the living / dining east window, where the olive tree stood until it moved to the pier
-#       north of the window: the island with its pendants, the cooktop and the hood, the refrigerator and the
-#       microwave, the dining table and the hall beyond (the automatic view, -25, has the olive tree, 2 ft away,
-#       across the right 40 % of the picture)
 OPENING = {'G0': (105.0, -3.0), 'H2': (40.0, -2.0),
            'C0': (-30.0, -4.0), 'S1': (-170.0, -4.0), 'A0': (-138.0, -5.0), 'P5': (-90.0, -3.0),
+           'A3': (-75.0, -3.0),      # A3: face the taller shower window (sixth round)
            'L7': (85.0, -4.0), 'L8': (0.0, -4.0),
-           'D0': (-172.0, -3.0),     # D0: across the dining table at the refrigerator and microwave (seventh round)
-           'A3': (-60.0, -8.0), 'H3': (105.0, -2.0), 'H5': (90.0, -2.0), 'H0': (88.0, -2.0), 'H4': (75.0, -2.0),
-           'T2': (5.0, -1.0), 'K2': (175.0, -6.0), 'Y0': (-120.0, -2.0), 'Z0': (-92.0, -2.0),
-           'D2': (-125.0, -4.0)}
+           'D0': (-172.0, -3.0)}     # D0: across the dining table at the refrigerator and microwave (seventh round)
 
 sys.dont_write_bytecode = True      # keep tools/web free of __pycache__
 sys.path.insert(0, os.path.join(REPO, 'tools', 'web'))
@@ -212,11 +178,9 @@ def validate(doc, start=START):
             warn.append('sweep %s: links %s are not in `visible`; added' % (s['id'], ' '.join(missing)))
     eye = doc.get('eye')
     if isinstance(eye, (int, float)):
-        # the eye is `eye` above the level the sweep stands on (place_sweeps.py LEVELS; 0 = the house floor)
-        off = [s['id'] for s in sweeps
-               if abs(s['p'][1] - (s.get('level') if isinstance(s.get('level'), (int, float)) else 0.0) - eye) > 0.01]
+        off = [s['id'] for s in sweeps if abs(s['p'][1] - eye) > 0.01]
         if off:
-            warn.append('sweeps not at the eye height %.4f above their level: %s' % (eye, ' '.join(off)))
+            warn.append('sweeps not at the eye height %.4f: %s' % (eye, ' '.join(off)))
     return sweeps, warn
 
 

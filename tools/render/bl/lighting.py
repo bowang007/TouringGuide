@@ -5,8 +5,7 @@ sky fill, plus a sun lamp for the direct sun, late morning in Sunnyvale. The HDR
 out and the HDRI is rotated so its bright side stands at the lamp's azimuth. If the HDRI can't be fetched,
 a physical (Nishita) sky without sun disc is used instead. The house's street side faces south (SCENE +z)
 and the garden faces north, so a south-east sun rakes through the east living/kitchen windows and the
-front rooms, the rear facade and the two landings by the house (v7 final: comment, it said "the deck") are in
-open shade, and the sky over the garden is
+front rooms, the rear facade and the deck by the house are in open shade, and the sky over the garden is
 the deep-blue side: the glow and the brightest clouds stand over the street.
 
 The sky's position is measured, not only derived: setup_daylight() renders the finished world alone

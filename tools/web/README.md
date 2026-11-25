@@ -10,12 +10,11 @@ release) is in `tools/render/README.md`; this file covers what happens between `
 | File | Written by | From |
 |---|---|---|
 | `assets/data/tour.json` | `build_site_data.py` | `tools/render/data/scene.json` (tour, extent, foundations), `measurements.json`, `scene_classification.json` |
-| `assets/data/measurements.json` | `build_site_data.py` | `tools/render/data/measurements.json` (rooms, doors, windows, and since the eighth round `spaces` and `overall`) + the `audit` rows of the scene |
+| `assets/data/measurements.json` | `build_site_data.py` | `tools/render/data/measurements.json` + the `audit` rows of the scene |
 | `assets/data/design.json` | `build_site_data.py` | `tools/render/data/design.json` + the owner's change lists of the scene |
-| `assets/plans/dimension-plan.svg` | `dimension_plan.py` | scene (walls, door leaves and sliding panels, foundations) + measurements (rooms, openings, `spaces`) |
+| `assets/plans/dimension-plan.svg` | `dimension_plan.py` | scene (walls, door leaves, foundations) + measurements |
 | `assets/panos/{8k,4k,2k}/<ID>.webp`, `assets/panos/manifest.json`, `assets/thumbs/<ID>.webp` | `publish_panos.py` | `tools/render/.cache/panos/<ID>.png` |
 | `assets/design/<key>.webp` | `publish_design.py` | `tools/render/.cache/heroes/<key>.png` |
-| `assets/design/roof.svg` | `roof_drawing.py` | the roof's planes and lines (`tools/render/bl/roof.py`), the skylights (`bl/revision_spec.py`), the walls' outer faces (`relayout.py`) |
 | `assets/exterior/` (frames, `half/`, `manifest.json`) | `publish_exterior.py` | `tools/render/.cache/exterior/` |
 | `assets/model/house.glb` | copied by hand | `tools/render/.cache/web/house.glb` |
 
@@ -30,7 +29,6 @@ nothing.
 ```bash
 python3 tools/web/sitedata.py                           # status: files, sizes, counts
 python3 tools/web/dimension_plan.py [--check]           # the plan drawing
-python3 tools/web/roof_drawing.py [--check]             # the Design sheet's roof drawing
 python3 tools/web/build_site_data.py [--version V] [--check] [--out DIR]
 ```
 
@@ -46,53 +44,18 @@ python3 tools/web/build_site_data.py [--version V] [--check] [--out DIR]
   (`id, label, bounds, at, sweep, tag`: the measured rooms, then living, kitchen + dining, hall and
   garage) and `highlights` (the reel: the entrance first, each caption once; a card opens its
   sweep at the sweep's own `yaw` and `pitch`, the view its thumbnail shows). A room nobody can
-  stand in, such as the laundry closet or the reach-in closets of Bedrooms 2, 3 and 4, owns the
-  sweep in front of it. A room may lie inside
+  stand in, such as the laundry closet, owns the sweep in front of it. A room may lie inside
   another room's rectangle (the closet is cut out of Bedroom 4, whose entry stays a rectangle): a
   sweep belongs to the smallest room that contains it, and any other lookup by position has to
-  choose the same way. A sweep that stands in no room stands in a doorway, in the thickness of
-  the wall between two rooms (`Y0` and `Z0` in the doors of Bedrooms 3 and 4 since the eighth
-  round): it belongs to the room it is named after when that is one of the two, else to the
-  nearest. There are 53 sweeps and 18 rooms (since the eighth round): the 14 rooms of the
-  schedule, then living room, kitchen + dining, hall and garage. The primary suite's walk-in
-  closet keeps the id `primary_dressing` (tag M05, sweep
+  choose the same way. There are 52 sweeps (since the seventh round) and 17 rooms (since the
+  sixth): the primary suite's walk-in closet keeps the id `primary_dressing` (tag M05, sweep
   `C0`) from the open area it replaced, and the vestibule beside it is `primary_vestibule` (M14,
-  sweeps `S0`, `S1`); Bedroom 2's closet is `bed2_closet` (M15, seen from `B2`), and Bedroom 3's
-  closet (M10) is seen from `B3` since its own stop `C3` went. The furnace and storage closets
-  are not rooms of the tour: as rooms they would take over the hall sweep in front of them. An
-  open space (living room, kitchen + dining, hall, garage) is entered on
+  sweeps `S0`, `S1`). An open space (living room, kitchen + dining, hall, garage) is entered on
   the reel's card of its own name when that card stands in it, else on the sweep `OPEN_ROOMS`
   names: the living room on `L8` since the seventh round, so a click on its name in the floor
   plan opens the picture the reel shows.
-* **Levels and eye heights** (eighth round). A sweep's `p[1]` is its own eye height, 5.0853 ft
-  above the level it stands on: lower in the garage (4.169; the floor there is 11 in below the
-  house floor), on the porch slab (4.627) and on the rear landing (5.002). An outdoor sweep's
-  `room` is its own key, `porch` or `deck`: the stop on the rear landing keeps the key it was
-  published with, and its `label` is "Rear landing" since the eighth round. `eye` is the median of the
-  indoor sweeps, 5.0853. `floor` is the surface under the stop (rug, tile, slab), where the page
-  draws its ring.
-* **`measurements.json`** (the schedule). A door's `start` / `end` / `width` are its clear opening
-  (between the jamb liners, frames or jamb boards), `wall_start` / `wall_end` the cut in the wall;
-  windows, sidelights and the two sliding glass doors keep the unit's wall opening, and the
-  sliding doors add `clear_start` / `clear_end` (D14 also `way_start` / `way_end`, its open
-  way). `sill` and `head` are measured from the floor the opening stands on; `floor` gives that
-  level for the garage's vehicle door and side door. `spaces` lists what the plan shows without
-  a room tag (closets nobody enters, the hall's two legs, the garage's floor level and step, the
-  porch, the rear landings) and `overall` the outside sizes, levels and ridge heights. The plan
-  drawing reads `spaces`; it measures the overall sizes on the drawn walls.
-  The Dimensions sheet shows all of it: for a door the wall opening beside its clear width, for a
-  sliding glass door the clear width between its jambs and the way as shown open, for the
-  garage's doors the floor they stand on; under the rooms a table "Closets, levels and landings"
-  with every entry of `spaces` and its floor level; in the footnote the outside size from
-  `overall`. "Visit in 3D" from an opening stands on the opening's `node` and turns toward the
-  opening (`MEASURE.lookAt`), unless that sweep's own view already faces it.
 * **`design.json`** (`tools/render/data/`) is hand-edited: tab order, and per view `label`, `title`,
-  `text`, `refs`, `node`, `opening`, `image`. The view `roof` shows a drawing instead of a still:
-  `roof_drawing.py` writes `assets/design/roof.svg` from the model's own modules (the ten roof
-  planes with their ridges, hips and valleys, the eaves, the walls under them, the five
-  skylights), so it is run again after a change to the roof or to a skylight; `--check` exits 1
-  when the file is out of date, `--lines FILE` writes the drawn geometry for a check against a
-  built model.
+  `text`, `refs`, `node`, `opening`, `image`.
 * **Release label.** `tour.json` is fetched without caching and names the release; the page appends
   it to the modules, the other data files, the model and the Design images. Panoramas and exterior
   frames carry the content hash of their own manifests.
@@ -126,36 +89,20 @@ place. For the rehearsal give each a stand-in: any `<ID>.png` equirect, for exam
 low-resolution review render enlarged to 8192×4096 (a narrower source gets fewer levels; one under
 2048 px is published as it is, and `data.test.js` then reports its width; the publisher's seam
 warning on an enlarged picture can be ignored). Publish them into the root and stamp the root
-with a label of its own (the id is the eighth round's new sweep):
+with a label of its own (the ids are the seventh round's new sweeps):
 
 ```bash
-tools/render/.cache/venv/bin/python tools/web/publish_panos.py <stand-ins> --repo $R --only H5
+tools/render/.cache/venv/bin/python tools/web/publish_panos.py <stand-ins> --repo $R --only L6,L7,L8,L9
 SITEDATA_ROOT=$R python3 tools/web/build_site_data.py --version rehearsal
 ```
 
-A sweep that left the tour (the eighth round's `C3`) is dropped from the root's manifest by that
-call; its files stay until `--prune`. A sweep whose opening view changed (`A3`, `K2`) keeps its
-old thumbnail until its own panorama is published again.
+A sweep that left the tour (the seventh round's `L5`) is dropped from the root's manifest by that
+call; its files stay until `--prune`. A sweep whose opening view changed (`D0`) keeps its old
+thumbnail until its own panorama is published again.
 
 The model, the Design stills and the exterior frames of such a root are still the published ones:
 the dollhouse and the floor plan show a rebuilt room as it was, under its new name, and a move
-projects the new panoramas onto the old walls. After a round that changes levels this shows in
-the tests too: in the eighth round's rehearsal the rings of the garage sweeps lay on the new
-garage floor, 11 in below the floor of the published model, and `nav.test.js` could not reach
-`G0` to `G3` by ring clicks. Such a failure says nothing until the model is baked from the new
-build. For such a round bake a stand-in from the new build (about 10 minutes on the GPU) and
-make `assets/model` of the root a copy instead of a link:
-
-```bash
-tools/render/gpu.sh -b tools/render/.cache/<build>.blend -noaudio --python tools/render/bake_web.py -- \
-    --out /tmp/standin/house.glb --bake-dir /tmp/standin/atlases --texel 24 --detail 1 --samples 48 \
-    --tex-budget 160 --max-atlas 2048
-rm $R/assets/model && mkdir $R/assets/model && cp /tmp/standin/house.glb $R/assets/model/
-SITEDATA_ROOT=$R python3 tools/web/build_site_data.py --version rehearsal     # the model's hash goes into tour.json
-```
-
-The browser tests about levels ("a lower floor", "a room whose floor lies below the house floor")
-hold the model to the data: they fail when one of the two is ahead of the other.
+projects the new panoramas onto the old walls.
 To run the test suite against it, copy `tools/web/tests` (without `node_modules` and `out`) into
 the root as well, because `data.test.js` reads the files of the tree it runs from. Run it there with
 `TOUR_BASE=http://127.0.0.1:8766`, after `npm install` or with `NODE_PATH` set to a `node_modules`
@@ -217,7 +164,7 @@ Run the script after every publish; GitHub Pages stays the address for everyone 
 python3 -m http.server 8765 --bind 127.0.0.1            # in another terminal, from the repository root
 cd tools/web/tests
 npm install                                             # once: puppeteer-core only
-npm test                                                # the whole suite, about 13 minutes
+npm test                                                # the whole suite, about 10 minutes
 npm run test:quick                                      # tools + data + smoke + rest, 30 s
 npm run test:igpu                                       # everything on the integrated GPU
 node --test data.test.js                                # the data checks alone, no browser
@@ -233,9 +180,6 @@ file covers, how "the frame equals the panorama" is measured and how to write a 
 `data.test.js` compares `assets/data`, the panorama manifest, the files on disk and the plan
 drawing. It fails while they are out of step, for example after the data tools ran and before the
 panoramas of new sweeps are published.
-
-**Eighth round, as published:** release label `2026-11-25a`; the whole suite (`npm test`):
-168 of 168 tests pass on the published tree (2026-11-25, 53 sweeps, 70 links; 13 min 47 s).
 
 ## Engine harness (`dev/`)
 

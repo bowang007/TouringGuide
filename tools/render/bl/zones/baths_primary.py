@@ -165,8 +165,7 @@ def _window(ctx):
     south glass. Seventh round (every window white): the post is satin white here, and bl/revisions.white_windows,
     which runs after this, gives the post, the stool and its lip the windows' own white by name
     (revision_spec.WINDOW_WHITE_ALSO), so in the built house the stool is white, not oak."""
-    fx = S.WEST_WALL_C + 0.11                  # room face of the window frame (bl/revisions.bath_window: 0.22 ft deep
-    #                                            on the centre line of the 5 in wall)
+    fx = 0.11                                  # room face of the window frame (bl/revisions.bath_window)
     m0, m1 = GZ - 0.05, GZ + 0.05              # the mullion
     post = _box(ctx, 'A0 window mullion post', fx, XW + 0.015, SILL, 8.0, m0, m1, 'paint_trim', C)
     _box(ctx, 'A0 tile window return N', fx, XW, SILL + 0.035, 8.0, WZ0, WZ0 + 0.03, M.shower_tile(), C)
@@ -175,13 +174,13 @@ def _window(ctx):
     oak = M.oak()
     _box(ctx, 'A0 window stool', fx, X0, SILL, SILL + 0.04, m1, WZ1, oak, C)
     _box(ctx, 'A0 window stool lip', X0, X0 + 0.07, SILL - 0.035, SILL + 0.04, m1, WZ1 + 0.07, oak, C, bevel=0.008)
-    # roman shade over the dry lite, inside-mounted under the head (the reveal is 0.098 ft deep), drawn up to
+    # roman shade over the dry lite, inside-mounted under the head (the reveal is 0.115 ft deep), drawn up to
     # about 6'-4"
     a, b = m1 + 0.02, WZ1 - 0.05
-    K.box(ctx, 'A0 roman shade headrail', fx + 0.015, X0, 7.74, 7.88, a, b, 'paint_trim', C)
-    K.box(ctx, 'A0 roman shade fabric', X0 - 0.04, X0 - 0.02, 6.62, 7.74, a + 0.01, b - 0.01, 'fabric_linen_white', C)
+    K.box(ctx, 'A0 roman shade headrail', 0.125, 0.225, 7.74, 7.88, a, b, 'paint_trim', C)
+    K.box(ctx, 'A0 roman shade fabric', 0.185, 0.205, 6.62, 7.74, a + 0.01, b - 0.01, 'fabric_linen_white', C)
     for i, yb in enumerate((6.30, 6.47)):
-        fold = K.box(ctx, f'A0 roman shade fold {i}', X0 - 0.055, X0 + 0.045 - 0.025 * i, yb, yb + 0.19, a + 0.01, b - 0.01,
+        fold = K.box(ctx, f'A0 roman shade fold {i}', 0.17, 0.27 - 0.025 * i, yb, yb + 0.19, a + 0.01, b - 0.01,
                      'fabric_linen_white', C)
         ctx.add_bevel(fold, 0.06, 4)
     return post
@@ -196,7 +195,7 @@ def _shower(ctx):
     Q.u_channel(ctx, C, 'A0 shower channel south', (XW + 0.02, GZ), (GX - 0.04, GZ), THR)
     K.box(ctx, 'A0 shower channel wall', XW, XW + 0.065, THR, GY1, GZ - 0.0375, GZ + 0.0375, ni, C, bevel=0.006)
     # east side: the door, hinged on the north wall, and a short fixed return that closes the corner
-    zr = Z0 + 2.425                            # the door's free edge / the return's north end
+    zr = 23.62
     Q.glass_panel(ctx, C, 'A0 shower glass return', (GX, zr), (GX, GZ + t), GY0, GY1)
     Q.u_channel(ctx, C, 'A0 shower channel return', (GX, zr - 0.01), (GX, GZ + 0.0375), THR)
     Q.glass_panel(ctx, C, 'A0 shower glass door', (GX, ZN + 0.05), (GX, zr - 0.02), GY0 + 0.02, GY1)
@@ -213,7 +212,7 @@ def _shower(ctx):
     # exposed nickel set on the north wall at the west end: the rain head centred in the shower's depth, west of
     # the skylight; the hand shower on its riser
     fn = K.Frame(0.0, ZN, 0.0, 1.0)            # u = z - ZN, v = x
-    Q.exposed_shower(ctx, fn, C, 'A0 shower set', X0 + 1.075, y_valve=3.6, y_top=6.72, reach=(GZ - ZN) / 2 - 0.17,
+    Q.exposed_shower(ctx, fn, C, 'A0 shower set', 1.30, y_valve=3.6, y_top=6.72, reach=(GZ - ZN) / 2 - 0.17,
                      head_r=0.36, hand_y=4.55)
     # the niche's bottles (its sill top is the shelf)
     nx0, nx1, ny0, ny1, dep = S.BATH_NICHE
@@ -290,7 +289,7 @@ def _toilet(ctx, zf):
     fw = K.Frame(S.BATH_TOILET_X, zf - 0.02, 0.0, -1.0)      # u = out of the stone (north), v = -x
     K.skirted_wc(ctx, fw, C, 'A0 WC', floor=FL, length=2.15)      # compact: 21in stay clear to the shower glass
     fww = K.Frame(X0, 0.0, 1.0, 0.0)           # the painted west wall: u = x - X0, v = -z
-    Q.tp_holder(ctx, fww, C, 'A0 paper', -(Z1 - 1.842), 2.2)
+    Q.tp_holder(ctx, fww, C, 'A0 paper', -26.52, 2.2)
 
 
 def _shelf(ctx):
@@ -298,7 +297,7 @@ def _shelf(ctx):
     with a small still life (stoneware and glass bottles, a framed botanical print, a trailing succulent)."""
     xp = X0                                    # the painted wall's face
     fp = K.Frame(xp, 0.0, 1.0, 0.0)            # u = x - xp, v = -z
-    ys, z0, z1, dep, th = 4.75, Z1 - 2.062, Z1 - 0.442, 0.55, 0.14
+    ys, z0, z1, dep, th = 4.75, 26.30, 27.92, 0.55, 0.14
     K.fbox(ctx, fp, 'A0 shelf timber', 0.0, dep, -z1, -z0, ys, ys + th, M.timber(), C, bevel=0.012)
     for i, zz in enumerate((z0 + 0.3, z1 - 0.3)):
         Q.iron_bracket(ctx, fp, C, f'A0 shelf bracket {i}', -zz, ys, depth=0.46, drop=0.44)
@@ -321,10 +320,10 @@ def _east(ctx):
     the light switch beside the door."""
     fe = K.Frame(X1, 0.0, -1.0, 0.0)           # the painted east wall: u = X1 - x, v = z
     yb = 4.45
-    u, rb = Q.towel_bar(ctx, fe, C, 'A0 towel bar', Z0 + 3.255, Z0 + 4.905, yb)
-    K.draped(ctx, fe, C, 'A0 bath towel', u, u, Z0 + 3.425, Z0 + 4.735, yb + rb, 1.55, 1.95,
+    u, rb = Q.towel_bar(ctx, fe, C, 'A0 towel bar', 24.45, 26.10, yb)
+    K.draped(ctx, fe, C, 'A0 bath towel', u, u, 24.62, 25.93, yb + rb, 1.55, 1.95,
              M.striped('striped_bath', base='#a79d7e', stripe='#3c3b33', pitch_in=1.6, duty=0.34, axis='z'), th=0.055, rc=rb)
-    K.outlet(ctx, fe, C, 'A0 outlet', Z1 - 1.112, 4.2)
+    K.outlet(ctx, fe, C, 'A0 outlet', 27.25, 4.2)
     fn = K.Frame(0.0, Z0, 0.0, 1.0)            # the painted north wall: u = z - Z0, v = x
     xs = DL0 - 0.42
     K.fbox(ctx, fn, 'A0 switch plate', 0.0, 0.018, xs - 0.19, xs + 0.19, 4.0, 4.38, 'paint_trim', C, bevel=0.006)
@@ -338,10 +337,10 @@ def _ceiling(ctx):
     door (its north end and its top stand a little inside the wall and the ceiling slab); cans, the fan grille."""
     xb = (TILE_E + DL0) / 2 - 0.2
     Q.hewn_beam(ctx, 'A0 ceiling beam', 'z', Z0 - 0.02, ZSP - 0.02, xb, 7.50, CEIL + 0.03, 0.46, M.beam(), C, seed=4.1)
-    cans = [(X0 + 7.375, Z0 + 1.805), (X0 + 7.375, Z0 + 4.255), (X0 + 2.975, Z0 + 4.255), (X0 + 4.575, Z0 + 1.505)]
+    cans = [(7.6, 23.0), (7.6, 25.45), (3.2, 25.45), (4.8, 22.7)]
     for x, z in cans:
         lighting.can(ctx, x, z, ceil=CEIL, coll=f'{ZONE}_lights', watts=9.0, kelvin=CAN_K)
-    K.exhaust_grille(ctx, C, 'A0 exhaust', X0 + 1.275, Z0 + 4.105, ceil=CEIL)
+    K.exhaust_grille(ctx, C, 'A0 exhaust', 1.5, 25.3, ceil=CEIL)
     return len(cans)
 
 

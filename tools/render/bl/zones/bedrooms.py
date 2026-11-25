@@ -6,10 +6,8 @@ Design (1077 W McKinley language, three cohesive but distinct rooms):
                  boucle bench, abstract charcoal/ochre diptych, ceiling-track linen drapes at the
                  garden window, leaning floor mirror, closet rebuilt with flush white bypass
                  sliders (one open onto white shelving + rail).
-  * Bedroom 3  - the largest room, vaulted: low wrap-around grey linen bed on the west wall (a solid
-                 wall with a wide canvas over the bed since the eighth round; the window W10 only
-                 while revision_spec.BED3_WEST_WINDOW), cream lacquer nightstands, built-in
-                 upholstered window seat in the canted
+  * Bedroom 3  - the largest room, vaulted: low wrap-around grey linen bed on the west wall under
+                 W10, cream lacquer nightstands, built-in upholstered window seat in the canted
                  bay W09 with pillows and roller shades, white-oak desk + sculptural boucle barrel
                  chair, colour-field painting, LED ring pendant hung from the ridge, slope cans.
   * Bedroom 4  - compact (flat 8 ft ceiling, revisions.bedroom4_flat), L-shaped since the laundry closet
@@ -19,10 +17,9 @@ Design (1077 W McKinley language, three cohesive but distinct rooms):
                  black steel sled legs with an oak/steel chair in the niche between the nightstand and the
                  closet's west wall, brush print above it, a slim line print on the closet wall and an oak
                  peg rail behind the door (bed4_closet_faces), opal globe pendant.
-  * Closets    - Bedroom 3 closet (eighth round: a reach-in behind two sliding panels, fitted out after
-                 the warp by bedrooms_rooms.py): white built-in (drawers, shelves, double hang with
+  * Closets    - Bedroom 3 compact closet: white built-in (drawers, shelves, double hang with
                  real shirts / a jacket / folded trousers, see bedrooms_garments) + open shelf
-                 tower + disk light; Bedroom 4 reach-in: shelf + rail.
+                 tower + black-framed mirror + disk light; Bedroom 4 reach-in: shelf + rail.
 
 Layout positions follow the original scene's anchors (beds, nightstands, desks, closet storage)
 except Bedroom 2's bed, which moves from under the garden window to the solid east wall so the
@@ -38,7 +35,7 @@ from . import bedrooms_furniture as F
 from . import bedrooms_kit as K
 from .bedrooms_kit import Frame
 from ..common import FT, RENDER_DIR
-from ..revision_spec import BED3_WEST_WINDOW, LAUNDRY_CLEAR, LAUNDRY_WALL_T
+from ..revision_spec import LAUNDRY_CLEAR, LAUNDRY_WALL_T
 
 if RENDER_DIR not in sys.path:
     sys.path.insert(0, RENDER_DIR)
@@ -93,9 +90,7 @@ def build_bed2(ctx, kit, M):
     F.boucle_bench(kit, M, Frame(14.62, zc, EAST), 'B2 bench', 4.0, 1.3, 1.5)
     # rug under the lower two thirds of the bed and the bench
     # pale warm-grey heathered wool with a narrow tonal border (reads as an area rug, lighter than the bed)
-    # (v7 repair: its south edge 0.12 ft further north, 10.13: the entry door's leaf, new this round, swept over the
-    # rug's south-west corner with its bottom 3/8 in below the rug's top)
-    F.rug(kit, 'B2 rug', 13.7, 21.25, 2.35, 10.13, K.rug_material(
+    F.rug(kit, 'B2 rug', 13.7, 21.25, 2.35, 10.25, K.rug_material(
         'Z_bedrooms_rug_heather_grey', ['#cbc7bf', '#d7d3cb', '#e2ded6'], 70.0, 'heather',
         border=(3.775, 3.95, '#b3ada2', ((0.22, 0.30),))))
     # diptych above the headboard
@@ -115,13 +110,12 @@ def build_bed2(ctx, kit, M):
     F.framed_print(kit, Frame(12.25, 8.3, WEST), 'B2 print west', 2.1, 2.7, K.art_fields(
         600, 770, 17, [(0.06, 0.52, (0.36, 0.35, 0.33)), (0.55, 0.78, (0.78, 0.73, 0.65)), (0.81, 0.94, (0.73, 0.55, 0.30))]),
         0.32, 5.0)
-    # recessed cans (4 in a grid)
+    # recessed cans (4 in a grid + entry alcove)
     for x in (14.7, 19.6):
         for z in (3.3, 9.4):
             kit.can(x, z, watts=LIGHTS['B2']['can'], lens=LIGHTS['B2']['lens'])
-    # v7 hall: the concept's entry alcove is hall and the closet is the sheet's 6'-10" x 1'-11" since the eighth
-    # round. The closet's doors and fit-out (collection zone_bedrooms_bed2_closet, LIGHTS['B2']['closet']) are built
-    # after the warp, in plan feet, by bl/zones/hall_block.py (bl/revisions.hall_block / hall_block_fit_out).
+    kit.can(14.8, 13.95, watts=LIGHTS['B2']['can'], lens=LIGHTS['B2']['lens'])
+    _bed2_closet(ctx, kit, M)
     return info
 
 
@@ -147,6 +141,40 @@ def _leaning_mirror(kit, wall_x, zc, w, h, lean_deg=6.0):
     gv = [(-w / 2 + fw, fw, 0.0), (w / 2 - fw, fw, 0.0), (w / 2 - fw, h - fw, 0.0), (-w / 2 + fw, h - fw, 0.0)]
     gl = kit.mesh('B2 mirror glass', gv, [(0, 1, 2, 3)], 'mirror', (x, 0.01, zc), fr_yaw, -a)
     return gl
+
+
+def _bed2_closet(ctx, kit, M):
+    """Closet D13 (opening x 18.06-22.41 in the wall at z 12.72-13.09; interior x 17.92-22.92,
+    z 13.09-15.14). Two flush white bypass sliders, the rear one parked behind the front one so the
+    east half stands open onto white shelving and a hanging rail."""
+    kit.use('bed2_closet')
+    y0, y1 = 0.03, 6.6
+    # front panel (closest to the room) and rear panel, both parked over the west half
+    kit.wbox('B2 closet slider front', 18.09, 20.34, y0, y1, 13.13, 13.235, 'door_slab', 0.012, 2)
+    kit.wbox('B2 closet slider rear', 18.12, 20.37, y0, y1, 13.275, 13.38, 'door_slab', 0.012, 2)
+    kit.wbox('B2 closet slider pull', 20.12, 20.17, 2.9, 3.7, 13.118, 13.133, 'black_metal', 0.004, 1)
+    kit.wbox('B2 closet track', 18.06, 22.41, 6.6, 6.67, 13.11, 13.42, 'paint_trim', 0.0)
+    kit.wbox('B2 closet floor guide', 20.3, 20.5, 0.0, 0.05, 13.2, 13.31, 'black_metal', 0.005, 1)
+    mel = M['melamine']
+    # top shelf + rail
+    kit.wbox('B2 closet shelf', 17.93, 22.9, 5.86, 5.94, 13.5, 15.13, mel, 0.008, 1)
+    F.closet_rod(kit, 'B2 closet', 17.925, 21.315, 14.25, 5.55, 'x')
+    # shelf tower at the east end
+    tx0, tx1 = 21.32, 22.9
+    for x in (tx0, tx1 - 0.06):
+        kit.wbox('B2 closet tower side', x, x + 0.06, 0.0, 5.86, 13.62, 15.12, mel, 0.006, 1)
+    for i, y in enumerate((0.0, 1.1, 2.2, 3.3, 4.4)):
+        kit.wbox(f'B2 closet tower shelf {i}', tx0 + 0.06, tx1 - 0.06, y, y + 0.06 if i else 0.2, 13.62, 15.12, mel, 0.005, 1)
+    F.folded_stack(kit, M, Frame(22.1, 14.35, 0, 1.16), 'B2 closet stack a', 4, 1.1, 0.95, 0.17, 2)
+    F.folded_stack(kit, M, Frame(22.1, 14.35, 0, 2.26), 'B2 closet stack b', 3, 1.1, 0.95, 0.2, 5)
+    F.folded_stack(kit, M, Frame(22.1, 14.35, 0, 3.36), 'B2 closet stack c', 2, 1.1, 0.95, 0.24, 8)
+    _basket(kit, M, Frame(22.1, 14.4, 0, 0.2), 'B2 closet basket', 1.25, 0.75, 1.15)
+    F.folded_stack(kit, M, Frame(19.0, 14.4, 0, 5.94), 'B2 closet top stack', 3, 1.2, 1.0, 0.2, 4)
+    S, J = F.SHIRTS, F.JACKETS
+    F.hanger_row(kit, M, 17.94, 21.30, 14.25, 5.55, 'B2 closet', 'x', seed=3, start='a1', subsurf=0, items=[
+        ('shirt', S[0]), ('shirt', S[1]), ('shirt', S[2]), ('shirt', S[3]), ('shirt', S[4]), ('jacket', J[2]),
+        ('shirt', S[5]), ('jacket', J[0]), ('shirt', S[7]), ('jacket', J[1]), ('shirt', S[8])])
+    kit.can(20.3, 14.15, watts=LIGHTS['B2']['closet'], lens=LIGHTS['B2']['lens'])
 
 
 def _basket(kit, M, fr, tag, w, h, d):
@@ -198,13 +226,9 @@ def build_bed3(ctx, kit, M):
     F.snake_plant(kit, M, Frame(13.3, 53.22, 0.9), 'B3 plant', 'stoneware_dark', 0.42, 1.2, 13, 8)
     # colour-field painting above the desk
     F.canvas_art(kit, Frame(13.892, dz, EAST), 'B3 art desk', 3.0, 2.25, K.art_fields(900, 680, 7), y_c=4.85)
-    # (no art on the short north wall between the bath's hinged door and the closet's sliding panels: the B3 lens
-    # stands 1.7 ft from it)   (v7 final: comment, it said "between the pocket doors")
-    # W10 roller shade (inside mount, partly lowered) + bay window seat & shades. v7 bedrooms: only while the west
-    # window is there (revision_spec.BED3_WEST_WINDOW; the sheet has a solid wall, and then a picture hangs over the
-    # bed: bl/zones/bedrooms_rooms.py, after the warp)
-    if BED3_WEST_WINDOW:
-        F.roller_shade(kit, M, Frame(0.225, 46.65, WEST), 'B3 W10 shade', 3.96, 7.0, 0.9)
+    # (no art on the short north wall between the pocket doors: the B3 lens stands 1.7 ft from it)
+    # W10 roller shade (inside mount, partly lowered) + bay window seat & shades
+    F.roller_shade(kit, M, Frame(0.225, 46.65, WEST), 'B3 W10 shade', 3.96, 7.0, 0.9)
     _bay_window_seat(ctx, kit, M)
     # lighting: LED ring pendant from the ridge + 4 slope cans + a can in the bay soffit
     kit.use('bed3_lights')
@@ -257,11 +281,63 @@ def _bay_window_seat(ctx, kit, M):
 
 
 def _bed3_closet(ctx, kit, M):
-    """v7 bedrooms (eighth round): Bedroom 3's closet is a reach-in behind two sliding panels, as on the architect's
-    sheet, 2'-3 1/2" deep. It is fitted out AFTER the warp, in plan feet, by bl/zones/bedrooms_rooms.py (called by
-    bl/revisions.bedroom3_fit_out); here only its collection is made. (Until the seventh round a step-in closet was
-    built here on the concept plan: its 2.60 ft deep wardrobe stood 0.3 ft in the wall after the conversion.)"""
+    """Compact closet (suite3_wic, x 8.085-13.89, z 40.19-42.83; camera C3 at 11.6, 41.6 looks west).
+    West: 2 ft white built-in (drawer + shelf tower, double hang). East: open shelf tower.
+    North wall: frameless full-length mirror. Surface LED disk light."""
     kit.use('bed3_closet')
+    mel = M['melamine']
+    x0, x1 = 8.105, 10.1
+    zN, zS = 40.21, 42.81
+    zd = 41.45                                  # divider between drawer tower (north) and hanging (south)
+    kit.wbox('C3 plinth', x0 + 0.05, x1 - 0.08, 0.0, 0.15, zN + 0.02, zS - 0.02, 'paint_black', 0.0)
+    # white decks on the plinth (the hanging bay would otherwise show the black plinth top)
+    kit.wbox('C3 hang deck', x0 + 0.01, x1, 0.15, 0.21, zd + 0.03, zS - 0.06, mel, 0.005, 1)
+    kit.wbox('C3 drawer deck', x0 + 0.01, x1 - 0.06, 0.15, 0.175, zN + 0.06, zd - 0.03, mel, 0.0)
+    kit.wbox('C3 top', x0, x1, 7.42, 7.5, zN, zS, mel, 0.006, 1)
+    for z in (zN, zd - 0.03, zS - 0.06):
+        kit.wbox('C3 side', x0, x1, 0.15, 7.42, z, z + 0.06, mel, 0.006, 1)
+    kit.wbox('C3 back', x0 - 0.015, x0 + 0.005, 0.15, 7.42, zN, zS, mel, 0.0)
+    # drawer tower: 3 drawers + shelves
+    for i in range(3):
+        y = 0.18 + i * 0.66
+        kit.wbox(f'C3 drawer {i}', x1 - 0.06, x1, y, y + 0.62, zN + 0.075, zd - 0.045, mel, 0.008, 2)
+        kit.wbox(f'C3 drawer pull {i}', x1, x1 + 0.03, y + 0.5, y + 0.53, zN + 0.42, zd - 0.42, 'black_metal', 0.005, 1)
+    for i, y in enumerate((2.2, 3.35, 4.5, 5.65, 6.75)):
+        kit.wbox(f'C3 shelf {i}', x0 + 0.02, x1 - 0.02, y, y + 0.06, zN + 0.06, zd - 0.03, mel, 0.005, 1)
+    F.folded_stack(kit, M, Frame(9.15, (zN + zd) / 2, PI / 2, 2.26), 'C3 stack a', 3, 1.0, 0.95, 0.2, 1)
+    F.folded_stack(kit, M, Frame(9.15, (zN + zd) / 2, PI / 2, 3.41), 'C3 stack b', 4, 1.0, 0.95, 0.17, 4)
+    _basket(kit, M, Frame(9.15, (zN + zd) / 2, PI / 2, 4.56), 'C3 basket', 1.0, 0.7, 1.05)
+    F.folded_stack(kit, M, Frame(9.15, (zN + zd) / 2, PI / 2, 5.71), 'C3 stack c', 2, 1.0, 0.95, 0.22, 6)
+    # double hang (rails run along z)
+    for y in (6.58, 3.48):
+        F.closet_rod(kit, f'C3 {y:.2f}', zd + 0.03, zS - 0.06, 9.11, y, 'z')
+    kit.wbox('C3 hang shelf', x0 + 0.02, x1 - 0.02, 6.75, 6.81, zd + 0.03, zS - 0.06, mel, 0.005, 1)
+    S, T, J = F.SHIRTS, F.TROUSERS, F.JACKETS
+    # packed from the far (south) end; fronts face north toward the C3 lens
+    F.hanger_row(kit, M, zd + 0.03, zS - 0.06, 9.11, 6.58, 'C3 upper', 'z', seed=6, start='a1', front=-1,
+                 floor_y=3.7, items=[('shirt', S[0]), ('stripe', S[0]), ('shirt', S[4]), ('jacket', J[2])])
+    F.hanger_row(kit, M, zd + 0.03, zS - 0.06, 9.11, 3.48, 'C3 lower', 'z', seed=9, start='a1', front=-1,
+                 floor_y=0.3, items=[('trousers', T[i]) for i in (1, 3, 0, 5, 2)])
+    # east open shelf tower (clear of the camera: x >= 12.9)
+    ex0, ex1, ez0, ez1 = 12.92, 13.875, 40.21, 41.55
+    for z in (ez0, ez1 - 0.06):
+        kit.wbox('C3 east side', ex0, ex1, 0.0, 7.0, z, z + 0.06, mel, 0.006, 1)
+    for i, y in enumerate((0.0, 1.3, 2.6, 3.9, 5.2, 6.5)):
+        kit.wbox(f'C3 east shelf {i}', ex0, ex1, y, y + (0.15 if i == 0 else 0.06), ez0 + 0.06, ez1 - 0.06, mel, 0.005, 1)
+    F.folded_stack(kit, M, Frame(13.4, 40.88, PI / 2, 1.36), 'C3 east stack a', 3, 0.85, 0.75, 0.2, 3)
+    F.folded_stack(kit, M, Frame(13.4, 40.88, PI / 2, 2.66), 'C3 east stack b', 2, 0.85, 0.75, 0.24, 7)
+    _basket(kit, M, Frame(13.4, 40.88, PI / 2, 3.96), 'C3 east box', 0.95, 0.65, 0.8)
+    _shoes(kit, M, 13.4, 40.88, 0.15)
+    # full-length mirror on the north wall between the two units: slim matte-black frame (like the
+    # other mirrors in the house) so it reads as a mirror, not as a doorway into another room
+    mx0, mx1, my0, my1, fw, fd = 10.72, 12.08, 1.0, 6.65, 0.06, 0.08
+    zw = 40.192
+    kit.wbox('C3 mirror', mx0 + fw - 0.01, mx1 - fw + 0.01, my0 + fw - 0.01, my1 - fw + 0.01, zw, zw + fd - 0.025,
+             'mirror', 0.0)
+    for nm, a, b, c, d in (('top', mx0, mx1, my1 - fw, my1), ('bottom', mx0, mx1, my0, my0 + fw),
+                           ('W', mx0, mx0 + fw, my0 + fw, my1 - fw), ('E', mx1 - fw, mx1, my0 + fw, my1 - fw)):
+        kit.wbox(f'C3 mirror frame {nm}', a, b, c, d, zw, zw + fd, 'black_metal', 0.008, 2)
+    F.disk_light(kit, 11.2, 41.5, 'C3', 8.0, 0.32, LIGHTS['C3']['disk'])
 
 
 def _shoes(kit, M, x, z, y):
@@ -275,8 +351,8 @@ def _shoes(kit, M, x, z, y):
 # ================================================================================== Bedroom 4
 # Owner's correction of 2026-11-20: the laundry closet (bl/revision_spec.py LAUNDRY_*, built by
 # bl/revisions.laundry_closet after the warp) is carved out of this room's north-east corner. On the built plan
-# its west wall's bedroom face is x 11.725 and its south wall's bedroom face z 32.142, so the room is an L: the
-# full 14'-11" width south of z 32.142 (the door D04 and the reach-in closet), 11'-6" wide north of it (bed,
+# its west wall's bedroom face is x 11.725 and its south wall's bedroom face z 31.913, so the room is an L: the
+# full 14'-10" width south of z 31.913 (the door D04 and the reach-in closet), 11'-6" wide north of it (bed,
 # nightstand and the desk niche). The desk group that stood in the corner moved into the niche.
 B4_DESK_W = 3.5
 B4_DESK_GAP = 0.05          # ft between the desk's east end and the closet's west wall (on the built plan)
@@ -338,7 +414,7 @@ def build_bed4(ctx, kit, M):
     succ.rotation_euler.z = 0.7
     F.table_lamp(kit, M, fd.sub(1.25, 0.6, 0, 2.48), 'B4 desk lamp', 'stoneware', 0.72, LIGHTS['B4']['desk'], LIGHTS['B4']['bulb'])
     F.framed_print(kit, Frame(dx, 29.64, NORTH), 'B4 print', 1.7, 2.2, K.art_brush(560, 720, 21), 0.28, 5.05)
-    # (v7 bedrooms: the W12 roller shade is hung after the warp, in the 5'-0" window: bl/zones/bedrooms_rooms.py)
+    F.roller_shade(kit, M, Frame(0.225, 32.53, WEST), 'B4 W12 shade', 4.08, 7.0, 0.45)
     # bypass closet door pulls (doors themselves are shell geometry)
     kit.wbox('B4 closet pull 1', 10.8, 10.85, 2.75, 3.45, 37.555, 37.58, 'black_metal', 0.005, 1)
     kit.wbox('B4 closet pull 2', 11.12, 11.17, 2.75, 3.45, 37.665, 37.69, 'black_metal', 0.005, 1)
@@ -360,13 +436,13 @@ def bed4_closet_faces(ctx):
 
     * west wall (faces the bed, the desk's end stands against it): a slim black-framed line print;
     * south wall (the pocket between the closet and the open door D04): an oak peg rail with black pegs and a canvas
-      tote, the usual thing behind a bedroom door. Nothing reaches into the door's swing (south of z 33.60)."""
+      tote, the usual thing behind a bedroom door. Nothing reaches into the door's swing (south of z 33.43)."""
     kit = K.Kit(ctx)
     kit.use('bed4')
     M = F.mats()
     xw = LAUNDRY_CLEAR[0] - LAUNDRY_WALL_T              # the west wall's bedroom face (11.725)
-    zs = LAUNDRY_CLEAR[3] + LAUNDRY_WALL_T              # the south wall's bedroom face (32.142)
-    zn = LAUNDRY_CLEAR[2]                               # the room's north wall (28.892)
+    zs = LAUNDRY_CLEAR[3] + LAUNDRY_WALL_T              # the south wall's bedroom face (31.913)
+    zn = LAUNDRY_CLEAR[2]                               # the room's north wall (28.72)
     out = {}
     # ---- slim print, centred on the wall's width between the desk's back edge and the corner
     zc = (zn + zs) / 2 + 0.2

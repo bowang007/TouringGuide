@@ -30,16 +30,9 @@ tour.json (SCENE feet: x west -> east, y up, z rear/north -> street/south):
              yaw / pitch in DEGREES (the scene's nodes hold radians; yaw 0 looks toward -z, positive
              clockwise seen from above); links = tour.edges in both directions; visible, floor, outdoor are
              copied when the node has them, else visible = links, floor = 0.02, outdoor = false;
-             room = id of the entry of `rooms` the sweep stands in (the smallest one containing it),
-             'outside' for outdoor sweeps. A sweep that stands in no room stands in a doorway, in the
-             thickness of the wall between two rooms (Y0 and Z0 in the doors of Bedrooms 3 and 4 since
-             the eighth round): it belongs to the room it is named after when that is one of the two,
-             else to the nearest. A room nobody can stand in (the laundry closet) owns the sweep in
-             front of it: the stop it names, unless that is another room's own stop.
-             p[1] is the sweep's own eye height, 5.0853 ft above the level it stands on (the garage
-             floor is 11 in below the house floor, the porch slab and the rear landings are lower too);
-             `eye` is the median of the indoor sweeps, and floor is the surface under the stop, where
-             the page draws its ring.
+             room = id of the entry of `rooms` the sweep stands in (the smallest one containing it, else the
+             nearest), 'outside' for outdoor sweeps. A room nobody can stand in (the laundry closet) owns
+             the sweep in front of it: the stop it names, unless that is another room's own stop.
   rooms      [{id, label, bounds [x0, z0, x1, z1], at [x, z], sweep, tag}]: the measured rooms of the
              schedule (tag = its M-number, bounds = clear interior, at = centre of the bounds, sweep = the
              sweep to enter the room) followed by the open spaces the schedule does not measure (living,
@@ -91,8 +84,8 @@ import sitedata  # noqa: E402
 TITLE = '1095 W McKinley'
 SUBTITLE = 'Proposed remodel · 4 bedrooms · 3 full bathrooms'
 FLOOR = 0.02
-# the reel when the scene names none: the tour's highlights as of the eighth round
-HIGHLIGHTS = ['E0', 'L8', 'D0', 'K0', 'P0', 'B2', 'B3', 'B4', 'LC', 'A0', 'A1', 'A3', 'S0', 'C0', 'G0']
+# the old page's `roomIDs`: the stops of its room list, in its order
+HIGHLIGHTS = ['E0', 'L0', 'D0', 'K0', 'P0', 'B2', 'B3', 'B4', 'A0', 'A1', 'A3', 'S0', 'C0', 'C3', 'G0']
 # spaces the schedule does not measure: (id, label, scene_classification room keys, preferred sweep).
 # The preferred sweep is the fallback: a space with a card of its own name in the reel is entered there.
 OPEN_ROOMS = [('living', 'Living room', ('living', 'dining'), 'L0'),
@@ -102,7 +95,6 @@ OPEN_ROOMS = [('living', 'Living room', ('living', 'dining'), 'L0'),
 MAX_RECTS = 16      # footprint rectangles the engine's shaders accept (FOOT_MAX in assets/js/tour/engine.js)
 MIN_STRIP = 0.1     # ft: the strips that approximate a foundation that is not a rectangle (the bay) get no finer
 TOL = 0.06          # ft: tolerance of the footprint checks
-DOORWAY = 0.5       # ft: a sweep in no room is in a doorway of a room this near (a wall is 5 in thick)
 MODEL = 'assets/model/house.glb'                        # fetched by the page with its content hash (tour.json `files`)
 CODE = ('assets/js/tour', 'assets/css/tour.css')        # the page's code: stamped with the release label by index.html
 
@@ -359,10 +351,8 @@ def build_rooms(scene, meas, cls, sweep_ids, sweep_xz, cards=None):
     return rooms, notes
 
 
-def room_of(rooms, x, z, label=None):
-    """Id of the smallest room containing (x, z). A point in no room is in a doorway, in the thickness of
-    the wall between two rooms: it belongs to the room named `label` (the sweep's own name) when that room
-    is within DOORWAY of it, else to the nearest room."""
+def room_of(rooms, x, z):
+    """Id of the smallest room containing (x, z); else the nearest room."""
     def area(r):
         b = r['bounds']
         return (b[2] - b[0]) * (b[3] - b[1])
@@ -373,9 +363,6 @@ def room_of(rooms, x, z, label=None):
     within = [r for r in rooms if dist(r) == 0]
     if within:
         return min(within, key=area)['id']
-    named = [r for r in rooms if label and r['label'] == label and dist(r) <= DOORWAY]
-    if named:
-        return min(named, key=dist)['id']
     return min(rooms, key=dist)['id'] if rooms else None
 
 
@@ -406,8 +393,7 @@ def build_tour(scene, meas, cls, version):
         outdoor = bool(n.get('outdoor', False))
         sweeps.append({
             'id': nid, 'label': n.get('label') or n.get('name') or nid,
-            'room': (n.get('room') or 'outside') if outdoor
-            else room_of(rooms, *xz[nid], label=n.get('label') or n.get('name')),
+            'room': (n.get('room') or 'outside') if outdoor else room_of(rooms, *xz[nid]),
             'p': [r4(v) for v in n['p']], 'floor': r4(n.get('floor', FLOOR)),
             'yaw': round(math.degrees(n.get('yaw') or 0.0), 2), 'pitch': round(math.degrees(n.get('pitch') or 0.0), 2),
             'links': links[nid],

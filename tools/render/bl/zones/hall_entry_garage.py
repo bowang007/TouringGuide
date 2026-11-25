@@ -5,12 +5,8 @@ with woven-cane fronts under a round black-framed mirror, ceramic vases with flo
 large abstract art on the long hall walls, a three-ring LED pendant in the entry vault, flush
 ring + 4in can lighting along the halls. The garage is a clean finished garage: white walls,
 sealed concrete (shell) with saw-cut control joints, wall-hung light-grey cabinet system with a
-white-oak worktop, slatwall with shelf and bins, EV wall charger and 4ft LED linear ceiling
-fixtures. Room for two cars is kept clear. v7 garage (eighth round): the garage floor is 11 in below
-the house floor (bl/garage_spec.FLOOR_Y), so every height in build_garage() is written above that
-floor; the cabinet run stops short of the north-east corner, where the sheet's water heater stands,
-and the east wall's pieces stand south of the garage's side door. The floor itself, the step, the
-doors, their switches and the water heater are built after the warp, in plan feet, by bl/garage.py.
+white-oak worktop, slatwall with shelf and bins, EV wall charger, tankless water heater and
+4ft LED linear ceiling fixtures. Room for two cars is kept clear.
 
 All coordinates are SCENE feet. See hall_entry_garage_lib.Frame for the wall-local (u, v, n).
 """
@@ -22,7 +18,6 @@ from mathutils import Euler, Matrix, Vector
 
 from .. import lighting
 from ..common import FT, ft2bl, move_to_collection, world_bbox_ft
-from .. import garage_spec as GS          # v7 garage: floor level, the cabinet run's east end
 from . import hall_entry_garage_art as ART
 from . import hall_entry_garage_lib as L
 from .hall_entry_garage_lib import (EAST_FACING_WEST, NORTH_FACING_SOUTH, SOUTH_FACING_NORTH,
@@ -344,7 +339,7 @@ def _hair_material(name, color, rough=0.5, radial=0.8):
     return m
 
 
-def bunny_tails(ctx, M, mouth, coll, seed=9, n=10, wall_z=None, scale=1.0):
+def bunny_tails(ctx, M, mouth, coll, seed=9, n=10, wall_z=None):
     """Dried bunny-tail grass (Lagurus ovatus) loosely gathered in a bottle vase.
 
     Each stem is a thin straw that leans out of the neck and droops progressively toward the tip
@@ -380,8 +375,7 @@ def bunny_tails(ctx, M, mouth, coll, seed=9, n=10, wall_z=None, scale=1.0):
         out = Vector((math.cos(a), 0.0, math.sin(a)))
         th0 = math.radians(rng.choice((4, 8, 12, 16, 20, 25, 30)) + rng.uniform(-3, 3))
         bend = math.radians(rng.uniform(10.0, 24.0))
-        L_ = 1.18 * scale * rng.uniform(0.75, 1.25)     # from 0.35 ft inside the neck to the plume base (v7 hall:
-        #                                                 `scale` shortens the stems for the 6 in ledge of the hall)
+        L_ = 1.18 * rng.uniform(0.75, 1.25)             # from 0.35 ft inside the neck to the plume base
         wob = Vector((-math.sin(a), 0.0, math.cos(a))) * rng.uniform(-0.03, 0.03)
         p = Vector((mx + rng.uniform(-0.012, 0.012), my - 0.35, mz + rng.uniform(-0.012, 0.012)))
         pts = [tuple(p)]
@@ -645,36 +639,51 @@ def smoke_detector(ctx, x, z, ceil=8.0):
 def build_halls(ctx, M, A, cnt):
     E = EAST_FACING_WEST(A['hall_e'])
     CW = WEST_FACING_EAST(A['corr_w'])         # u = -z
-    # v7 hall: the hall between the bedrooms (the "junction": the horizon canvas, the walnut ledge with its vase,
-    # books and bowl, the two-gang switch, its can and its flush ring) is the sheet's 3'-3" / 3'-4" hall since the
-    # eighth round. Those pieces are built after the warp, in plan feet, by bl/zones/hall_block.py
-    # (bl/revisions.hall_block_fit_out), with this module's canvas(), books(), bunny_tails(), switch_plate() and
-    # flush_ring().
+    NJ = NORTH_FACING_SOUTH(A['junc_n'])       # u = +x
 
     # art
     canvas(ctx, M, E, 'hall arches', 33.9, 4.9, 2.2, 2.9, ART.art_material('arches', 'arches'), C_HALL,
            frame_mat=M['lacquer'])
     canvas(ctx, M, CW, 'corridor plaster', -25.3, 4.85, 3.0, 4.0, ART.plaster_relief_material(), C_HALL,
            depth=0.14)
+    canvas(ctx, M, NJ, 'junction horizon', 19.45, 4.95, 4.2, 2.8, ART.art_material('horizon', 'horizon'), C_HALL)
 
-    # thermostat (matte black glass square)
+    # floating walnut ledge under the horizon piece, with a black bottle vase and a bowl on books
+    lu0, lu1, lv0, lv1 = 17.25, 21.65, 2.55, 2.83
+    NJ.box(ctx, 'ledge walnut', lu0, lu1, lv0, lv1, 0.004, 0.92, 'walnut_slab', C_HALL, 0.012, 3)
+    zl = A['junc_n']
+    bottle = L.lathe(ctx, 'vase bottle black', [(0.1, 0), (0.17, 0.05), (0.2, 0.3), (0.19, 0.62), (0.12, 0.8),
+                                                (0.05, 0.92), (0.045, 1.12), (0.055, 1.16), (0.0, 1.16)],
+                     C_DECOR, [M['ceramic_blk']])
+    bottle.location = ft2bl(18.15, lv1, zl + 0.48)
+    stems = bunny_tails(ctx, M, (18.15, lv1 + 1.1, zl + 0.48), C_DECOR, seed=9, n=10, wall_z=zl + 0.13)
+    ytop = books(ctx, M, 20.85, lv1, zl + 0.46, 0.08, C_DECOR,
+                 [(1.0, 0.78, 0.1, M['book_c']), (0.9, 0.7, 0.08, M['book_a'])])
+    bowl = L.lathe(ctx, 'bowl cream', [(0.06, 0), (0.15, 0.015), (0.2, 0.06), (0.215, 0.1), (0.2, 0.105),
+                                       (0.17, 0.065), (0.1, 0.03), (0.0, 0.028)], C_DECOR, [M['ceramic_cream']])
+    bowl.location = ft2bl(20.85, ytop, zl + 0.46)
+
+    # thermostat (matte black glass square) and switch plates
     CW.box(ctx, 'thermostat', -22.1 - 0.17, -22.1 + 0.17, 4.9 - 0.17, 4.9 + 0.17, 0.0, 0.07, M['glass_blk'], C_HALL, 0.02, 3)
+    switch_plate(ctx, M, NJ, 'junction', 15.52, 4.0, 2, C_HALL)
 
-    # lighting: cans along the front hall and along the corridor to the foyer
+    # lighting: cans along the front hall, along the corridor to the foyer, flush ring at the junction
     xh = (A['hall_w'] + A['hall_e']) / 2
     for zc in (31.6, 35.2, 38.8):
         lighting.can(ctx, xh, zc, coll=C_LIGHT, kelvin=HALL_K)
     for zc in (21.9, 25.3, 28.7):
         lighting.can(ctx, 19.4, zc, coll=C_LIGHT, kelvin=HALL_K)
+    lighting.can(ctx, 19.4, 18.15, coll=C_LIGHT, kelvin=HALL_K)
+    flush_ring(ctx, M, 15.45, 18.15, name='junction flush ring')
     smoke_detector(ctx, xh, 33.4)
     slot_diffuser(ctx, M, xh, 37.0, 3.4)
     # junction detector: in the corridor toward the foyer, ~6 ft clear of the flush ring and between cans
     smoke_detector(ctx, 18.0, 23.6)
-    cnt['cans'] = cnt.get('cans', 0) + 6
+    cnt['cans'] = cnt.get('cans', 0) + 7
 
 
 # ----------------------------------------------------------------------------- garage
-def cabinet(ctx, M, fr, name, u0, u1, v0, v1, n0, n1, doors=2, drawer=False, pull='v', coll=C_GAR, floor=0.0):
+def cabinet(ctx, M, fr, name, u0, u1, v0, v1, n0, n1, doors=2, drawer=False, pull='v', coll=C_GAR):
     """Wall-hung garage cabinet: case + slab doors with 1/8in reveals + black bar pulls."""
     cm, dm = M['cab_case'], M['cab']
     t = 0.06
@@ -708,79 +717,56 @@ def cabinet(ctx, M, fr, name, u0, u1, v0, v1, n0, n1, doors=2, drawer=False, pul
                 elif pull == 'v_high':
                     cv0, cv1 = b - 0.75, b - 0.15
                 else:
-                    mid = min(b - 0.4, floor + 4.2)
+                    mid = min(b - 0.4, 4.2)
                     cv0, cv1 = mid - 0.45, mid + 0.45
                 fr.box(ctx, f'{name} pull {i}', edge - 0.02, edge + 0.02, cv0, cv1, n1, n1 + 0.1, pm, coll, 0.01, 2)
-
-
-def _concept(f, v, lo=-20.0, hi=80.0):
-    """Concept coordinate that the relayout map `f` carries to the plan coordinate `v` (v7 garage)."""
-    for _ in range(60):
-        m = (lo + hi) / 2
-        if f(m) < v:
-            lo = m
-        else:
-            hi = m
-    return (lo + hi) / 2
 
 
 def build_garage(ctx, M, A, cnt):
     GN = NORTH_FACING_SOUTH(A['gar_n'])      # u = x, n = z - 31.77
     GE = EAST_FACING_WEST(A['gar_e'])        # u = z
     GW = WEST_FACING_EAST(A['gar_w'])        # u = -z
-    # v7 garage: the floor is GS.FLOOR_Y (11 in below the house floor); `g` carries every height below onto it, so
-    # the cabinets, the worktop (36 in), the charger and the slatwall keep their heights above the floor they stand
-    # over. The ceiling stays at 8 ft above the house floor (8'-11" above the garage's).
-    g = GS.FLOOR_Y
-    fy = g
+    fy = floor_y(30.0, 41.0, 0.025)
 
-    # --- cabinet wall (north): wall-hung system, uppers over the worktop --------------------------
-    # v7 garage: the run stops 0.55 ft short of the water heater's stand in the north-east corner (the sheet's
-    # FX11): two tall units, three base / wall pairs under one worktop, and a 1 ft tall unit closing the run
-    # (until the seventh round two more tall units ran on to the east wall). GS.CABINET_RUN_END_X is a plan
-    # x; the run is fitted with relayout.X_GARAGE_RUN, so it is carried back onto the concept plan here.
+    # --- cabinet wall (north): full-width wall-hung system, uppers over the worktop -------------
     n0 = 0.006
-    xs = [21.1, 23.5, 25.9, 29.4, 32.9, 36.4, _concept(GS.R.X_GARAGE_RUN, GS.CABINET_RUN_END_X)]
-    kinds = ['T', 'T', 'B', 'B', 'B', 'T']
+    xs = [21.1, 23.5, 25.9, 29.4, 32.9, 36.4, 38.8, A['gar_e'] - 0.11]
+    kinds = ['T', 'T', 'B', 'B', 'B', 'T', 'T']
     for i, kd in enumerate(kinds):
         a, b = xs[i], xs[i + 1]
         if kd == 'T':
-            cabinet(ctx, M, GN, f'gar tall {i}', a, b, g + 0.5, g + 7.5, n0, 2.0, doors=2 if b - a > 2.0 else 1, floor=g)
+            cabinet(ctx, M, GN, f'gar tall {i}', a, b, 0.5, 7.5, n0, 2.0, doors=2 if b - a > 2.0 else 1)
         else:
-            cabinet(ctx, M, GN, f'gar base {i}', a, b, g + 0.5, g + 2.98, n0, 2.0, doors=2, drawer=True, pull='v_high',
-                    floor=g)
-            cabinet(ctx, M, GN, f'gar wall {i}', a, b, g + 5.0, g + 7.5, n0, 1.17, doors=2, pull='v_low', floor=g)
+            cabinet(ctx, M, GN, f'gar base {i}', a, b, 0.5, 2.98, n0, 2.0, doors=2, drawer=True, pull='v_high')
+            cabinet(ctx, M, GN, f'gar wall {i}', a, b, 5.0, 7.5, n0, 1.17, doors=2, pull='v_low')
     wt0, wt1 = xs[2], xs[5]
-    GN.box(ctx, 'gar worktop oak', wt0, wt1, g + 2.98, g + 3.11, n0, 2.08, 'white_oak_veneer', C_GAR, 0.012, 3)
-    GN.box(ctx, 'gar undercab led', wt0 + 0.1, wt1 - 0.1, g + 4.975, g + 5.0, 0.95, 1.05, M['undercab_led'], C_GAR)
+    GN.box(ctx, 'gar worktop oak', wt0, wt1, 2.98, 3.11, n0, 2.08, 'white_oak_veneer', C_GAR, 0.012, 3)
+    GN.box(ctx, 'gar undercab led', wt0 + 0.1, wt1 - 0.1, 4.975, 5.0, 0.95, 1.05, M['undercab_led'], C_GAR)
     # a single tool case on the worktop
-    GN.box(ctx, 'gar toolcase', 26.6, 27.9, g + 3.11, g + 3.48, 0.35, 1.25, M['plastic_dk'], C_GAR, 0.04, 3)
-    GN.box(ctx, 'gar toolcase latch', 27.1, 27.4, g + 3.3, g + 3.4, 1.25, 1.28, M['plastic_blk'], C_GAR, 0.01, 2)
+    GN.box(ctx, 'gar toolcase', 26.6, 27.9, 3.11, 3.48, 0.35, 1.25, M['plastic_dk'], C_GAR, 0.04, 3)
+    GN.box(ctx, 'gar toolcase latch', 27.1, 27.4, 3.3, 3.4, 1.25, 1.28, M['plastic_blk'], C_GAR, 0.01, 2)
     cnt['garage_cabinets'] = len(kinds) + 3
 
     # --- EV charger on the east wall -----------------------------------------------------------
-    # v7 garage: the sheet's side door (DR18) stands where the charger hung (concept z 35.7..36.9), so the
-    # charger went to the wall's south end, between the slatwall and the vehicle door (plan z about 49.2)
-    eu, ev0, ev1 = 47.9, g + 3.7, g + 4.95
+    eu, ev0, ev1 = 36.0, 3.7, 4.95
     GE.box(ctx, 'ev charger body', eu - 0.27, eu + 0.27, ev0, ev1, 0.0, 0.2, M['plastic_w'], C_GAR, 0.06, 4)
     GE.box(ctx, 'ev charger face', eu - 0.22, eu + 0.22, ev0 + 0.08, ev1 - 0.08, 0.2, 0.215, M['glass_blk'], C_GAR, 0.03, 3)
     GE.box(ctx, 'ev charger status', eu - 0.12, eu + 0.12, ev1 - 0.25, ev1 - 0.23, 0.215, 0.22, M['status_led'], C_GAR)
-    GE.box(ctx, 'ev holster', eu + 0.62, eu + 0.86, g + 3.95, g + 4.2, 0.0, 0.16, M['plastic_w'], C_GAR, 0.03, 3)
-    GE.box(ctx, 'ev connector', eu + 0.66, eu + 0.82, g + 3.5, g + 4.02, 0.06, 0.2, M['rubber_blk'], C_GAR, 0.04, 3)
-    pts_l = [(eu, ev0 + 0.02, 0.1), (eu, g + 3.0, 0.13), (eu + 0.08, g + 2.35, 0.17), (eu + 0.3, g + 2.08, 0.19),
-             (eu + 0.58, g + 2.2, 0.17), (eu + 0.72, g + 2.8, 0.14), (eu + 0.74, g + 3.3, 0.13), (eu + 0.74, g + 3.5, 0.13)]
+    GE.box(ctx, 'ev holster', eu + 0.62, eu + 0.86, 3.95, 4.2, 0.0, 0.16, M['plastic_w'], C_GAR, 0.03, 3)
+    GE.box(ctx, 'ev connector', eu + 0.66, eu + 0.82, 3.5, 4.02, 0.06, 0.2, M['rubber_blk'], C_GAR, 0.04, 3)
+    pts_l = [(eu, ev0 + 0.02, 0.1), (eu, 3.0, 0.13), (eu + 0.08, 2.35, 0.17), (eu + 0.3, 2.08, 0.19),
+             (eu + 0.58, 2.2, 0.17), (eu + 0.72, 2.8, 0.14), (eu + 0.74, 3.3, 0.13), (eu + 0.74, 3.5, 0.13)]
     cab = L.catmull([GE.pt(*p) for p in pts_l], 6)
     L.tube(ctx, 'ev cable', cab, [0.04] * len(cab), C_GAR, M['rubber_blk'], 3)
     L.cyl_between(ctx, 'ev conduit', GE.pt(eu, ev1 - 0.05, 0.05), GE.pt(eu, 8.0, 0.05), 0.04, C_GAR, M['conduit'], 12)
 
     # --- slatwall with shelf, bins and a hose on the east wall ---------------------------------
-    # (v7 garage: 0.65 ft further south than before, clear of the side door's frame)
-    s0, s1, sv0 = 38.85, 46.85, g + 3.5
+    s0, s1, sv0 = 38.2, 46.2, 3.5
     GE.box(ctx, 'slatwall backer', s0, s1, sv0, sv0 + 4.0, 0.0, 0.025, M['slat_back'], C_GAR)
     for k in range(16):
         a = sv0 + k * 0.25
         GE.box(ctx, f'slat {k}', s0, s1, a + 0.012, a + 0.238, 0.025, 0.065, M['slat'], C_GAR, 0.008, 2)
-    sh0, sh1, shv = 39.65, 42.85, g + 6.05
+    sh0, sh1, shv = 39.0, 42.2, 6.05
     GE.box(ctx, 'slat shelf', sh0, sh1, shv - 0.05, shv, 0.065, 1.1, M['steel_grey'], C_GAR, 0.01, 2)
     GE.box(ctx, 'slat shelf lip', sh0, sh1, shv - 0.05, shv + 0.08, 1.07, 1.1, M['steel_grey'], C_GAR, 0.006, 2)
     for uu in (sh0 + 0.3, sh1 - 0.3):
@@ -792,7 +778,7 @@ def build_garage(ctx, M, A, cnt):
         GE.box(ctx, f'bin {i} lid', a - 0.02, a + bw + 0.02, shv + 0.66, shv + 0.74, 0.12, 1.04, M['plastic_blk'], C_GAR, 0.03, 3)
         GE.box(ctx, f'bin {i} label', a + bw / 2 - 0.18, a + bw / 2 + 0.18, shv + 0.3, shv + 0.45, 1.02, 1.025, M['canvas_edge'], C_GAR)
     # hose hanger + coiled hose
-    hu, hv = 44.95, g + 5.55
+    hu, hv = 44.3, 5.55
     GE.box(ctx, 'hose hanger', hu - 0.25, hu + 0.25, hv + 0.15, hv + 0.45, 0.065, 0.12, M['steel_grey'], C_GAR, 0.02, 2)
     GE.box(ctx, 'hose hanger arm', hu - 0.22, hu + 0.22, hv + 0.15, hv + 0.2, 0.065, 0.55, M['steel_grey'], C_GAR, 0.015, 2)
     pts = []
@@ -810,9 +796,25 @@ def build_garage(ctx, M, A, cnt):
                          hv + 0.17 - r * (1 - math.cos(a)) - sag, 0.12 + 0.058 * t))
     L.tube(ctx, 'hose coil', pts, [0.032] * len(pts), C_GAR, M['hose'], 2)
 
-    # v7 garage: no water heater here any more (the wall-hung unit on the west wall is gone): the sheet's tank
-    # stands in the north-east corner and is built in plan feet by bl/garage.water_heater. The switch and the
-    # opener button beside the house door are built there too (bl/garage.house_door), on the door's latch side.
+    # --- tankless water heater on the west wall ------------------------------------------------
+    wu, wv0, wv1 = -46.6, 4.4, 6.3
+    GW.box(ctx, 'water heater', wu - 0.58, wu + 0.58, wv0, wv1, 0.02, 0.72, M['plastic_w'], C_GAR, 0.04, 3)
+    GW.box(ctx, 'water heater display', wu - 0.18, wu + 0.18, 5.55, 5.85, 0.72, 0.73, M['glass_blk'], C_GAR, 0.01, 2)
+    L.cyl_between(ctx, 'water heater vent', GW.pt(wu, wv1 - 0.02, 0.38), GW.pt(wu, 8.0, 0.38), 0.13, C_GAR, M['conduit'], 24)
+    for j, (du, m) in enumerate(((-0.3, M['copper']), (0.0, M['steel_grey']), (0.3, M['copper']))):
+        L.cyl_between(ctx, f'water heater pipe {j}', GW.pt(wu + du, wv0 + 0.02, 0.36), GW.pt(wu + du, 3.6, 0.36),
+                      0.035, C_GAR, m, 12)
+        L.cyl_between(ctx, f'water heater pipe {j} in', GW.pt(wu + du, 3.6, 0.40), GW.pt(wu + du, 3.6, 0.0),
+                      0.035, C_GAR, m, 12)
+        L.cyl_between(ctx, f'water heater valve {j}', GW.pt(wu + du - 0.07, 3.95, 0.36), GW.pt(wu + du + 0.07, 3.95, 0.36),
+                      0.05, C_GAR, M['plastic_blk'] if j != 1 else M['copper'], 12)
+
+    # --- door-side switch + opener button (garage face of the west wall) -----------------------
+    switch_plate(ctx, M, GW, 'garage lights', -(A['d02'][0] - 0.42), 4.0, 2, C_GAR)
+    GW.box(ctx, 'opener button', -(A['d02'][0] - 0.95) - 0.11, -(A['d02'][0] - 0.95) + 0.11, 3.85, 4.2, 0.0, 0.05,
+           M['plastic_w'], C_GAR, 0.015, 2)
+    GW.box(ctx, 'opener button key', -(A['d02'][0] - 0.95) - 0.07, -(A['d02'][0] - 0.95) + 0.07, 3.9, 4.06, 0.05, 0.065,
+           M['plastic_w'], C_GAR, 0.01, 2)
 
     # --- saw-cut control joints in the slab -----------------------------------------------------
     xm = (A['gar_w'] + A['gar_e']) / 2

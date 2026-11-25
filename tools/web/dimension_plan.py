@@ -5,35 +5,23 @@ The page fetches that file and puts the <svg> into <div id="dimensionPlan"> (it 
 index.html, which this tool never touches). The drawing is built only from the site data files
 (tools/web/sitedata.py):
   * tools/render/data/scene.json         walls (objects with group 'walls', shape 'box', standing on the
-                          floor, and the stucco skins of the three front walls, group 'facade', named
-                          'Front stucco ...': a front wall is 5 in with its skin, and the skin's face is
-                          the house's outside face; also the 'stucco front corner return ...' pieces,
-                          which close the square a wall box leaves open at an outside corner), door
-                          leaves and sliding panels (group 'door'), the foundation footprint (group
-                          'base'); an object of group 'removed' is a piece the built model no longer
-                          has and is not drawn,
+                          floor), door leaves (group 'door'), the foundation footprint (group 'base'),
                           tour stops (tour.nodes) for the living / kitchen / garage labels and
                           for deciding which side of a wall is "inside" for a window tag;
   * tools/render/data/measurements.json  rooms (id, name, bounds_ft [x0,x1,z0,z1], width_ft, depth_ft,
                           area_sqft, basis), windows and doors (axis 'x' = along x on the wall z=c,
                           'z' = along z on the wall x=c, start/end in feet) and the skylights
-                          (axis 'roof', p); `spaces`, what the plan shows without measuring it as a
-                          room (kind 'closet': a fill and a small label; 'hall': a label; 'step' and
-                          'landing': an outline; 'level': the garage's label takes its size and floor
-                          level from it); `overall` is not read: the overall sizes are measured on the
-                          drawn walls.
+                          (axis 'roof', p).
 
 Coordinates are feet: x runs west -> east, z rear (north, garden) -> street (south).
 
 What it draws: the floor footprint, room fills, walls cut at 4 ft (dark) and floor-level pieces
 below the cut such as sills and the bay base (light), door leaves, window and skylight symbols,
-the closets, steps and landings of `spaces`, room labels with clear sizes in feet-inches (a door
-tag that would cover a room's label moves
+room labels with clear sizes in feet-inches (a door tag that would cover a room's label moves
 across its wall, away from that room: the laundry closet is no bigger than its label; with a label
 on both sides, as between the walk-in closet and the vestibule, it slides along the wall), chains of
 clear interior dimensions on all four sides (found by scanning the walls), overall outside-face
-dimensions (width; depth on the west side and, where the house is shorter there, on the east side),
-and one hit rect per room, window, skylight and door:
+dimensions, and one hit rect per room, window, skylight and door:
     <rect ... class="review-hit" data-measure="M01" tabindex="0" role="button" aria-label="..."/>
 (openings carry class="review-hit opening-hit"), which the page's measurementDetail() /
 click handlers use to select an item.
@@ -71,14 +59,8 @@ TAG_FILL, TAG_LINE = '#fffef8', '#97aca1'
 
 # Spaces the schedule does not measure, labelled at their tour stop: (node, title, subtitle, place),
 # place = (dx, dz) feet from the stop, or 'span' to centre the label between the walls around the stop.
-# The living room's label stands clear of the skylight over the sofa side (W21, eighth round). The garage's label is
-# centred in the garage and takes its size and floor level from `spaces` (key 'garage') when the schedule has it.
-EXTRA_LABELS = [('L0', 'LIVING ROOM', 'Open plan', (-3.5, 2.0)), ('K0', 'KITCHEN + DINING', 'Open plan', (0, -3)),
-                ('G0', 'GARAGE', '17′7″ × 20′11″', 'span')]    # relayout.ROOMS['garage'] (the plan's 17'-7" x 20'-11")
-WALL_T = 5.0 / 12.0           # every wall of the plan is 5 in (tools/render/relayout.py WALL): the window symbols' depth
-STUCCO = ('Front stucco', 'stucco front corner return')    # facade pieces that are wall: the three front walls'
-#                               skins, and the pieces that close the open square at an outside corner
-STEP_FILL, STEP_LINE = '#eceae2', '#9aa39b'
+EXTRA_LABELS = [('L0', 'LIVING ROOM', 'Open plan', (0, 0)), ('K0', 'KITCHEN + DINING', 'Open plan', (0, -3)),
+                ('G0', 'GARAGE', '17′7⅜″ × 20′11″', 'span')]   # relayout X_GARAGE / Z_RIGHT (the plan's 17'-7" x 20'-11")
 SOURCE_LINE = "Architect's plan · sizes/sizes.pdf, sheet SKA002 (Nov 13 2026) · clear interior sizes"
 
 
@@ -203,9 +185,6 @@ def build(scene, meas):
     X = lambda v: v * S          # noqa: E731  (feet -> px)
     svg = Svg()
     walls = floor_pieces(objs, ('walls',))
-    # the three front walls carry a stucco skin whose face is the house's outside face: part of the wall
-    walls += [(o, c) for o, c in floor_pieces(objs, ('facade',)) if o.get('name', '').startswith(STUCCO)]
-    spaces = {s.get('key'): s for s in meas.get('spaces', [])}
     cut_walls = [o for o, c in walls if c]
     # overall extents: straight wall runs only (the bay's short piers and angled faces project beyond)
     straight = [b for b in (aabb(o) for o in cut_walls) if b and max(b[1] - b[0], b[3] - b[2]) >= 1.0]
@@ -228,27 +207,14 @@ def build(scene, meas):
         fill = WET if 'bath' in low else CLOSET if 'closet' in low else ROOM
         svg.rect(X(x0), X(z0), X(x1 - x0), X(z1 - z0), fill=fill)
 
-    for sp in spaces.values():
-        x0, x1, z0, z1 = sp['bounds_ft']
-        if sp.get('kind') == 'closet':
-            svg.rect(X(x0), X(z0), X(x1 - x0), X(z1 - z0), fill=CLOSET)
-        elif sp.get('kind') in ('step', 'landing'):
-            w = sp.get('step_width') or 0.0
-            if w:                               # the step round a landing's three open sides
-                svg.rect(X(x0 - w), X(z0 - w), X(x1 - x0 + 2 * w), X(z1 - z0 + w), fill=PAPER, stroke=STEP_LINE,
-                         stroke_width=0.8)
-            svg.rect(X(x0), X(z0), X(x1 - x0), X(z1 - z0), fill=STEP_FILL, stroke=STEP_LINE, stroke_width=0.8)
-
     # Floor-level pieces below the cut (sills, bay base), door leaves, then the cut walls.
     for o, c in walls:
         if not c:
             svg.add('<polygon %s/>' % attrs(points=' '.join('%s,%s' % (f(X(a)), f(X(b))) for a, b in box_corners(o)),
                                             fill=WALL_LOW, stroke=WALL_LOW, stroke_width=0.6))
     for o, _ in floor_pieces(objs, ('door', 'garageDoor')):
-        glazed = o.get('material') == 'glass'        # a sliding glass door's panel
         svg.add('<polygon %s/>' % attrs(points=' '.join('%s,%s' % (f(X(a)), f(X(b))) for a, b in box_corners(o)),
-                                        fill='#d1e1dc' if glazed else LEAF, stroke=GLASS if glazed else LEAF_LINE,
-                                        stroke_width=0.7))
+                                        fill=LEAF, stroke=LEAF_LINE, stroke_width=0.7))
     for o in cut_walls:
         svg.add('<polygon %s/>' % attrs(points=' '.join('%s,%s' % (f(X(a)), f(X(b))) for a, b in box_corners(o)),
                                         fill=WALL, stroke=WALL, stroke_width=0.5))
@@ -308,16 +274,13 @@ def build(scene, meas):
             hits.append((w, (X(cx - ww / 2), X(cz - dd / 2), X(cx + ww / 2), X(cz + dd / 2)), t))
             continue
         above = overlaps_door(w)
-        a, b, c, th = w['start'], w['end'], w['c'], WALL_T
+        a, b, c, th = w['start'], w['end'], w['c'], 0.45
         nx, nz = node_xz(w)
-        slider = 'clear_start' in w              # a sliding glass door: its panels are drawn (group 'door'), not a pane
         if w['axis'] == 'x':
             out = 1 if nz < c else -1            # tag on the side away from the room
             r = (X(a), X(c - th / 2), X(b), X(c + th / 2))
             if above:
                 svg.line(X(a), X(c + out * .55), X(b), X(c + out * .55), stroke=GLASS, stroke_width=1.6, stroke_dasharray='5 4')
-            elif slider:
-                svg.line(X(a), X(c), X(b), X(c), stroke=GLASS, stroke_width=1, stroke_dasharray='3 3')
             else:
                 svg.rect(r[0], r[1], r[2] - r[0], r[3] - r[1], fill=PAPER, stroke=GLASS, stroke_width=1)
                 svg.line(X(a), X(c), X(b), X(c), stroke=GLASS, stroke_width=1.4)
@@ -327,8 +290,6 @@ def build(scene, meas):
             r = (X(c - th / 2), X(a), X(c + th / 2), X(b))
             if above:
                 svg.line(X(c + out * .55), X(a), X(c + out * .55), X(b), stroke=GLASS, stroke_width=1.6, stroke_dasharray='5 4')
-            elif slider:
-                svg.line(X(c), X(a), X(c), X(b), stroke=GLASS, stroke_width=1, stroke_dasharray='3 3')
             else:
                 svg.rect(r[0], r[1], r[2] - r[0], r[3] - r[1], fill=PAPER, stroke=GLASS, stroke_width=1)
                 svg.line(X(c), X(a), X(c), X(b), stroke=GLASS, stroke_width=1.4)
@@ -379,15 +340,7 @@ def build(scene, meas):
         if not n:
             continue
         lx, lz = n['p'][0], n['p'][2]
-        sp = spaces.get(title.lower())
-        if place == 'span' and sp:                  # the space's own rectangle, size and floor level
-            x0, x1, z0, z1 = sp['bounds_ft']
-            lx, lz = (x0 + x1) / 2, (z0 + z1) / 2
-            sub = '%s × %s' % (ft(sp['width_ft']), ft(sp['depth_ft']))
-            if sp.get('floor'):                     # against the house floor: "floor 11″ lower"
-                drop = ft(abs(sp['floor']))
-                sub += ' · floor %s %s' % (drop[2:] if drop.startswith('0′') else drop, 'lower' if sp['floor'] < 0 else 'higher')
-        elif place == 'span':
+        if place == 'span':
             sx = [s for s in chain(every_wall, 'x', lz) if s[0] <= lx <= s[1]]
             sz = [s for s in chain(every_wall, 'z', lx) if s[0] <= lz <= s[1]]
             lx = sum(sx[0]) / 2 if sx else lx
@@ -399,24 +352,6 @@ def build(scene, meas):
         svg.rect(x - w / 2, y - 24, w, 48, fill=PAPER, fill_opacity='.85', rx=4)
         svg.text(x, y - 3, title, 17, weight=700)
         svg.text(x, y + 16, sub, 13, fill=MUTED)
-
-    # Closets nobody enters and the hall's legs (`spaces`): a small label, clear size under a closet's name.
-    for sp in spaces.values():
-        if sp.get('kind') not in ('closet', 'hall'):
-            continue
-        x0, x1, z0, z1 = sp['bounds_ft']
-        lines = [sp.get('label') or sp['name'].upper()]
-        if sp['kind'] == 'closet':
-            lines.append('%s × %s' % (ft(sp['width_ft']), ft(sp['depth_ft'])))
-        size = 11 if sp['kind'] == 'closet' else 12
-        w = max(text_w(s, size, 600) for s in lines) + 10
-        k = max(.6, min(1.0, (X(x1 - x0) - 6) / w))
-        h = len(lines) * size * 1.3 * k + 4
-        cx, cy = X((x0 + x1) / 2), X((z0 + z1) / 2)
-        svg.rect(cx - w * k / 2, cy - h / 2, w * k, h, fill='#fffdf7', fill_opacity='.88', rx=3)
-        for i, s in enumerate(lines):
-            svg.text(cx, cy - h / 2 + 2 + (i + 1) * size * 1.3 * k - size * .3 * k, s, round((size if i == 0 else size - 1) * k, 1),
-                     fill=INK if i == 0 else MUTED, weight=600 if i == 0 else 400)
 
     # Room labels: name, clear size, area; scaled down to fit the room.
     for cx, cy, w, h, k, ls in room_labels:
@@ -442,23 +377,16 @@ def build(scene, meas):
             svg.text(at - 5, (a + b) / 2, label, size, fill=GREEN, weight=600, rotate=-90)
 
     cw = every_wall
-    # the rear dimensions stand clear of the landings and their steps outside the rear wall
-    north = X(min([oz0] + [sp['bounds_ft'][2] - (sp.get('step_width') or 0.0) for sp in spaces.values()
-                           if sp.get('kind') == 'landing']))
-    for axis, at, pos, short in (('x', oz0 + 3.0, north - 64, None), ('x', oz1 - 3.5, X(oz1) + 112, None),
+    for axis, at, pos, short in (('x', oz0 + 3.0, X(oz0) - 64, None), ('x', oz1 - 3.5, X(oz1) + 112, None),
                                  ('z', ox0 + 1.0, X(ox0) - 68, None), ('z', ox1 - 1.0, X(ox1) + 74, None)):
         for a, b in chain(cw, axis, at):
             if b - a < 1.2:
                 continue
             dim(X(a), X(b), pos, axis, ft(b - a), 12 if X(b - a) < 70 else 13)
-    dim(X(ox0), X(ox1), north - 100, 'x', ft(ox1 - ox0) + ' overall', 14)
+    dim(X(ox0), X(ox1), X(oz0) - 100, 'x', ft(ox1 - ox0) + ' overall', 14)
     dim(X(ox0), X(ox1), X(oz1) + 148, 'x', ft(ox1 - ox0) + ' overall', 14)
     dim(X(oz0), X(oz1), X(ox0) - 104, 'z', ft(oz1 - oz0) + ' overall', 14)
-    east = [b for b in straight if b[1] >= ox1 - 0.5 or b[0] >= ox1 - 3.0]      # the east wall and what meets it
-    ez1 = max(b[3] for b in east) if east else oz1
-    if oz1 - ez1 > 0.5:                              # the garage side ends short of the Bedroom 3 side
-        dim(X(oz0), X(ez1), X(ox1) + 110, 'z', ft(ez1 - oz0) + ' overall', 14)
-    svg.text(X((ox0 + ox1) / 2), north - 128, 'BACKYARD / GARDEN · NORTH', 15, fill=MUTED, weight=600, letter_spacing='1')
+    svg.text(X((ox0 + ox1) / 2), X(oz0) - 128, 'BACKYARD / GARDEN · NORTH', 15, fill=MUTED, weight=600, letter_spacing='1')
     svg.text(X((ox0 + ox1) / 2), X(oz1) + 182, 'STREET · W MCKINLEY AVE · SOUTH', 15, fill=MUTED, weight=600, letter_spacing='1')
 
     # Hit rects last so they sit on top: rooms, then openings (smaller, so they win where they overlap).
@@ -484,8 +412,7 @@ def build(scene, meas):
     head.line(bx0, top + 104, max(bx1, bx0 + 900), top + 104, stroke='#d7dfd5', stroke_width=1.4)
     ly = by1 + 34
     lx = bx0
-    for kind in ('wall', 'low', 'window', 'door', 'skylight') + (('step',) if any(
-            s.get('kind') in ('step', 'landing') for s in spaces.values()) else ()):
+    for kind in ('wall', 'low', 'window', 'door', 'skylight'):
         if kind == 'wall':
             head.rect(lx, ly - 9, 26, 9, fill=WALL)
             label = 'Wall (cut at 4 ft)'
@@ -499,9 +426,6 @@ def build(scene, meas):
         elif kind == 'door':
             head.rect(lx, ly - 7, 26, 5, fill=LEAF, stroke=LEAF_LINE, stroke_width=.7)
             label = 'Door leaf / opening (D)'
-        elif kind == 'step':
-            head.rect(lx, ly - 10, 26, 11, fill=STEP_FILL, stroke=STEP_LINE, stroke_width=.8)
-            label = 'Step / landing'
         else:
             head.rect(lx, ly - 11, 26, 13, fill='#d1e1dc88', stroke=GLASS, stroke_width=1.2, stroke_dasharray='6 4')
             label = 'Skylight'

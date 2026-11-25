@@ -23,7 +23,6 @@ import sys
 
 import bpy
 import numpy as np
-from mathutils import Vector
 
 from .common import FT
 
@@ -86,17 +85,6 @@ def _bbox_ft(ob):
         x = w[:, 0] / FT
         z = -w[:, 1] / FT
         return float(x.min()), float(x.max()), float(z.min()), float(z.max())
-    if ob.type in ('CURVE', 'CURVES', 'SURFACE', 'FONT', 'META'):
-        # Tubes (branches in a vase, a cable, a hose) are curves drawn in world feet with their origin at the scene
-        # origin. Until the eighth round they were placed by that origin, i.e. not at all: they stayed on the
-        # concept plan while the vase or the wall they belong to moved (the foyer's branches stood in the closet
-        # wall, the garage's charger cable and hose outside the east wall). Their own extent places them.
-        mw = ob.matrix_world
-        pts = [mw @ Vector(c) for c in ob.bound_box]
-        xs = [p.x / FT for p in pts]
-        zs = [-p.y / FT for p in pts]
-        if max(xs) - min(xs) > 1e-6 or max(zs) - min(zs) > 1e-6:
-            return min(xs), max(xs), min(zs), max(zs)
     t = ob.matrix_world.translation
     return t.x / FT, t.x / FT, -t.y / FT, -t.y / FT
 
@@ -107,8 +95,7 @@ FORCE_FITTED = re.compile(r'^gar (tall|base|wall|worktop|undercab|toolcase)|^gar
 
 
 def _region_for(ob, x, z):
-    at = (float(x.min() + x.max()) / 2, float(z.min() + z.max()) / 2)
-    return R.pinned_region(ob.name, at) or R.region(*at)
+    return R.pinned_region(ob.name) or R.region((x.min() + x.max()) / 2, (z.min() + z.max()) / 2)
 
 
 def _warp_slab(ob):

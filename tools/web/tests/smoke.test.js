@@ -104,12 +104,11 @@ test('a link with ?sweep=ID opens the inside view on that sweep', async (s) => {
 });
 
 // The address bar hands out links to sweeps, and a round of changes can remove one (L5 stood where the
-// living room's sofa is since the owner's seventh round; C3 stood in Bedroom 3's closet, a reach-in closet
-// since the eighth). Such a link opens the front page like a plain visit: no error, and the way into the
-// house works.
+// living room's sofa is since the owner's seventh round). Such a link opens the front page like a plain
+// visit: no error, and the way into the house works.
 test('a link to a sweep that has left the tour opens the front page', async (s) => {
   const tour = await (async () => { await s.open(); return s.tour(); })();
-  const gone = ['C3', 'L5', 'ZZ'].find((id) => !tour.sweeps.some((x) => x.id === id));
+  const gone = ['L5', 'ZZ'].find((id) => !tour.sweeps.some((x) => x.id === id));
   await s.open('?sweep=' + gone + '&yaw=40&pitch=-5');
   assert.equal(await s.page.$eval('#landing', (e) => e.classList.contains('open')), true, 'the landing page is up');
   const st = await s.state();

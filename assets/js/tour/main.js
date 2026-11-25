@@ -148,29 +148,14 @@ async function boot() {
   } else if (gl) fail(eng instanceof Error ? eng : new Error('engine module missing'));
 
   // Sheets (they work without the 3D view).
-  // "Visit" from a sheet: stand on that sweep, facing its own direction. A sheet that names something to
-  // look at (`at`: {x, z, y} in feet, y a height or a [low, high] range of heights; the Dimensions sheet
-  // gives the middle of the opening the visitor asked for) turns the visitor toward it, at eye height
-  // where the range holds it. A sweep whose own view already faces that way keeps its view: it was chosen
-  // for the place. When the 3D view has stopped (the browser took the WebGL context away) the fallback
-  // page is up: the buttons say so.
+  // "Visit" from a sheet: stand on that sweep, facing its own direction. When the 3D view has stopped
+  // (the browser took the WebGL context away) the fallback page is up: the buttons say so.
   const stopped = () => {
     if (viewer.engineState !== 'failed') return false;
     ui.toast('The 3D view has stopped. Reload the page to continue the tour.');
     return true;
   };
-  const VISIT_FACES = 0.26, VISIT_UP = 0.35;            // radians: "already faces it" (15 degrees), "above the picture" (20 degrees up)
-  const visit = viewer ? (node, at) => {
-    if (stopped()) return;
-    const s = viewer.sweep(node), o = { instant: true, reset: true };
-    if (s && at && Number.isFinite(at.x) && Number.isFinite(at.z)) {
-      const y = Array.isArray(at.y) ? Math.min(Math.max(s.p[1], Math.min(...at.y)), Math.max(...at.y)) : Number.isFinite(at.y) ? at.y : s.p[1];
-      const dx = at.x - s.p[0], dz = at.z - s.p[2], d = Math.hypot(dx, dz), yaw = Math.atan2(dx, -dz), up = Math.atan2(y - s.p[1], Math.max(d, 0.01));
-      const off = d > 0.3 ? Math.abs(Math.atan2(Math.sin(yaw - s.look.yaw), Math.cos(yaw - s.look.yaw))) : 0;
-      if (off > VISIT_FACES || Math.abs(up) > VISIT_UP) { if (d > 0.3) o.yaw = yaw; o.pitch = up; }
-    }
-    viewer.goTo(s ? node : tour.start, o);
-  } : null;
+  const visit = viewer ? (node) => { if (!stopped()) viewer.goTo(viewer.sweep(node) ? node : tour.start, { instant: true, reset: true }); } : null;
   const dimensions = dimensionsM.createDimensions({ data: measurements, planSvg, ui, visit });
   const designSheet = designM.createDesign({
     data: design, ui, suffix: v, dimensions, visit,
